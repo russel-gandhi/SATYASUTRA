@@ -2,3 +2,19 @@ ledger_db_path: data/ledger.sqlite3
 probe:
   timeout_s: 8
   user_agent: "FORGE-probe/0.0.1 (hackathon build; contact: {contact})"
+ingest:
+  source_id: bluesky_jetstream
+  ws_url: wss://jetstream2.us-east.bsky.network/subscribe
+  collections: [app.bsky.feed.post]
+  post_url_template: https://bsky.app/profile/{did}/post/{rkey}
+  langs: [en, hi]              # posts with no language tag are skipped while this is set
+  keywords: []
+  min_text_chars: 40           # shorter posts rarely hold a checkable claim; revisit with the F1-08 capture
+  skip_replies: true
+  open_timeout_s: 15
+  idle_timeout_s: 30
+  reconnect_delay_s: 1
+  max_reconnect_delay_s: 30
+  resume_overlap_s: 2          # reconnect this far behind the last event; repeats are dropped by id
+  recent_ids_kept: 20000
+

@@ -93,9 +93,27 @@ class ProbeSettings(_Strict):
     user_agent: str
 
 
+class IngestSettings(_Strict):
+    source_id: str
+    ws_url: str
+    collections: list[str] = Field(min_length=1)
+    post_url_template: str
+    langs: list[str] = Field(default_factory=list)       # empty means every language
+    keywords: list[str] = Field(default_factory=list)    # empty means no keyword filter
+    min_text_chars: int = Field(ge=0)
+    skip_replies: bool
+    open_timeout_s: float = Field(gt=0)
+    idle_timeout_s: float = Field(gt=0)
+    reconnect_delay_s: float = Field(gt=0)
+    max_reconnect_delay_s: float = Field(gt=0)
+    resume_overlap_s: float = Field(ge=0)
+    recent_ids_kept: int = Field(gt=0)
+
+
 class RuntimeFile(_Strict):
     ledger_db_path: str
     probe: ProbeSettings
+    ingest: IngestSettings
 
 
 class Config(_Strict):
