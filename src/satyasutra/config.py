@@ -168,6 +168,30 @@ class ExtractSettings(_Strict):
     max_claims_per_post: int = Field(gt=0)
 
 
+class FeedRef(_Strict):
+    source_id: str                           # its URL is the source's probe_url in sources.yaml
+    publisher: str
+    lang: str
+
+
+class CommonsSettings(_Strict):
+    endpoint: str
+    thumb_width: int = Field(gt=0)           # images are fetched as thumbnails of this width, to keep downloads small
+    sample_size: int = Field(gt=1)           # images drawn for the false-match measurement
+
+
+class ProvenanceSettings(_Strict):
+    db_path: str
+    feeds: list[FeedRef] = Field(min_length=1)
+    max_image_bytes: int = Field(gt=0)
+    min_side_px: int = Field(gt=0)           # smaller images are icons and badges, not evidence
+    max_images_per_item: int = Field(gt=0)
+    download_timeout_s: float = Field(gt=0)
+    match_limit: int = Field(gt=0)
+    image_requests_per_minute: int = Field(gt=0)
+    commons: CommonsSettings
+
+
 class VerifySettings(_Strict):
     posts_endpoint: str                      # Bluesky AppView getPosts, used when /verify is given a post URI
     timeout_s: float = Field(gt=0)
@@ -186,6 +210,7 @@ class RuntimeFile(_Strict):
     fastclock: FastClockSettings
     extract: ExtractSettings
     verify: VerifySettings
+    provenance: ProvenanceSettings
 
 
 class Config(_Strict):

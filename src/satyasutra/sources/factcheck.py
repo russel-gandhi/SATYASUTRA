@@ -25,6 +25,7 @@ from ..errors import ConfigError, QuotaExhausted, RateLimited, SchemaChanged, Un
 from ..schemas import Evidence
 from ..ratelimit import Spacer
 from ..schemas.core import sha256_text
+from .probe import build_user_agent
 
 SOURCE_ID = "factcheck_tools"
 SECONDS_PER_MINUTE = 60
@@ -98,7 +99,7 @@ class FactCheckClient:
         self._src = config.source(SOURCE_ID)
         self._settings = config.runtime.factcheck
         self._cache, self._env, self._clock = cache, env, clock
-        self._http = client or httpx.Client(timeout=self._settings.timeout_s, headers={"User-Agent": config.runtime.probe.user_agent})
+        self._http = client or httpx.Client(timeout=self._settings.timeout_s, headers={"User-Agent": build_user_agent(config.runtime.probe.user_agent)})
         self._spacer = Spacer(self._src.rate_limit_per_min, clock, sleep)
 
     def _key(self) -> str:

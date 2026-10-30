@@ -11,6 +11,7 @@ from ..config import Config
 from ..errors import SchemaChanged, Unreachable
 from ..ingest.jetstream import hash_author
 from ..schemas import Post
+from .probe import build_user_agent
 
 NOT_FOUND = "post not found"
 
@@ -31,7 +32,7 @@ def fetch_post(
     now: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
 ) -> Post:
     settings = config.runtime.verify
-    http = client or httpx.Client(timeout=settings.timeout_s, headers={"User-Agent": config.runtime.probe.user_agent})
+    http = client or httpx.Client(timeout=settings.timeout_s, headers={"User-Agent": build_user_agent(config.runtime.probe.user_agent)})
     try:
         response = http.get(settings.posts_endpoint, params={"uris": uri})
     except httpx.HTTPError as exc:

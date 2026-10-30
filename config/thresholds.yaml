@@ -20,3 +20,13 @@ thresholds:
       matching needs embeddings or NLI (Phase 3). Command: scripts/calibrate_factcheck.py
       collect then relevance'
     date: '2026-10-31'
+  image_match_pdq_distance:
+    value: 40
+    calibrated_on: 'scripts/measure_image_match.py measure on 60 random Wikimedia
+      Commons images (1770 unrelated pairs), 2026-10-31: 0 false matches at any distance
+      up to 96, closest unrelated pair 100 bits; resize 50 percent, JPEG q40 and horizontal
+      flip stayed within 36 bits (all matched at 40); a 90 percent centre crop did
+      NOT match (largest 136), so crops are not supported. Random Commons photos are
+      more varied than screenshots and flat graphics, so false matches on those are
+      not bounded by this sample.'
+    date: '2026-10-31'

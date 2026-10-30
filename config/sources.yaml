@@ -87,3 +87,53 @@ sources:
     auth_param: key
     rate_limit_per_min: 10
     note: key held by the team; free-tier limits not verified
+
+  # F1-10: fact-checker feeds, publishers taken from real Fact Check API results (F1-07 calibration queries, 2026-10-31).
+  # Full Fact and Science Feedback were reachable but their feeds carry no images, so they are not used for the image index.
+  - id: feed_altnews
+    role: fact-check feed
+    description: Alt News (English) RSS
+    probe_url: https://www.altnews.in/feed/
+    tier: 2
+    rate_limit_per_min: 6
+    cache_ttl_s: 900
+
+  - id: feed_factly
+    role: fact-check feed
+    description: Factly (English) RSS
+    probe_url: https://factly.in/feed/
+    tier: 2
+    rate_limit_per_min: 6
+    cache_ttl_s: 900
+
+  - id: feed_boom_hindi
+    role: fact-check feed
+    description: BOOM Hindi RSS
+    probe_url: https://hindi.boomlive.in/feed
+    tier: 2
+    rate_limit_per_min: 6
+    cache_ttl_s: 900
+
+  - id: feed_boom_english
+    role: fact-check feed
+    description: BOOM English RSS
+    probe_url: https://www.boomlive.in/feed
+    tier: 2
+    rate_limit_per_min: 6
+    cache_ttl_s: 900
+
+  - id: feed_factcheck_org
+    role: fact-check feed
+    description: FactCheck.org (English, US) RSS
+    probe_url: https://www.factcheck.org/feed/
+    tier: 2
+    rate_limit_per_min: 6
+    cache_ttl_s: 900
+
+  - id: wikimedia_commons
+    role: image provenance
+    description: Wikimedia Commons API, for images with a documented history and for measuring false matches
+    probe_url: https://commons.wikimedia.org/w/api.php?action=query&meta=siteinfo&format=json
+    tier: 4
+    rate_limit_per_min: 30
+    cache_ttl_s: 3600

@@ -41,3 +41,22 @@ verify:
   text_source_id: api_text
   uri_prefix: "at://"
   ledger_kind: verdict
+
+provenance:
+  db_path: data/provenance.sqlite3
+  feeds:
+    - {source_id: feed_altnews, publisher: Alt News, lang: en}
+    - {source_id: feed_factly, publisher: Factly, lang: en}
+    - {source_id: feed_boom_hindi, publisher: BOOM Hindi, lang: hi}
+    - {source_id: feed_boom_english, publisher: BOOM, lang: en}
+    - {source_id: feed_factcheck_org, publisher: FactCheck.org, lang: en}
+  max_image_bytes: 8000000
+  min_side_px: 200
+  max_images_per_item: 6
+  download_timeout_s: 20
+  match_limit: 5
+  image_requests_per_minute: 60
+  commons:
+    endpoint: https://commons.wikimedia.org/w/api.php
+    thumb_width: 640
+    sample_size: 60
