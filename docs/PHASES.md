@@ -53,4 +53,4 @@ What changed and why in two or three lines. Reference the plan section if useful
 ## Gate log
 
 - **Phase 1 gate command passes (2026-10-31, F1-09).** A post taken live from the Bluesky stream goes through Gemini claim extraction, a Fact Check lookup and the verdict rules, and each verdict gets a ledger row (`tests/contract/test_walking_skeleton.py`, `scripts/verify_live.py`). Phase 1 was still open at that point for F1-03 and F1-10. On 8 live posts, 1 produced a claim (a stock-trade report, `UNVERIFIABLE_YET`, no reviews); most posts are opinion or chatter.
-- **Phase 1 complete (2026-10-31).** All 10 tickets done: F1-03 (LangGraph to SSE) and F1-10 (debunked-image index) closed after the gate command above passed. 269 unit tests, the guard and the live contract tests pass. Not yet merged to `main`.
+- **Phase 1 complete (2026-10-31).** All 10 tickets done: F1-03 (LangGraph to SSE) and F1-10 (debunked-image index) closed after the gate command above passed. 269 unit tests, the guard and the live contract tests pass. Merged to `main` and tagged `phase-1-complete`.

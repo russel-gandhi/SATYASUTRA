@@ -89,9 +89,9 @@ only Tier 1 or 2 evidence can decide a claim, "cannot tell" is a valid result, a
 
 ## State at the time of writing
 
-- **Phase 0 done** (9/9, on `main`, tag `phase-0-complete`). **Phase 1 done: 10 of 10 tickets**, on branch `phase-1/walking-skeleton`
-  (pushed; CI green on the F1-10 push). The gate command passes and is logged in `docs/PHASES.md`. **Not yet merged to `main`**; merge
-  and tag `phase-1-complete` when the user says so, then write the Phase 2 tickets.
+- **Phases 0 and 1 done and merged to `main`** (tags `phase-0-complete`, `phase-1-complete`). Phase 1: 10 of 10 tickets, gate logged in
+  `docs/PHASES.md`, CI green. The branch `phase-1/walking-skeleton` is kept. **Next: Phase 2 (fast clock)**: write its tickets
+  (`forge.py new`), branch `phase-2/...`, then start.
 - The walking skeleton works: `POST /verify` takes text or a Bluesky post URI, extracts claims with Gemini, looks them up in the Fact
   Check API, applies the verdict rules and writes one ledger row per verdict. On 8 live stream posts only 1 held a claim; most posts
   are opinion or chatter. A live REFUTED or SUPPORTED end to end has not been seen.
