@@ -110,10 +110,18 @@ class IngestSettings(_Strict):
     recent_ids_kept: int = Field(gt=0)
 
 
+class FactCheckSettings(_Strict):
+    endpoint: str
+    page_size: int = Field(gt=0)
+    timeout_s: float = Field(gt=0)
+
+
 class RuntimeFile(_Strict):
     ledger_db_path: str
+    cache_db_path: str
     probe: ProbeSettings
     ingest: IngestSettings
+    factcheck: FactCheckSettings
 
 
 class Config(_Strict):

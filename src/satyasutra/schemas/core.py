@@ -93,6 +93,10 @@ class Evidence(_Model):
     model: str = ""
     model_sha256: str = ""
     contrast_claim: str | None = None      # set when route == "contrast"
+    publisher: str = ""                    # the fact-checker or outlet, when the route has one
+    rating: str = ""                       # the publisher's own rating text, never rewritten
+    reviewed_claim: str = ""               # the claim the publisher reviewed (may be only similar to ours)
+    reviewed_at: datetime | None = None
 
     @model_validator(mode="after")
     def _integrity(self) -> "Evidence":

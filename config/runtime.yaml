@@ -1,4 +1,5 @@
 ledger_db_path: data/ledger.sqlite3
+cache_db_path: data/cache.sqlite3
 probe:
   timeout_s: 8
   user_agent: "FORGE-probe/0.0.1 (hackathon build; contact: {contact})"
@@ -17,4 +18,8 @@ ingest:
   max_reconnect_delay_s: 30
   resume_overlap_s: 2          # reconnect this far behind the last event; repeats are dropped by id
   recent_ids_kept: 20000
+factcheck:
+  endpoint: https://factchecktools.googleapis.com/v1alpha1/claims:search
+  page_size: 5
+  timeout_s: 20
 
