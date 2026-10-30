@@ -28,6 +28,16 @@ def test_health_reports_version_and_config_checksum(ctx):
     assert client.get("/health").json()["ledger_entries"] == 1
 
 
+def test_health_sources_serves_probe_results(tmp_path):
+    from satyasutra.sources import ProbeResult
+
+    cfg = load_config(CONFIG)
+    fake = [ProbeResult("pib", "official", 1, "reachable", 200, 12, "ok", "2026-01-01T00:00:00+00:00")]
+    app = create_app(cfg, SQLiteLedgerStore(tmp_path / "l.sqlite3", code_version=__version__), prober=lambda c: fake)
+    body = TestClient(app).get("/health/sources").json()
+    assert body == [fake[0].as_dict()]
+
+
 def test_ledger_entry_and_404(ctx):
     client, store, _ = ctx
     entry = store.append("verdict", {"a": 1})

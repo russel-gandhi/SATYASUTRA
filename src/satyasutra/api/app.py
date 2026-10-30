@@ -6,6 +6,7 @@ Start it with:  uvicorn satyasutra.api.app:create_app --factory
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Callable
 
 from fastapi import FastAPI, HTTPException
 
@@ -13,11 +14,16 @@ from .. import __version__
 from ..config import Config, load_config
 from ..ledger import LedgerStore, SQLiteLedgerStore
 from ..schemas import SCHEMA_VERSION
+from ..sources import ProbeResult, probe_all
 
 ROOT = Path(__file__).resolve().parents[3]
 
 
-def create_app(config: Config | None = None, ledger: LedgerStore | None = None) -> FastAPI:
+def create_app(
+    config: Config | None = None,
+    ledger: LedgerStore | None = None,
+    prober: Callable[[Config], list[ProbeResult]] = probe_all,
+) -> FastAPI:
     cfg = config or load_config()
     if ledger is None:
         db = Path(cfg.runtime.ledger_db_path)
@@ -37,6 +43,11 @@ def create_app(config: Config | None = None, ledger: LedgerStore | None = None) 
             "config_checksum": cfg.checksum,
             "ledger_entries": head.seq if head else 0,
         }
+
+    @app.get("/health/sources")
+    def health_sources() -> list[dict]:
+        """Live reachability of every configured source, probed now. Slow by design: it is the truth, not a cache."""
+        return [r.as_dict() for r in prober(cfg)]
 
     # Declared before /ledger/{seq} so "verify" is never read as a sequence number.
     @app.get("/ledger/verify")

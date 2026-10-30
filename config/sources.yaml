@@ -4,11 +4,19 @@
 sources:
   - id: bluesky_public_api
     role: public feed
-    description: Bluesky public AppView; used to check reachability before wiring the firehose
-    probe_url: https://public.api.bsky.app/xrpc/com.atproto.server.describeServer
+    description: Bluesky public AppView (profile lookups work without auth)
+    probe_url: https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor=bsky.app
     tier: 4
     rate_limit_per_min: 60
     cache_ttl_s: 60
+    note: probed 2026-10-31 - describeServer returns 501 and feed.searchPosts returns 403 here, so ingestion cannot rely on AppView search; use Jetstream
+
+  - id: bluesky_jetstream
+    role: public feed
+    description: Bluesky Jetstream host (HTTP reachability only; the websocket stream is a separate Phase 1 spike)
+    probe_url: https://jetstream2.us-east.bsky.network/
+    tier: 4
+    cache_ttl_s: 0
 
   - id: pib
     role: official
@@ -53,6 +61,7 @@ sources:
     tier: 4
     rate_limit_per_min: 30
     cache_ttl_s: 3600
+    note: probed 2026-10-31 - 403 "Wikimedia Error" with a generic User-Agent; Wikimedia expects a descriptive User-Agent with real team contact details (ticket F0-09)
 
   - id: wayback_cdx
     role: link archive
