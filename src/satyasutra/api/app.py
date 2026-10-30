@@ -5,6 +5,7 @@ Start it with:  uvicorn satyasutra.api.app:create_app --factory
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from functools import cache
 from pathlib import Path
@@ -19,7 +20,7 @@ from ..config import Config, load_config
 from ..envfile import load_env_file
 from ..agent import format_sse, trace_events
 from ..cache import TTLCache
-from ..fastclock import FastClock
+from ..fastclock import FastClock, FastClockWorker
 from ..claims import ExtractionResult, extract_claims
 from ..errors import ConfigError, SourceError
 from ..ingest import author_salt, hash_author
@@ -57,17 +58,34 @@ def create_app(
     trace_graph: Any = None,
     fastclock: FastClock | None = None,
     verdict_cache: VerdictCache | None = None,
+    worker: FastClockWorker | None = None,
 ) -> FastAPI:
     load_env_file(ROOT / ".env")
     cfg = config or load_config()
     if ledger is None:
         ledger = SQLiteLedgerStore(_path(cfg.runtime.ledger_db_path), code_version=__version__)
 
-    app = FastAPI(title="SATYASUTRA", version=__version__)
+    salt = author_salt()
+    if worker is None and cfg.runtime.fastclock.worker_enabled:
+        worker = FastClockWorker(cfg, fastclock or FastClock(cfg, TTLCache(_path(cfg.runtime.cache_db_path))), salt)
+    if worker is not None:
+        fastclock = fastclock or worker.fastclock          # /verify and the stream feed the same clusters
+
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI):
+        if worker is not None:
+            worker.start()
+        try:
+            yield
+        finally:
+            if worker is not None:
+                await worker.stop()
+
+    app = FastAPI(title="SATYASUTRA", version=__version__, lifespan=lifespan)
     app.state.config = cfg
     app.state.ledger = ledger
+    app.state.worker = worker
     app.state.active_traces = 0           # streams currently open; the disconnect test watches it return to zero
-    salt = author_salt()
 
     # Built on first use, so /health works with no keys set; a missing key then surfaces as a clear error on /verify only.
     @cache
@@ -115,6 +133,18 @@ def create_app(
         if entry is None:
             raise HTTPException(status_code=404, detail=f"no ledger entry {seq}")
         return entry.model_dump(mode="json")
+
+    @app.get("/fastclock/top")
+    def fastclock_top() -> dict:
+        if worker is None:
+            raise HTTPException(status_code=503, detail="the fast-clock worker is not enabled (fastclock.worker_enabled in config/runtime.yaml)")
+        return {"clusters": worker.top()}
+
+    @app.get("/fastclock/stats")
+    def fastclock_stats() -> dict:
+        if worker is None:
+            raise HTTPException(status_code=503, detail="the fast-clock worker is not enabled (fastclock.worker_enabled in config/runtime.yaml)")
+        return worker.stats()
 
     @app.get("/trace/stream")
     async def trace_stream(job: str = Query(min_length=1, max_length=64, pattern=JOB_ID)) -> StreamingResponse:

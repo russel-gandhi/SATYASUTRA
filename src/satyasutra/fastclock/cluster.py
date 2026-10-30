@@ -48,6 +48,7 @@ class Clusterer:
         self.clusters: dict[int, Cluster] = {}
         self._buckets: dict[tuple[int, tuple[int, ...]], set[int]] = {}
         self._next_id = 1
+        self.dropped_total = 0                 # clusters removed so far, idle or to make room
 
     def _band_keys(self, sig: tuple[int, ...]):
         for b in range(self.s.lsh_bands):
@@ -85,6 +86,7 @@ class Clusterer:
 
     def _drop(self, cluster: Cluster) -> None:
         self.clusters.pop(cluster.id, None)
+        self.dropped_total += 1
         for key in self._band_keys(cluster.signature):
             bucket = self._buckets.get(key)
             if bucket:

@@ -31,6 +31,11 @@ fastclock:
   max_clusters: 5000
   result_ttl_s: 3600
   top_n: 10
+  worker_enabled: false
+  queue_max: 2000
+  latency_samples: 2000
+  repeat_keys_kept: 20000
+  example_text_chars: 200
 extract:
   max_claims_per_post: 5
 

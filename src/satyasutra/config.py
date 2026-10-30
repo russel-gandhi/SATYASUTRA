@@ -156,6 +156,11 @@ class FastClockSettings(_Strict):
     max_clusters: int = Field(gt=0)
     result_ttl_s: float = Field(gt=0)
     top_n: int = Field(gt=0)
+    worker_enabled: bool                     # start the live worker with the API; off so the API and its tests run with no network
+    queue_max: int = Field(gt=0)             # posts waiting for the clock; beyond this the oldest are dropped and counted
+    latency_samples: int = Field(gt=0)       # per-post times kept for the median and p95
+    repeat_keys_kept: int = Field(gt=0)      # recent text keys remembered to count exact repeats
+    example_text_chars: int = Field(gt=0)    # an example post's text is cut to this length in /fastclock/top
 
     @model_validator(mode="after")
     def _bands_divide(self) -> "FastClockSettings":
