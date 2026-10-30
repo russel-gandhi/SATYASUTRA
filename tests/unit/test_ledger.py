@@ -107,3 +107,11 @@ def test_verify_script_exit_codes(tmp_path):
     assert bad.returncode == 1 and "TAMPERED at seq 1" in bad.stdout
     missing = subprocess.run([sys.executable, script, "--db", str(tmp_path / "none.db")], capture_output=True, text=True)
     assert missing.returncode == 2
+
+
+def test_reads_and_writes_leave_no_open_connection_so_the_file_can_be_deleted(tmp_path):
+    path = tmp_path / "l.sqlite3"
+    store = SQLiteLedgerStore(path, code_version="t1", clock=lambda: FIXED)
+    fill(store)
+    store.get(1), store.head(), list(store.entries()), store.verify()
+    path.unlink()                                  # Windows refuses this while any connection is still open

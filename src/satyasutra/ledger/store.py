@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from contextlib import closing
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -62,7 +63,7 @@ class SQLiteLedgerStore:
         self._clock = clock
         if str(self.path) != ":memory:":
             self.path.parent.mkdir(parents=True, exist_ok=True)
-        with self._connect() as con:
+        with closing(self._connect()) as con:
             con.executescript(_SCHEMA)
 
     def _connect(self) -> sqlite3.Connection:
@@ -111,17 +112,17 @@ class SQLiteLedgerStore:
             con.close()
 
     def get(self, seq: int) -> LedgerEntry | None:
-        with self._connect() as con:
+        with closing(self._connect()) as con:
             row = con.execute("SELECT * FROM entries WHERE seq = ?", (seq,)).fetchone()
         return self._row_to_entry(row) if row else None
 
     def head(self) -> LedgerEntry | None:
-        with self._connect() as con:
+        with closing(self._connect()) as con:
             row = con.execute("SELECT * FROM entries ORDER BY seq DESC LIMIT 1").fetchone()
         return self._row_to_entry(row) if row else None
 
     def entries(self) -> Iterator[LedgerEntry]:
-        with self._connect() as con:
+        with closing(self._connect()) as con:
             rows = con.execute("SELECT * FROM entries ORDER BY seq").fetchall()
         for row in rows:
             yield self._row_to_entry(row)
@@ -129,7 +130,7 @@ class SQLiteLedgerStore:
     def verify(self) -> VerifyResult:
         """Re-walk the chain and recompute every hash. One changed byte, a gap or a reorder fails it."""
         expected_seq, prev, checked = 1, GENESIS_HASH, 0
-        with self._connect() as con:
+        with closing(self._connect()) as con:
             rows = con.execute("SELECT * FROM entries ORDER BY seq").fetchall()
         for row in rows:
             seq = row["seq"]

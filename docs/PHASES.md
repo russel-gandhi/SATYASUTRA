@@ -49,3 +49,7 @@ F0-03: freeze core schemas
 
 What changed and why in two or three lines. Reference the plan section if useful.
 ```
+
+## Gate log
+
+- **Phase 1 gate command passes (2026-10-31, F1-09).** A post taken live from the Bluesky stream goes through Gemini claim extraction, a Fact Check lookup and the verdict rules, and each verdict gets a ledger row (`tests/contract/test_walking_skeleton.py`, `scripts/verify_live.py`). Phase 1 stays open: F1-03 (LangGraph to SSE) and F1-10 (debunked-image index) are not done, so it is not merged to `main`. On 8 live posts, 1 produced a claim (a stock-trade report, `UNVERIFIABLE_YET`, no reviews); most posts are opinion or chatter.

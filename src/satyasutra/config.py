@@ -168,6 +168,15 @@ class ExtractSettings(_Strict):
     max_claims_per_post: int = Field(gt=0)
 
 
+class VerifySettings(_Strict):
+    posts_endpoint: str                      # Bluesky AppView getPosts, used when /verify is given a post URI
+    timeout_s: float = Field(gt=0)
+    max_text_chars: int = Field(gt=0)
+    text_source_id: str                      # source_id recorded for text posted straight to /verify
+    uri_prefix: str                          # what a Bluesky post URI starts with
+    ledger_kind: str
+
+
 class RuntimeFile(_Strict):
     ledger_db_path: str
     cache_db_path: str
@@ -176,6 +185,7 @@ class RuntimeFile(_Strict):
     factcheck: FactCheckSettings
     fastclock: FastClockSettings
     extract: ExtractSettings
+    verify: VerifySettings
 
 
 class Config(_Strict):

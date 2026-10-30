@@ -47,7 +47,7 @@ def author_salt(env: Mapping[str, str] | None = None) -> str:
     return env.get("FORGE_AUTHOR_SALT") or secrets.token_hex(16)
 
 
-def _hash_author(salt: str, did: str) -> str:
+def hash_author(salt: str, did: str) -> str:
     return hashlib.sha256(f"{salt}|{did}".encode("utf-8")).hexdigest()
 
 
@@ -118,7 +118,7 @@ def parse_event(
             id=f"at://{did}/{collection}/{rkey}",
             source_id=cfg.source_id,
             url=cfg.post_url_template.format(did=did, rkey=rkey),
-            author_hash=_hash_author(salt, did),
+            author_hash=hash_author(salt, did),
             text=text,
             lang=langs[0] if langs else None,
             posted_at=posted_at,

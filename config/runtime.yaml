@@ -33,3 +33,11 @@ fastclock:
   top_n: 10
 extract:
   max_claims_per_post: 5
+
+verify:
+  posts_endpoint: https://public.api.bsky.app/xrpc/app.bsky.feed.getPosts
+  timeout_s: 15
+  max_text_chars: 3000
+  text_source_id: api_text
+  uri_prefix: "at://"
+  ledger_kind: verdict
