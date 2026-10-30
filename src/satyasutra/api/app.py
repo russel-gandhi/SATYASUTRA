@@ -8,14 +8,16 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from functools import cache
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, model_validator
 
 from .. import __version__
 from ..config import Config, load_config
 from ..envfile import load_env_file
+from ..agent import format_sse, trace_events
 from ..cache import TTLCache
 from ..claims import ExtractionResult, extract_claims
 from ..errors import ConfigError, SourceError
@@ -29,6 +31,7 @@ from ..sources import FactCheckClient, FactCheckResult, ProbeResult, probe_all
 from ..sources.bluesky import PostNotFound, fetch_post
 
 ROOT = Path(__file__).resolve().parents[3]
+JOB_ID = r"^[A-Za-z0-9_-]+$"
 
 
 class VerifyRequest(BaseModel):
@@ -49,6 +52,7 @@ def create_app(
     extract: Callable[[Post], ExtractionResult] | None = None,
     lookup: Callable[[str, str | None], FactCheckResult] | None = None,
     fetch: Callable[[str], Post] | None = None,
+    trace_graph: Any = None,
 ) -> FastAPI:
     load_env_file(ROOT / ".env")
     cfg = config or load_config()
@@ -58,6 +62,7 @@ def create_app(
     app = FastAPI(title="SATYASUTRA", version=__version__)
     app.state.config = cfg
     app.state.ledger = ledger
+    app.state.active_traces = 0           # streams currently open; the disconnect test watches it return to zero
     salt = author_salt()
 
     # Built on first use, so /health works with no keys set; a missing key then surfaces as a clear error on /verify only.
@@ -101,6 +106,23 @@ def create_app(
         if entry is None:
             raise HTTPException(status_code=404, detail=f"no ledger entry {seq}")
         return entry.model_dump(mode="json")
+
+    @app.get("/trace/stream")
+    async def trace_stream(job: str = Query(min_length=1, max_length=64, pattern=JOB_ID)) -> StreamingResponse:
+        """Run the agent graph for this job and stream its trace as Server-Sent Events, each event sent as it happens.
+        The run lives only as long as the connection: a client that leaves cancels it. (Persisted jobs come with the real agent.)"""
+        if trace_graph is None:
+            raise HTTPException(status_code=503, detail="no agent graph is configured")
+
+        async def body():
+            app.state.active_traces += 1
+            try:
+                async for event in trace_events(trace_graph, {"job": job}, job, cfg.runtime.trace):
+                    yield format_sse(event)
+            finally:
+                app.state.active_traces -= 1
+
+        return StreamingResponse(body(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
     @app.post("/verify")
     def verify(request: VerifyRequest) -> dict:

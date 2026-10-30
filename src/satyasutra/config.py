@@ -168,6 +168,10 @@ class ExtractSettings(_Strict):
     max_claims_per_post: int = Field(gt=0)
 
 
+class TraceSettings(_Strict):
+    summary_max_chars: int = Field(gt=0)     # tool-call summaries are cut to this length before they are streamed
+
+
 class FeedRef(_Strict):
     source_id: str                           # its URL is the source's probe_url in sources.yaml
     publisher: str
@@ -211,6 +215,7 @@ class RuntimeFile(_Strict):
     extract: ExtractSettings
     verify: VerifySettings
     provenance: ProvenanceSettings
+    trace: TraceSettings
 
 
 class Config(_Strict):

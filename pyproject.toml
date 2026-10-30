@@ -4,6 +4,7 @@ version = "0.0.1"
 description = "FORGE: build repository for the SATYASUTRA claim-verification and media-audit engine"
 requires-python = ">=3.11"
 dependencies = [
+    "langgraph>=1.2",
     "pillow>=11",
     "numpy>=2",
     "pdqhash>=0.2.8",

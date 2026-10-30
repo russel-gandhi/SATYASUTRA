@@ -74,7 +74,8 @@ src/satyasutra/
   provenance/  fingerprint.py (SHA-256, pHash, PDQ, mirrored), index.py (SQLite of hashes and links), feeds.py, build.py
   pipeline.py  verify_post: extract -> Fact Check -> rules -> one ledger row per verdict
   cache.py, ratelimit.py, envfile.py
-  api/app.py   FastAPI factory; POST /verify takes {"text"} or {"uri"}
+  agent/       trace.py: LangGraph run -> typed trace events (the real agent graph is Phase 3)
+  api/app.py   FastAPI factory; POST /verify takes {"text"} or {"uri"}; GET /trace/stream?job= streams trace events as SSE
 scripts/       probe_sources, tail_posts, measure_gemini, check_env, calibrate_fastclock, calibrate_factcheck, cluster_live, extract_live,
                verify_live, build_index, match_image, measure_image_match, check_no_fixtures, verify_ledger
 docs/          plan/ (the SATYASUTRA plan: BIBLE, BUILD_MAP*, source of truth for design), PHASES.md (with a gate log), spikes.md,
@@ -88,9 +89,9 @@ only Tier 1 or 2 evidence can decide a claim, "cannot tell" is a valid result, a
 
 ## State at the time of writing
 
-- **Phase 0 done** (9/9, on `main`, tag `phase-0-complete`). **Phase 1: 9 of 10 done**, on branch `phase-1/walking-skeleton`
-  (pushed; CI green on the latest push). Only **F1-03 (LangGraph streaming to SSE spike)** is left. When it is done, tick the Phase 1
-  gate (the gate log in `docs/PHASES.md` already records that the gate command passes) and merge to `main`.
+- **Phase 0 done** (9/9, on `main`, tag `phase-0-complete`). **Phase 1 done: 10 of 10 tickets**, on branch `phase-1/walking-skeleton`
+  (pushed; CI green on the F1-10 push). The gate command passes and is logged in `docs/PHASES.md`. **Not yet merged to `main`**; merge
+  and tag `phase-1-complete` when the user says so, then write the Phase 2 tickets.
 - The walking skeleton works: `POST /verify` takes text or a Bluesky post URI, extracts claims with Gemini, looks them up in the Fact
   Check API, applies the verdict rules and writes one ledger row per verdict. On 8 live stream posts only 1 held a claim; most posts
   are opinion or chatter. A live REFUTED or SUPPORTED end to end has not been seen.
@@ -118,6 +119,8 @@ only Tier 1 or 2 evidence can decide a claim, "cannot tell" is a valid result, a
   PDQ distance <= 40 bits (`image_match_pdq_distance`, measured on 60 Commons images: 0 false matches up to 96, edits within 36).
   Crops do not match. A match means "appeared in a fact-check", never "false". Feeds carry no structured rating. Manual Lens/Yandex
   lookups remain for demo items. `pdqhash` is built from source (needs a C++ compiler).
+- **LangGraph 1.2.18 streams on Python 3.14** (`astream(stream_mode=["tasks"])`, first SSE event about 16 ms). Its task `error` field holds the
+  exception message, so the trace reports only the class; the state schema must declare every key a node returns or LangGraph drops it.
 - **Wikimedia** blocks any request without a filled-in User-Agent: always use `build_user_agent(config.runtime.probe.user_agent)`, never
   the raw template. Its random-file API caches identical requests.
 - **Python 3.14:** torch (CPU), onnxruntime, mediapipe, faster-whisper install and import. The PyPI torch wheel has no CUDA, so the

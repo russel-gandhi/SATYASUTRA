@@ -60,3 +60,6 @@ provenance:
     endpoint: https://commons.wikimedia.org/w/api.php
     thumb_width: 640
     sample_size: 60
+
+trace:
+  summary_max_chars: 200
