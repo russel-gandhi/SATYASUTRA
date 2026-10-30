@@ -9,3 +9,7 @@ data/
 *.db
 .env
 config/sources.local.yaml
+
+.env.*
+!.env.example
+*.env.txt

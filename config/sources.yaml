@@ -71,19 +71,19 @@ sources:
     rate_limit_per_min: 15
     cache_ttl_s: 86400
 
-  - id: reverse_image_search
-    role: provenance
-    description: Google Cloud Vision web detection (candidate; Spike S1 decides whether it stays)
-    probe_url: https://vision.googleapis.com/
-    tier: 4
-    auth_env: GOOGLE_CLOUD_VISION_API_KEY
-    auth_param: key
-    cache_ttl_s: 86400
-    note: paid beyond a free allowance; pricing and terms not verified
-
   - id: telegram_bot_api
     role: bot channel
     description: Telegram Bot API host (reachability only; the token is never part of the probe URL)
     probe_url: https://api.telegram.org/
     tier: 4
     auth_env: TELEGRAM_BOT_TOKEN
+
+  - id: gemini_llm
+    role: llm
+    description: Google Gemini API (LLM provider chosen by the team; model id is set in config once confirmed by a listing)
+    probe_url: https://generativelanguage.googleapis.com/v1beta/models?pageSize=1
+    tier: 4
+    auth_env: GEMINI_API_KEY
+    auth_param: key
+    rate_limit_per_min: 10
+    note: key held by the team; free-tier limits not verified

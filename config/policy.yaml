@@ -11,4 +11,4 @@ budgets:
   max_steps_per_claim: 12
   max_seconds_per_claim: 45
   max_fetches_per_claim: 8
-  reverse_search_per_day: 0    # stays 0 until Spike S1 confirms a key and a price
+  reverse_search_per_day: 0    # paid reverse search is out (team decision); provenance uses our own pHash/PDQ index
