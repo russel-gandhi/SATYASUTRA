@@ -41,6 +41,10 @@ verify:
   text_source_id: api_text
   uri_prefix: "at://"
   ledger_kind: verdict
+  # Starting values, not measured: there is no data yet on how fast fact-checks appear or change. Revisit with real repeat traffic.
+  # The Fact Check lookup keeps its own cache (sources.yaml, 600 s), so a verdict can be up to the TTL plus that old.
+  cache_ttl_decided_s: 21600
+  cache_ttl_undecided_s: 900
 
 provenance:
   db_path: data/provenance.sqlite3

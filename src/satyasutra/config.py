@@ -203,6 +203,8 @@ class VerifySettings(_Strict):
     text_source_id: str                      # source_id recorded for text posted straight to /verify
     uri_prefix: str                          # what a Bluesky post URI starts with
     ledger_kind: str
+    cache_ttl_decided_s: float = Field(gt=0)     # how long a decided verdict (REFUTED, SUPPORTED, MISSING_CONTEXT) is served from cache
+    cache_ttl_undecided_s: float = Field(gt=0)   # UNVERIFIABLE_YET and no-claim results expire sooner: new fact-checks appear
 
 
 class RuntimeFile(_Strict):

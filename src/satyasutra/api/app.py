@@ -19,6 +19,7 @@ from ..config import Config, load_config
 from ..envfile import load_env_file
 from ..agent import format_sse, trace_events
 from ..cache import TTLCache
+from ..fastclock import FastClock
 from ..claims import ExtractionResult, extract_claims
 from ..errors import ConfigError, SourceError
 from ..ingest import author_salt, hash_author
@@ -29,6 +30,7 @@ from ..schemas import SCHEMA_VERSION, Post
 from ..schemas.core import sha256_text
 from ..sources import FactCheckClient, FactCheckResult, ProbeResult, probe_all
 from ..sources.bluesky import PostNotFound, fetch_post
+from ..verdict_cache import VerdictCache, mark
 
 ROOT = Path(__file__).resolve().parents[3]
 JOB_ID = r"^[A-Za-z0-9_-]+$"
@@ -53,6 +55,8 @@ def create_app(
     lookup: Callable[[str, str | None], FactCheckResult] | None = None,
     fetch: Callable[[str], Post] | None = None,
     trace_graph: Any = None,
+    fastclock: FastClock | None = None,
+    verdict_cache: VerdictCache | None = None,
 ) -> FastAPI:
     load_env_file(ROOT / ".env")
     cfg = config or load_config()
@@ -73,6 +77,11 @@ def create_app(
     @cache
     def factcheck() -> FactCheckClient:
         return FactCheckClient(cfg, TTLCache(_path(cfg.runtime.cache_db_path)))
+
+    # Built on first use like the clients above; the cache lives in its own file so clearing it never touches the ledger.
+    @cache
+    def verdicts() -> VerdictCache:
+        return verdict_cache or VerdictCache(TTLCache(_path(cfg.runtime.cache_db_path)), cfg, __version__, scope=str(getattr(ledger, "path", "")))
 
     do_extract = extract or (lambda post: extract_claims(gemini(), cfg, post))
     do_lookup = lookup or (lambda text, lang: factcheck().search(text, lang))
@@ -139,13 +148,19 @@ def create_app(
                 now = datetime.now(timezone.utc)
                 post = Post(id=f"{settings.text_source_id}:{sha256_text(text)[:16]}", source_id=settings.text_source_id, url="",
                             author_hash=hash_author(salt, settings.text_source_id), text=text, posted_at=now, fetched_at=now)
-            done = verify_post(post, cfg, ledger, do_extract, do_lookup)
+            if fastclock is not None:
+                fastclock.process(post)            # a repeat is still a post that spread: it counts toward the cluster's velocity
+            cached = verdicts().get_or_compute(post.text, lambda: _run(post))
         except PostNotFound as exc:
             raise HTTPException(status_code=404, detail=str(exc))
         except ConfigError as exc:
             raise HTTPException(status_code=503, detail=str(exc))
         except SourceError as exc:
             raise HTTPException(status_code=502, detail=f"{type(exc).__name__}: {exc.detail}")
+        return mark(cached)
+
+    def _run(post: Post) -> dict:
+        done = verify_post(post, cfg, ledger, do_extract, do_lookup)
         ex = done.extraction
         if ex.status in ("blocked", "failed"):
             raise HTTPException(status_code=502, detail=f"claim extraction {ex.status}: {ex.reason}")
