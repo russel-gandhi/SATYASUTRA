@@ -172,7 +172,7 @@ class CorrectionCard(_Model):
     @field_validator("links")
     @classmethod
     def _https(cls, v: list[str]) -> list[str]:
-        if not all(link.startswith("https://") for link in v):
+        if not all(link.startswith("https://") for link in v):  # forge: allow-literal scheme check, not a source
             raise ValueError("every link must be https")
         return v
 

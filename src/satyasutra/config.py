@@ -35,7 +35,7 @@ class SourceConfig(_Strict):
     @field_validator("probe_url")
     @classmethod
     def _http(cls, v: str) -> str:
-        if not v.startswith(("http://", "https://")):
+        if not v.startswith(("http://", "https://")):  # forge: allow-literal scheme check, not a source
             raise ValueError("probe_url must be an http(s) URL")
         return v
 

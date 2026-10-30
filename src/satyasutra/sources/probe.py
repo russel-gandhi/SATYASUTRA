@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import time
+from http import HTTPStatus
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
@@ -71,13 +72,13 @@ def probe_source(src: SourceConfig, client: httpx.Client, env: Mapping[str, str]
     latency = int((time.perf_counter() - started) * 1000)
     code = response.status_code
 
-    if code == 429:
+    if code == HTTPStatus.TOO_MANY_REQUESTS:
         return result("rate_limited", code, latency, "HTTP 429")
-    if code in (401, 403):
+    if code in (HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN):
         return result("blocked", code, latency, f"HTTP {code}: reachable, but access refused")
-    if code >= 500:
+    if code >= HTTPStatus.INTERNAL_SERVER_ERROR:
         return result("unreachable", code, latency, f"HTTP {code}")
-    if code >= 400:
+    if code >= HTTPStatus.BAD_REQUEST:
         return result("unreachable", code, latency, f"HTTP {code}: unexpected for a probe URL")
     return result("reachable", code, latency, "ok")
 
