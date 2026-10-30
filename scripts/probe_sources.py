@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from satyasutra.config import load_config  # noqa: E402
+from satyasutra.envfile import load_env_file  # noqa: E402
 from satyasutra.sources import probe_all  # noqa: E402
 
 
@@ -38,6 +39,7 @@ def main(argv=None) -> int:
     parser.add_argument("--strict", action="store_true")
     args = parser.parse_args(argv)
 
+    load_env_file(Path(__file__).resolve().parents[1] / ".env")
     results = probe_all(load_config())
     if args.json:
         print(json.dumps([r.as_dict() for r in results], indent=2))

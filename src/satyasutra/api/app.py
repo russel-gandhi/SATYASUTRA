@@ -12,6 +12,7 @@ from fastapi import FastAPI, HTTPException
 
 from .. import __version__
 from ..config import Config, load_config
+from ..envfile import load_env_file
 from ..ledger import LedgerStore, SQLiteLedgerStore
 from ..schemas import SCHEMA_VERSION
 from ..sources import ProbeResult, probe_all
@@ -24,6 +25,7 @@ def create_app(
     ledger: LedgerStore | None = None,
     prober: Callable[[Config], list[ProbeResult]] = probe_all,
 ) -> FastAPI:
+    load_env_file(ROOT / ".env")
     cfg = config or load_config()
     if ledger is None:
         db = Path(cfg.runtime.ledger_db_path)
