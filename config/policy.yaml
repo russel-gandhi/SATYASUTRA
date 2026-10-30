@@ -18,6 +18,9 @@ gemini:
   measure_max_calls: 40       # hard cap on live calls per measurement run, to stay inside the free tier
   measure_timeout_s: 60
   retest_attempts: 3
+  request_timeout_s: 30
+  max_retries: 2
+  max_retry_wait_s: 30
   requests_per_minute: 15     # free tier, from the API's own 429 body (docs/gemini_limits.md)
   measured_on: "2026-10-30"
 

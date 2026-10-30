@@ -31,4 +31,5 @@ fastclock:
   max_clusters: 5000
   result_ttl_s: 3600
   top_n: 10
-
+extract:
+  max_claims_per_post: 5

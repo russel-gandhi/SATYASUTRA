@@ -23,6 +23,7 @@ from ..cache import TTLCache
 from ..config import Config
 from ..errors import ConfigError, QuotaExhausted, RateLimited, SchemaChanged, Unreachable
 from ..schemas import Evidence
+from ..ratelimit import Spacer
 from ..schemas.core import sha256_text
 
 SOURCE_ID = "factcheck_tools"
@@ -31,22 +32,6 @@ SECONDS_PER_MINUTE = 60
 
 def normalise_query(text: str) -> str:
     return " ".join(unicodedata.normalize("NFKC", text).casefold().split())
-
-
-class _Spacer:
-    """Keeps calls at least 60/limit seconds apart, so the configured per-minute limit is never exceeded."""
-
-    def __init__(self, per_minute: int | None, clock: Callable[[], float], sleep: Callable[[float], None]):
-        self._gap = SECONDS_PER_MINUTE / per_minute if per_minute else 0.0
-        self._clock, self._sleep, self._next, self._lock = clock, sleep, 0.0, threading.Lock()
-
-    def wait(self) -> None:
-        with self._lock:
-            now = self._clock()
-            if now < self._next:
-                self._sleep(self._next - now)
-                now = self._next
-            self._next = now + self._gap
 
 
 @dataclass
@@ -114,7 +99,7 @@ class FactCheckClient:
         self._settings = config.runtime.factcheck
         self._cache, self._env, self._clock = cache, env, clock
         self._http = client or httpx.Client(timeout=self._settings.timeout_s, headers={"User-Agent": config.runtime.probe.user_agent})
-        self._spacer = _Spacer(self._src.rate_limit_per_min, clock, sleep)
+        self._spacer = Spacer(self._src.rate_limit_per_min, clock, sleep)
 
     def _key(self) -> str:
         env = os.environ if self._env is None else self._env

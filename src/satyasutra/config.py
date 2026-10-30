@@ -66,6 +66,9 @@ class GeminiPolicy(_Strict):
     measure_max_calls: int = Field(gt=0)
     measure_timeout_s: int = Field(gt=0)
     retest_attempts: int = Field(gt=0)
+    request_timeout_s: float = Field(gt=0)
+    max_retries: int = Field(ge=0)               # extra attempts after a 429 that names a short retry delay
+    max_retry_wait_s: float = Field(ge=0)        # a longer retry delay than this is reported, not waited out
     requests_per_minute: int | None = None      # filled from docs/gemini_limits.md after a measurement
     measured_on: str = ""
 
@@ -133,6 +136,10 @@ class FastClockSettings(_Strict):
         return self
 
 
+class ExtractSettings(_Strict):
+    max_claims_per_post: int = Field(gt=0)
+
+
 class RuntimeFile(_Strict):
     ledger_db_path: str
     cache_db_path: str
@@ -140,6 +147,7 @@ class RuntimeFile(_Strict):
     ingest: IngestSettings
     factcheck: FactCheckSettings
     fastclock: FastClockSettings
+    extract: ExtractSettings
 
 
 class Config(_Strict):
