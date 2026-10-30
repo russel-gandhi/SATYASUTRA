@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
+from pydantic import model_validator, BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from .errors import ConfigError
 
@@ -116,12 +116,30 @@ class FactCheckSettings(_Strict):
     timeout_s: float = Field(gt=0)
 
 
+class FastClockSettings(_Strict):
+    shingle_words: int = Field(gt=0)
+    num_perm: int = Field(gt=0)
+    lsh_bands: int = Field(gt=0)             # must divide num_perm; rows per band = num_perm / lsh_bands
+    window_s: float = Field(gt=0)            # velocity is posts per minute over this window
+    cluster_idle_s: float = Field(gt=0)      # clusters silent this long are forgotten
+    max_clusters: int = Field(gt=0)
+    result_ttl_s: float = Field(gt=0)
+    top_n: int = Field(gt=0)
+
+    @model_validator(mode="after")
+    def _bands_divide(self) -> "FastClockSettings":
+        if self.num_perm % self.lsh_bands:
+            raise ValueError("lsh_bands must divide num_perm")
+        return self
+
+
 class RuntimeFile(_Strict):
     ledger_db_path: str
     cache_db_path: str
     probe: ProbeSettings
     ingest: IngestSettings
     factcheck: FactCheckSettings
+    fastclock: FastClockSettings
 
 
 class Config(_Strict):

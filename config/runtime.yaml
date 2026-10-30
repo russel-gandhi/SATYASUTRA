@@ -22,4 +22,13 @@ factcheck:
   endpoint: https://factchecktools.googleapis.com/v1alpha1/claims:search
   page_size: 5
   timeout_s: 20
+fastclock:
+  shingle_words: 3
+  num_perm: 128
+  lsh_bands: 32                # 4 rows per band; the similarity this bucketing starts to catch is about (1/bands)^(1/rows)
+  window_s: 300
+  cluster_idle_s: 900
+  max_clusters: 5000
+  result_ttl_s: 3600
+  top_n: 10
 

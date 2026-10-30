@@ -1,3 +1,11 @@
 # Every threshold carries the model hash, data and date it was calibrated on (Bible D10, I3).
 # Empty on purpose: nothing is calibrated yet, and nothing in src/ may invent a value.
-thresholds: {}
+thresholds:
+  cluster_jaccard:
+    value: 0.75
+    calibrated_on: 'posts_5min.jsonl: live 5-minute Bluesky capture, 3101 posts; 16
+      sample pairs read by hand around 0.75: 7 of 8 above are the same message (1
+      templated bot variant), only 4 of 8 below are; chosen to favour pure clusters.
+      Command: scripts/calibrate_fastclock.py capture --seconds 300, then analyse.
+      General chatter, not a news event: recalibrate during one'
+    date: '2026-10-31'
