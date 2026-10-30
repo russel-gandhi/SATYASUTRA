@@ -96,7 +96,7 @@ only Tier 1 or 2 evidence can decide a claim, "cannot tell" is a valid result, a
 - The walking skeleton works: `POST /verify` takes text or a Bluesky post URI, extracts claims with Gemini, looks them up in the Fact
   Check API, applies the verdict rules and writes one ledger row per verdict. On 8 live stream posts only 1 held a claim; most posts
   are opinion or chatter. A live REFUTED or SUPPORTED end to end has not been seen.
-- Phase 2 to 9 tickets are not written yet; write them when each phase starts.
+- Phase 3 to 9 tickets are not written yet; write them when each phase starts.
 - Open: TruFor `LICENSE.txt` not read; organiser question Q15 unanswered in writing; Gemini per-day quota not measured; Telegram echo
   untested and the exposed token must be re-issued; MiniCheck needs the user's approval to install; CUDA torch for the RTX 4060
   undecided; `cluster_jaccard` should be recalibrated during a real news event; extraction quality on real news and Hindi claims
