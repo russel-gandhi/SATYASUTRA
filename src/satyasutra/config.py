@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
+from pydantic import model_validator, BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from .errors import ConfigError
 
@@ -60,10 +60,52 @@ class Budgets(_Strict):
     reverse_search_per_day: int = Field(ge=0)
 
 
+class GeminiPolicy(_Strict):
+    api_base: str
+    models: list[str] = Field(min_length=1)
+    measure_max_calls: int = Field(gt=0)
+    measure_timeout_s: int = Field(gt=0)
+    retest_attempts: int = Field(gt=0)
+    request_timeout_s: float = Field(gt=0)
+    max_retries: int = Field(ge=0)               # extra attempts after a 429 that names a short retry delay
+    max_retry_wait_s: float = Field(ge=0)        # a longer retry delay than this is reported, not waited out
+    requests_per_minute: int | None = None      # filled from docs/gemini_limits.md after a measurement
+    measured_on: str = ""
+
+
+class RatingMap(_Strict):
+    """Publisher rating phrases by what they mean for a claim, taken from ratings actually seen (scripts/calibrate_factcheck.py)."""
+    refutes: list[str] = Field(default_factory=list)
+    supports: list[str] = Field(default_factory=list)
+    mixed: list[str] = Field(default_factory=list)        # true in part, or true but missing context
+    unproven: list[str] = Field(default_factory=list)     # "no evidence for this": absence of support, which never refutes (D12)
+
+    @model_validator(mode="after")
+    def _no_phrase_in_two_groups(self) -> "RatingMap":
+        seen: dict[str, str] = {}
+        for group in ("refutes", "supports", "mixed", "unproven"):
+            for phrase in getattr(self, group):
+                key = " ".join(phrase.casefold().split())
+                if key in seen and seen[key] != group:
+                    raise ValueError(f"rating phrase {phrase!r} is in both {seen[key]} and {group}")
+                seen[key] = group
+        return self
+
+
+class VerdictRules(_Strict):
+    rating_map: RatingMap
+    negations: list[str]                          # a review and a claim that differ in negation may be opposites
+    min_publishers_for_high: int = Field(gt=0)
+    stale_after_days: int = Field(gt=0)           # policy choice, not a measurement
+    related_limit: int = Field(ge=0)
+
+
 class PolicyFile(_Strict):
     allowed_domains: list[str]
     read_only: bool = True
     budgets: Budgets
+    gemini: GeminiPolicy
+    verdict_rules: VerdictRules
 
 
 class ThresholdEntry(_Strict):
@@ -82,9 +124,98 @@ class ProbeSettings(_Strict):
     user_agent: str
 
 
+class IngestSettings(_Strict):
+    source_id: str
+    ws_url: str
+    collections: list[str] = Field(min_length=1)
+    post_url_template: str
+    langs: list[str] = Field(default_factory=list)       # empty means every language
+    keywords: list[str] = Field(default_factory=list)    # empty means no keyword filter
+    min_text_chars: int = Field(ge=0)
+    skip_replies: bool
+    open_timeout_s: float = Field(gt=0)
+    idle_timeout_s: float = Field(gt=0)
+    reconnect_delay_s: float = Field(gt=0)
+    max_reconnect_delay_s: float = Field(gt=0)
+    resume_overlap_s: float = Field(ge=0)
+    recent_ids_kept: int = Field(gt=0)
+
+
+class FactCheckSettings(_Strict):
+    endpoint: str
+    page_size: int = Field(gt=0)
+    timeout_s: float = Field(gt=0)
+
+
+class FastClockSettings(_Strict):
+    shingle_words: int = Field(gt=0)
+    num_perm: int = Field(gt=0)
+    lsh_bands: int = Field(gt=0)             # must divide num_perm; rows per band = num_perm / lsh_bands
+    window_s: float = Field(gt=0)            # velocity is posts per minute over this window
+    cluster_idle_s: float = Field(gt=0)      # clusters silent this long are forgotten
+    max_clusters: int = Field(gt=0)
+    result_ttl_s: float = Field(gt=0)
+    top_n: int = Field(gt=0)
+
+    @model_validator(mode="after")
+    def _bands_divide(self) -> "FastClockSettings":
+        if self.num_perm % self.lsh_bands:
+            raise ValueError("lsh_bands must divide num_perm")
+        return self
+
+
+class ExtractSettings(_Strict):
+    max_claims_per_post: int = Field(gt=0)
+
+
+class TraceSettings(_Strict):
+    summary_max_chars: int = Field(gt=0)     # tool-call summaries are cut to this length before they are streamed
+
+
+class FeedRef(_Strict):
+    source_id: str                           # its URL is the source's probe_url in sources.yaml
+    publisher: str
+    lang: str
+
+
+class CommonsSettings(_Strict):
+    endpoint: str
+    thumb_width: int = Field(gt=0)           # images are fetched as thumbnails of this width, to keep downloads small
+    sample_size: int = Field(gt=1)           # images drawn for the false-match measurement
+
+
+class ProvenanceSettings(_Strict):
+    db_path: str
+    feeds: list[FeedRef] = Field(min_length=1)
+    max_image_bytes: int = Field(gt=0)
+    min_side_px: int = Field(gt=0)           # smaller images are icons and badges, not evidence
+    max_images_per_item: int = Field(gt=0)
+    download_timeout_s: float = Field(gt=0)
+    match_limit: int = Field(gt=0)
+    image_requests_per_minute: int = Field(gt=0)
+    commons: CommonsSettings
+
+
+class VerifySettings(_Strict):
+    posts_endpoint: str                      # Bluesky AppView getPosts, used when /verify is given a post URI
+    timeout_s: float = Field(gt=0)
+    max_text_chars: int = Field(gt=0)
+    text_source_id: str                      # source_id recorded for text posted straight to /verify
+    uri_prefix: str                          # what a Bluesky post URI starts with
+    ledger_kind: str
+
+
 class RuntimeFile(_Strict):
     ledger_db_path: str
+    cache_db_path: str
     probe: ProbeSettings
+    ingest: IngestSettings
+    factcheck: FactCheckSettings
+    fastclock: FastClockSettings
+    extract: ExtractSettings
+    verify: VerifySettings
+    provenance: ProvenanceSettings
+    trace: TraceSettings
 
 
 class Config(_Strict):

@@ -34,3 +34,12 @@ class SchemaChanged(SourceError):
 
 class QuotaExhausted(SourceError):
     """A budget (ours, in policy.yaml, or the provider's) is used up."""
+
+
+class AuthRefused(SourceError):
+    """The source rejected our credentials (HTTP 401 or 403)."""
+
+
+class ContentBlocked(SourceError):
+    """The source answered but declined to process this input (a safety block), so there is no output to use."""
+

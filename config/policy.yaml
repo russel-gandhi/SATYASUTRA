@@ -12,3 +12,28 @@ budgets:
   max_seconds_per_claim: 45
   max_fetches_per_claim: 8
   reverse_search_per_day: 0    # paid reverse search is out (team decision); provenance uses our own pHash/PDQ index
+gemini:
+  api_base: https://generativelanguage.googleapis.com/v1beta
+  models: [gemini-3.5-flash-lite, gemini-3.8-flash]    # first is the working default (spikes.md, 2026-10-31)
+  measure_max_calls: 40       # hard cap on live calls per measurement run, to stay inside the free tier
+  measure_timeout_s: 60
+  retest_attempts: 3
+  request_timeout_s: 30
+  max_retries: 2
+  max_retry_wait_s: 30
+  requests_per_minute: 15     # free tier, from the API's own 429 body (docs/gemini_limits.md)
+  measured_on: "2026-10-30"
+verdict_rules:
+  # Phrases are matched against the start of a normalised rating, longest phrase first. Every phrase below was seen in a live
+  # Fact Check response on 2026-10-31 (93 reviews, 14+ publishers). "supports" is empty because no positive rating appeared:
+  # fact-checkers mostly publish debunks, so a fact-check alone will rarely support a claim. Unlisted ratings stay unmapped.
+  rating_map:
+    refutes: ["false", "mostly false", "tragically false", "fake", "inaccurate", "incorrect", "this is incorrect"]
+    supports: []
+    mixed: ["misleading", "missing context", "lacks context", "not the whole story", "half true", "distorts the facts", "spins the facts"]
+    unproven: ["unsupported", "there is no evidence", "we don t have good enough evidence"]
+  negations: ["not", "no", "never", "none", "without", "cannot", "neither", "nor", "n't"]   # quoted: bare no/false would parse as booleans
+  min_publishers_for_high: 2
+  stale_after_days: 365
+  related_limit: 3
+

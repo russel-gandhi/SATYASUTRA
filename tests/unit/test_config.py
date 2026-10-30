@@ -26,7 +26,8 @@ def test_real_config_loads_and_is_unverified():
 
 def test_checksum_changes_with_content(cfgdir):
     before = load_config(cfgdir).checksum
-    (cfgdir / "runtime.yaml").write_text("ledger_db_path: x.db\nprobe:\n  timeout_s: 3\n  user_agent: t\n", encoding="utf-8")
+    runtime = (cfgdir / "runtime.yaml").read_text(encoding="utf-8")
+    (cfgdir / "runtime.yaml").write_text(runtime.replace("timeout_s: 8", "timeout_s: 3"), encoding="utf-8")
     assert load_config(cfgdir).checksum != before
 
 

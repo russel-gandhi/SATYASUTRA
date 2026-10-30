@@ -1,4 +1,65 @@
 ledger_db_path: data/ledger.sqlite3
+cache_db_path: data/cache.sqlite3
 probe:
   timeout_s: 8
   user_agent: "FORGE-probe/0.0.1 (hackathon build; contact: {contact})"
+ingest:
+  source_id: bluesky_jetstream
+  ws_url: wss://jetstream2.us-east.bsky.network/subscribe
+  collections: [app.bsky.feed.post]
+  post_url_template: https://bsky.app/profile/{did}/post/{rkey}
+  langs: [en, hi]              # posts with no language tag are skipped while this is set
+  keywords: []
+  min_text_chars: 40           # shorter posts rarely hold a checkable claim; revisit with the F1-08 capture
+  skip_replies: true
+  open_timeout_s: 15
+  idle_timeout_s: 30
+  reconnect_delay_s: 1
+  max_reconnect_delay_s: 30
+  resume_overlap_s: 2          # reconnect this far behind the last event; repeats are dropped by id
+  recent_ids_kept: 20000
+factcheck:
+  endpoint: https://factchecktools.googleapis.com/v1alpha1/claims:search
+  page_size: 5
+  timeout_s: 20
+fastclock:
+  shingle_words: 3
+  num_perm: 128
+  lsh_bands: 32                # 4 rows per band; the similarity this bucketing starts to catch is about (1/bands)^(1/rows)
+  window_s: 300
+  cluster_idle_s: 900
+  max_clusters: 5000
+  result_ttl_s: 3600
+  top_n: 10
+extract:
+  max_claims_per_post: 5
+
+verify:
+  posts_endpoint: https://public.api.bsky.app/xrpc/app.bsky.feed.getPosts
+  timeout_s: 15
+  max_text_chars: 3000
+  text_source_id: api_text
+  uri_prefix: "at://"
+  ledger_kind: verdict
+
+provenance:
+  db_path: data/provenance.sqlite3
+  feeds:
+    - {source_id: feed_altnews, publisher: Alt News, lang: en}
+    - {source_id: feed_factly, publisher: Factly, lang: en}
+    - {source_id: feed_boom_hindi, publisher: BOOM Hindi, lang: hi}
+    - {source_id: feed_boom_english, publisher: BOOM, lang: en}
+    - {source_id: feed_factcheck_org, publisher: FactCheck.org, lang: en}
+  max_image_bytes: 8000000
+  min_side_px: 200
+  max_images_per_item: 6
+  download_timeout_s: 20
+  match_limit: 5
+  image_requests_per_minute: 60
+  commons:
+    endpoint: https://commons.wikimedia.org/w/api.php
+    thumb_width: 640
+    sample_size: 60
+
+trace:
+  summary_max_chars: 200

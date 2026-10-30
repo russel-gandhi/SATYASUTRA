@@ -1,0 +1,30 @@
+# Packages whose install on this machine's Python must be proven before tickets depend on them (F1-01).
+# `op` runs inside a throwaway venv after install; it must print the `expect` text. Notes say what the op does NOT prove.
+max_download_mb: 400         # larger resolved downloads are listed but not fetched without --allow-large
+packages:
+  - name: torch
+    spec: torch
+    op: "import torch; print(int((torch.ones(2, 2) + torch.ones(2, 2)).sum().item()), 'cuda' if torch.cuda.is_available() else 'cpu')"
+    expect: "8"
+    note: PyPI wheel on Windows is usually CPU-only; CUDA needs the PyTorch index (decide after this run)
+  - name: onnxruntime
+    spec: onnxruntime
+    op: "import onnxruntime as o; print('providers', ','.join(o.get_available_providers()))"
+    expect: "providers"
+    note: import and provider list only; no model was run
+  - name: mediapipe
+    spec: mediapipe
+    op: "import mediapipe as m; print('mediapipe', m.__version__)"
+    expect: "mediapipe"
+    note: import and version only; no task was run
+  - name: faster-whisper
+    spec: faster-whisper
+    op: "import faster_whisper as f; print('faster_whisper', f.__version__)"
+    expect: "faster_whisper"
+    note: import and version only; weights were not downloaded
+  - name: minicheck
+    spec: "minicheck @ git+https://github.com/Liyan06/MiniCheck.git@main"
+    op: "import minicheck; print('minicheck ok')"
+    expect: "minicheck ok"
+    requires_approval: true
+    note: installs from a git branch, which runs that repository's build code; run with --approve minicheck only after the team has looked at it
