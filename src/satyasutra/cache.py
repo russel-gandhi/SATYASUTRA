@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import sqlite3
 import time
+from contextlib import closing
 from pathlib import Path
 from typing import Callable
 
@@ -14,7 +15,7 @@ class TTLCache:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._clock = clock
-        with self._connect() as con:
+        with closing(self._connect()) as con, con:
             con.execute("CREATE TABLE IF NOT EXISTS cache (key TEXT PRIMARY KEY, fetched_at REAL NOT NULL, payload TEXT NOT NULL)")
 
     def _connect(self) -> sqlite3.Connection:
@@ -22,7 +23,7 @@ class TTLCache:
 
     def get(self, key: str, ttl_s: float) -> tuple[str, float] | None:
         """(payload, fetched_at epoch seconds) when present and younger than ttl_s, else None."""
-        with self._connect() as con:
+        with closing(self._connect()) as con:
             row = con.execute("SELECT payload, fetched_at FROM cache WHERE key = ?", (key,)).fetchone()
         if row is None or self._clock() - row[1] > ttl_s:
             return None
@@ -30,6 +31,6 @@ class TTLCache:
 
     def put(self, key: str, payload: str, at: float | None = None) -> float:
         now = self._clock() if at is None else at
-        with self._connect() as con:
+        with closing(self._connect()) as con, con:
             con.execute("INSERT OR REPLACE INTO cache (key, fetched_at, payload) VALUES (?, ?, ?)", (key, now, payload))
         return now

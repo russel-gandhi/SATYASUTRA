@@ -189,3 +189,10 @@ def test_calls_are_spaced_to_the_configured_rate_limit(server, tmp_path):
     client.search("second claim")
     gap = 60 / cfg.source("factcheck_tools").rate_limit_per_min
     assert clock.slept and abs(clock.slept[0] - gap) < 0.01
+
+
+def test_cache_closes_its_connections_so_the_file_can_be_deleted(tmp_path):
+    cache = TTLCache(tmp_path / "c.sqlite3")
+    cache.put("k", "v")
+    assert cache.get("k", 10) is not None
+    (tmp_path / "c.sqlite3").unlink()          # fails on Windows while any connection is still open

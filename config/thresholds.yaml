@@ -9,3 +9,14 @@ thresholds:
       Command: scripts/calibrate_fastclock.py capture --seconds 300, then analyse.
       General chatter, not a news event: recalibrate during one'
     date: '2026-10-31'
+  factcheck_relevance:
+    value: 0.9
+    calibrated_on: 'live Fact Check API, 46 claim-like queries, 93 (query, review)
+      pairs read by hand (2026-10-31): lexical word overlap cannot separate a review
+      of the SAME claim from a review of its OPPOSITE (e.g. ''Smoking doesn t cause
+      cancer'' scored 0.29 against ''Smoking causes lung cancer'' while true paraphrases
+      scored 0.2-0.3), so the cut is set at near-identity; only 1 of 93 pairs passes.
+      Reviews below it are shown as related context, never used to decide. Semantic
+      matching needs embeddings or NLI (Phase 3). Command: scripts/calibrate_factcheck.py
+      collect then relevance'
+    date: '2026-10-31'

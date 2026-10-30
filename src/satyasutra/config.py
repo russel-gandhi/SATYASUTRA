@@ -73,11 +73,39 @@ class GeminiPolicy(_Strict):
     measured_on: str = ""
 
 
+class RatingMap(_Strict):
+    """Publisher rating phrases by what they mean for a claim, taken from ratings actually seen (scripts/calibrate_factcheck.py)."""
+    refutes: list[str] = Field(default_factory=list)
+    supports: list[str] = Field(default_factory=list)
+    mixed: list[str] = Field(default_factory=list)        # true in part, or true but missing context
+    unproven: list[str] = Field(default_factory=list)     # "no evidence for this": absence of support, which never refutes (D12)
+
+    @model_validator(mode="after")
+    def _no_phrase_in_two_groups(self) -> "RatingMap":
+        seen: dict[str, str] = {}
+        for group in ("refutes", "supports", "mixed", "unproven"):
+            for phrase in getattr(self, group):
+                key = " ".join(phrase.casefold().split())
+                if key in seen and seen[key] != group:
+                    raise ValueError(f"rating phrase {phrase!r} is in both {seen[key]} and {group}")
+                seen[key] = group
+        return self
+
+
+class VerdictRules(_Strict):
+    rating_map: RatingMap
+    negations: list[str]                          # a review and a claim that differ in negation may be opposites
+    min_publishers_for_high: int = Field(gt=0)
+    stale_after_days: int = Field(gt=0)           # policy choice, not a measurement
+    related_limit: int = Field(ge=0)
+
+
 class PolicyFile(_Strict):
     allowed_domains: list[str]
     read_only: bool = True
     budgets: Budgets
     gemini: GeminiPolicy
+    verdict_rules: VerdictRules
 
 
 class ThresholdEntry(_Strict):
