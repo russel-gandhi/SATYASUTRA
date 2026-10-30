@@ -35,7 +35,10 @@ Remote: `github.com/aadamaftabpersonal-boop/FORGEHackathon` (public).
 .\.venv\Scripts\python scripts\check_no_fixtures.py  # the guard
 .\.venv\Scripts\python tools\forge.py check          # ticket validity
 .\.venv\Scripts\python scripts\probe_sources.py      # live reachability table of every configured source
-uvicorn satyasutra.api.app:create_app --factory      # the API (/health, /health/sources, /ledger/verify, /ledger/{seq})
+uvicorn satyasutra.api.app:create_app --factory      # the API (/health, /health/sources, /ledger/verify, /ledger/{seq}, POST /verify)
+.\.venv\Scripts\python scriptserify_live.py --posts 8   # live posts through the whole /verify path
+.\.venv\Scripts\python scriptsuild_index.py       # fill the debunked-image index from the live feeds
+.\.venv\Scripts\python scripts\match_image.py <file-or-url>
 ```
 
 The Bash tool is Git Bash; the user's own terminal is PowerShell (no `&&`, no `printf`). Heredocs containing apostrophes can break
@@ -55,21 +58,27 @@ the Bash tool: use the file Write tool for multi-file edits.
 ## Layout
 
 ```
-config/        sources.yaml (candidate sources, tiers, auth env names), policy.yaml (gate, budgets, gemini), thresholds.yaml
-               (calibrated values only), runtime.yaml (ingest, factcheck, fastclock, probe settings), env_check.yaml
+config/        sources.yaml (candidate sources, tiers, auth env names), policy.yaml (gate, budgets, gemini, verdict_rules rating table),
+               thresholds.yaml (calibrated values only, each with data, note, date), runtime.yaml (ingest, factcheck, fastclock, extract,
+               verify, provenance, probe), env_check.yaml, prompts/
 src/satyasutra/
   config.py    strict pydantic config (extra=forbid), load_config(), checksum
-  errors.py    typed errors: Unreachable, RateLimited, SchemaChanged, QuotaExhausted, ConfigError
+  errors.py    typed errors: Unreachable, RateLimited, SchemaChanged, QuotaExhausted, AuthRefused, ContentBlocked, ConfigError
   schemas/     Post, Claim, Evidence, Verdict, ... ; validators coerce unsupported verdicts to UNVERIFIABLE_YET / INCONCLUSIVE
   ledger/      SQLite hash-chained append-only ledger; verify walk reports first bad seq
-  sources/     probe.py (reachability), factcheck.py (Google Fact Check adapter, cached, rate-spaced)
+  sources/     probe.py (reachability, build_user_agent), factcheck.py (Fact Check adapter), bluesky.py (fetch a post by at:// URI)
   ingest/      jetstream.py (Bluesky Jetstream to Post)
-  fastclock/   normalise, minhash, cluster (LSH), clock (result cache)   <- F1-08, uncommitted
-  cache.py     SQLite TTL cache that keeps the original fetch time
-  api/app.py   FastAPI factory
-scripts/       probe_sources, tail_posts, measure_gemini, check_env, calibrate_fastclock, check_no_fixtures, verify_ledger
-docs/          plan/ (the SATYASUTRA plan: BIBLE, BUILD_MAP*, source of truth for design), PHASES.md, spikes.md, env_matrix.md,
-               gemini_limits.md, ingest_rate.md, probe_results.md
+  fastclock/   normalise, minhash, cluster (LSH), clock (result cache)
+  llm/         gemini.py (GeminiClient, structured JSON, 15 RPM spacing)
+  claims/      extract.py (post to claims, quotes must appear verbatim), rules.py (verdict rules v0, no model)
+  provenance/  fingerprint.py (SHA-256, pHash, PDQ, mirrored), index.py (SQLite of hashes and links), feeds.py, build.py
+  pipeline.py  verify_post: extract -> Fact Check -> rules -> one ledger row per verdict
+  cache.py, ratelimit.py, envfile.py
+  api/app.py   FastAPI factory; POST /verify takes {"text"} or {"uri"}
+scripts/       probe_sources, tail_posts, measure_gemini, check_env, calibrate_fastclock, calibrate_factcheck, cluster_live, extract_live,
+               verify_live, build_index, match_image, measure_image_match, check_no_fixtures, verify_ledger
+docs/          plan/ (the SATYASUTRA plan: BIBLE, BUILD_MAP*, source of truth for design), PHASES.md (with a gate log), spikes.md,
+               env_matrix.md, gemini_limits.md, ingest_rate.md, probe_results.md, licences.md, provenance_index.md, calibration/
 tests/unit, tests/contract
 ```
 
@@ -79,16 +88,17 @@ only Tier 1 or 2 evidence can decide a claim, "cannot tell" is a valid result, a
 
 ## State at the time of writing
 
-- **Phase 0 done** (9/9). **Phase 1 in progress: 4 of 10 done** (F1-01, F1-02, F1-04, F1-06).
-- **F1-08 (fast clock) is `doing`** and its code is uncommitted: `src/satyasutra/fastclock/`, `scripts/calibrate_fastclock.py`,
-  `tests/unit/test_fastclock.py` (19 tests pass), plus a `fastclock:` block in `runtime.yaml` and `FastClockSettings` in `config.py`.
-  Still to do: finish the 5-minute live capture, run `calibrate_fastclock.py analyse`, look at the sample pairs, then
-  `write --value ...` to record `cluster_jaccard` in `config/thresholds.yaml` (the threshold must come from data, not a guess;
-  `FastClock` refuses to start without it), write `scripts/cluster_live.py`, close the ticket and commit.
-- Remaining Phase 1: F1-03 (LangGraph to SSE), F1-05 (Gemini claim extraction), F1-07 (verdict rules), F1-09 (`/verify` skeleton),
-  F1-10 (debunked-image fingerprint index). Phase 2 to 9 tickets are not written yet.
-- CI (`.github/workflows/ci.yml`, Python 3.12) was queued on GitHub and had not reported when this was written. It installs
-  `.[dev]`; check it, because `websockets` and later dependencies were added after the workflow was written.
+- **Phase 0 done** (9/9, on `main`, tag `phase-0-complete`). **Phase 1: 9 of 10 done**, on branch `phase-1/walking-skeleton`
+  (pushed; CI green on the latest push). Only **F1-03 (LangGraph streaming to SSE spike)** is left. When it is done, tick the Phase 1
+  gate (the gate log in `docs/PHASES.md` already records that the gate command passes) and merge to `main`.
+- The walking skeleton works: `POST /verify` takes text or a Bluesky post URI, extracts claims with Gemini, looks them up in the Fact
+  Check API, applies the verdict rules and writes one ledger row per verdict. On 8 live stream posts only 1 held a claim; most posts
+  are opinion or chatter. A live REFUTED or SUPPORTED end to end has not been seen.
+- Phase 2 to 9 tickets are not written yet; write them when each phase starts.
+- Open: TruFor `LICENSE.txt` not read; organiser question Q15 unanswered in writing; Gemini per-day quota not measured; Telegram echo
+  untested and the exposed token must be re-issued; MiniCheck needs the user's approval to install; CUDA torch for the RTX 4060
+  undecided; `cluster_jaccard` should be recalibrated during a real news event; extraction quality on real news and Hindi claims
+  unproven; fact-checker sites' terms and robots rules not read; Pillow and numpy licences not read.
 
 ## Findings that constrain the design
 
@@ -100,8 +110,16 @@ only Tier 1 or 2 evidence can decide a claim, "cannot tell" is a valid result, a
 - **Fact Check API:** ratings are free text, sometimes sentences. Results are reviews of *similar* claims, so Evidence role is
   `context`, and F1-07 must treat unmapped ratings as not decisive. An empty result is `200 {}`, a bad key is `400`.
   Most realistic news claims return nothing; `UNVERIFIABLE_YET` will be the common verdict.
-- **Reverse image search is out** (Cloud Vision is paid). Provenance uses our own pHash/PDQ index (F1-10) and manual Lens/Yandex
-  lookups for demo items.
+- **Fact Check matching:** the API returns reviews of similar claims, often of the OPPOSITE claim ("Smoking doesn't cause cancer: False"
+  for "Smoking causes lung cancer"). The verdict rules therefore let a review decide only when it is near-identical to the claim
+  (`factcheck_relevance` 0.9) with matching negation; everything else is shown as `related` and never decides. No positive ("true")
+  rating has been seen live, so the `supports` group of the rating table is empty. `UNVERIFIABLE_YET` is the usual verdict.
+- **Reverse image search is out** (Cloud Vision is paid). Provenance uses our own debunked-image index (F1-10, `docs/provenance_index.md`):
+  PDQ distance <= 40 bits (`image_match_pdq_distance`, measured on 60 Commons images: 0 false matches up to 96, edits within 36).
+  Crops do not match. A match means "appeared in a fact-check", never "false". Feeds carry no structured rating. Manual Lens/Yandex
+  lookups remain for demo items. `pdqhash` is built from source (needs a C++ compiler).
+- **Wikimedia** blocks any request without a filled-in User-Agent: always use `build_user_agent(config.runtime.probe.user_agent)`, never
+  the raw template. Its random-file API caches identical requests.
 - **Python 3.14:** torch (CPU), onnxruntime, mediapipe, faster-whisper install and import. The PyPI torch wheel has no CUDA, so the
   RTX 4060 is unusable until a CUDA build is found or TruFor runs as a service on Python 3.11 (installed, uv-managed). Python 3.12
   is not installed. MiniCheck was **not** installed: the plan installs it from a git branch, which needs the user's approval.
@@ -114,6 +132,7 @@ only Tier 1 or 2 evidence can decide a claim, "cannot tell" is a valid result, a
 
 - Match the surrounding code: small modules, typed, docstrings that say *why*, no comments restating code.
 - Adapters raise the typed errors in `errors.py`; an empty answer is a normal result, never an exception.
+- Windows: `with sqlite3.connect(...)` does not close the connection; use `contextlib.closing` or temp files cannot be deleted.
 - Tests use real-shaped data: local HTTP or websocket servers that speak the response shape captured from the live API, and
   contract tests (`-m contract`) that hit the real service. No fixtures files in `src/`.
 - Windows console is cp1252: scripts that print post text call `sys.stdout.reconfigure(encoding="utf-8", errors="replace")`.
