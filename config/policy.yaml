@@ -12,3 +12,12 @@ budgets:
   max_seconds_per_claim: 45
   max_fetches_per_claim: 8
   reverse_search_per_day: 0    # paid reverse search is out (team decision); provenance uses our own pHash/PDQ index
+gemini:
+  api_base: https://generativelanguage.googleapis.com/v1beta
+  models: [gemini-3.5-flash-lite, gemini-3.8-flash]    # first is the working default (spikes.md, 2026-10-31)
+  measure_max_calls: 40       # hard cap on live calls per measurement run, to stay inside the free tier
+  measure_timeout_s: 60
+  retest_attempts: 3
+  requests_per_minute: 15     # free tier, from the API's own 429 body (docs/gemini_limits.md)
+  measured_on: "2026-10-30"
+

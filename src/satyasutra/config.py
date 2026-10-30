@@ -60,10 +60,21 @@ class Budgets(_Strict):
     reverse_search_per_day: int = Field(ge=0)
 
 
+class GeminiPolicy(_Strict):
+    api_base: str
+    models: list[str] = Field(min_length=1)
+    measure_max_calls: int = Field(gt=0)
+    measure_timeout_s: int = Field(gt=0)
+    retest_attempts: int = Field(gt=0)
+    requests_per_minute: int | None = None      # filled from docs/gemini_limits.md after a measurement
+    measured_on: str = ""
+
+
 class PolicyFile(_Strict):
     allowed_domains: list[str]
     read_only: bool = True
     budgets: Budgets
+    gemini: GeminiPolicy
 
 
 class ThresholdEntry(_Strict):
