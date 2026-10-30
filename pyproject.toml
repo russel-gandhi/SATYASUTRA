@@ -1,0 +1,30 @@
+[project]
+name = "satyasutra"
+version = "0.0.1"
+description = "FORGE: build repository for the SATYASUTRA claim-verification and media-audit engine"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.9",
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "pyyaml>=6",
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "."]
+testpaths = ["tests"]
+addopts = "-m 'not contract'"
+markers = [
+    "contract: hits live sources over the network; run with `pytest -m contract` before any demo",
+]
