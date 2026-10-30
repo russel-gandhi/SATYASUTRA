@@ -55,16 +55,16 @@ def probe_source(src: SourceConfig, client: httpx.Client, env: Mapping[str, str]
     def result(state: ProbeState, status=None, latency=None, detail="") -> ProbeResult:
         return ProbeResult(src.id, src.role, src.tier, state, status, latency, detail, _now())
 
-    params = None
+    url = httpx.URL(src.probe_url)
     if src.auth_env and src.auth_param:
         key = env.get(src.auth_env)
         if not key:
             return result("needs_key", detail=f"set {src.auth_env} to probe this source")
-        params = {src.auth_param: key}
+        url = url.copy_merge_params({src.auth_param: key})  # keep the URL's own query, add the key
 
     started = time.perf_counter()
     try:
-        response = client.get(src.probe_url, params=params)
+        response = client.get(url)
     except httpx.TimeoutException:
         return result("unreachable", detail="timed out")
     except httpx.HTTPError as exc:

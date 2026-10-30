@@ -91,3 +91,10 @@ def test_key_is_sent_as_param_and_never_reported(base, client):
 def test_auth_env_without_param_still_probes_host(base, client):
     # e.g. a bot token that travels in the path: the probe checks the host only
     assert probe_source(src(base + "/ok", auth_env="FORGE_TEST_TOKEN"), client, env={}).state == "reachable"
+
+
+def test_key_is_added_without_dropping_the_urls_own_query(base, client):
+    SEEN.clear()
+    s = src(base + "/ok?query=election&pageSize=1", auth_env="FORGE_TEST_PROBE_KEY", auth_param="key")
+    probe_source(s, client, env={"FORGE_TEST_PROBE_KEY": "k"})
+    assert parse_qs(urlparse(SEEN[-1]).query) == {"query": ["election"], "pageSize": ["1"], "key": ["k"]}
