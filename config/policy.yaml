@@ -1,0 +1,14 @@
+# The gate: what the agent may touch and how much (Bible D16, D17). Plain data, enforced by plain code.
+allowed_domains:
+  - pib.gov.in
+  - mausam.imd.gov.in
+  - api.data.gov.in
+  - factchecktools.googleapis.com
+  - www.wikidata.org
+  - web.archive.org
+read_only: true
+budgets:
+  max_steps_per_claim: 12
+  max_seconds_per_claim: 45
+  max_fetches_per_claim: 8
+  reverse_search_per_day: 0    # stays 0 until Spike S1 confirms a key and a price

@@ -1,0 +1,3 @@
+# Every threshold carries the model hash, data and date it was calibrated on (Bible D10, I3).
+# Empty on purpose: nothing is calibrated yet, and nothing in src/ may invent a value.
+thresholds: {}

@@ -1,0 +1,80 @@
+# Every live source the system may touch. Candidates only: status stays "unverified" until
+# scripts/probe_sources.py has reached it from this machine (Bible Q3). URLs here were not
+# confirmed by the author; the probe is what decides. Keys go in environment variables (auth_env).
+sources:
+  - id: bluesky_public_api
+    role: public feed
+    description: Bluesky public AppView; used to check reachability before wiring the firehose
+    probe_url: https://public.api.bsky.app/xrpc/com.atproto.server.describeServer
+    tier: 4
+    rate_limit_per_min: 60
+    cache_ttl_s: 60
+
+  - id: pib
+    role: official
+    description: Press Information Bureau, Government of India
+    probe_url: https://pib.gov.in/
+    tier: 1
+    rate_limit_per_min: 30
+    cache_ttl_s: 900
+
+  - id: imd
+    role: official, weather
+    description: India Meteorological Department
+    probe_url: https://mausam.imd.gov.in/
+    tier: 1
+    rate_limit_per_min: 30
+    cache_ttl_s: 900
+
+  - id: data_gov_in
+    role: official, open data
+    description: Open Government Data platform, India
+    probe_url: https://api.data.gov.in/
+    tier: 1
+    auth_env: DATA_GOV_IN_API_KEY
+    auth_param: api-key
+    rate_limit_per_min: 30
+    cache_ttl_s: 3600
+
+  - id: factcheck_tools
+    role: fact-checks
+    description: Google Fact Check Tools API (ClaimReview)
+    probe_url: https://factchecktools.googleapis.com/v1alpha1/claims:search?query=election&pageSize=1
+    tier: 2
+    auth_env: GOOGLE_FACTCHECK_API_KEY
+    auth_param: key
+    rate_limit_per_min: 60
+    cache_ttl_s: 600
+
+  - id: wikidata
+    role: knowledge graph
+    description: Wikidata API; statements count as Tier 2 only when referenced (Bible I18)
+    probe_url: https://www.wikidata.org/w/api.php?action=query&meta=siteinfo&format=json
+    tier: 4
+    rate_limit_per_min: 30
+    cache_ttl_s: 3600
+
+  - id: wayback_cdx
+    role: link archive
+    description: Internet Archive CDX index, for when a link first existed
+    probe_url: https://web.archive.org/cdx/search/cdx?url=example.com&limit=1
+    tier: 4
+    rate_limit_per_min: 15
+    cache_ttl_s: 86400
+
+  - id: reverse_image_search
+    role: provenance
+    description: Google Cloud Vision web detection (candidate; Spike S1 decides whether it stays)
+    probe_url: https://vision.googleapis.com/
+    tier: 4
+    auth_env: GOOGLE_CLOUD_VISION_API_KEY
+    auth_param: key
+    cache_ttl_s: 86400
+    note: paid beyond a free allowance; pricing and terms not verified
+
+  - id: telegram_bot_api
+    role: bot channel
+    description: Telegram Bot API host (reachability only; the token is never part of the probe URL)
+    probe_url: https://api.telegram.org/
+    tier: 4
+    auth_env: TELEGRAM_BOT_TOKEN

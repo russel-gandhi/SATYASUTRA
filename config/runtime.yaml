@@ -1,0 +1,4 @@
+ledger_db_path: data/ledger.sqlite3
+probe:
+  timeout_s: 8
+  user_agent: "FORGE-probe/0.0.1 (hackathon build; contact: team)"
