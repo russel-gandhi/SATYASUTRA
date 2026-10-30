@@ -83,11 +83,17 @@ def probe_source(src: SourceConfig, client: httpx.Client, env: Mapping[str, str]
     return result("reachable", code, latency, "ok")
 
 
+def build_user_agent(template: str, env: Mapping[str, str] | None = None) -> str:
+    """Fill {contact} from FORGE_CONTACT. The contact is never committed; without it the header says so plainly."""
+    env = os.environ if env is None else env
+    return template.replace("{contact}", env.get("FORGE_CONTACT", "").strip() or "no contact configured")
+
+
 def probe_all(config: Config, client: httpx.Client | None = None, env: Mapping[str, str] | None = None) -> list[ProbeResult]:
     own = client is None
     http = client or httpx.Client(
         timeout=config.runtime.probe.timeout_s,
-        headers={"User-Agent": config.runtime.probe.user_agent},
+        headers={"User-Agent": build_user_agent(config.runtime.probe.user_agent, env)},
         follow_redirects=True,
     )
     try:

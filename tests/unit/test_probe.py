@@ -98,3 +98,11 @@ def test_key_is_added_without_dropping_the_urls_own_query(base, client):
     s = src(base + "/ok?query=election&pageSize=1", auth_env="FORGE_TEST_PROBE_KEY", auth_param="key")
     probe_source(s, client, env={"FORGE_TEST_PROBE_KEY": "k"})
     assert parse_qs(urlparse(SEEN[-1]).query) == {"query": ["election"], "pageSize": ["1"], "key": ["k"]}
+
+
+def test_user_agent_takes_contact_from_env_and_says_so_when_missing():
+    from satyasutra.sources.probe import build_user_agent
+
+    t = "FORGE/0 (contact: {contact})"
+    assert build_user_agent(t, {"FORGE_CONTACT": " team@example.org "}) == "FORGE/0 (contact: team@example.org)"
+    assert build_user_agent(t, {}) == "FORGE/0 (contact: no contact configured)"
