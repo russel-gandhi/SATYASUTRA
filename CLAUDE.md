@@ -36,8 +36,8 @@ Remote: `github.com/aadamaftabpersonal-boop/FORGEHackathon` (public).
 .\.venv\Scripts\python tools\forge.py check          # ticket validity
 .\.venv\Scripts\python scripts\probe_sources.py      # live reachability table of every configured source
 uvicorn satyasutra.api.app:create_app --factory      # the API (/health, /health/sources, /ledger/verify, /ledger/{seq}, POST /verify)
-.\.venv\Scripts\python scriptserify_live.py --posts 8   # live posts through the whole /verify path
-.\.venv\Scripts\python scriptsuild_index.py       # fill the debunked-image index from the live feeds
+.\.venv\Scripts\python scripts\verify_live.py --posts 8   # live posts through the whole /verify path
+.\.venv\Scripts\python scripts\build_index.py       # fill the debunked-image index from the live feeds
 .\.venv\Scripts\python scripts\match_image.py <file-or-url>
 ```
 
