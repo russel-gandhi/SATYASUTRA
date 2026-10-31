@@ -34,6 +34,8 @@
   .claim { border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-top: 12px; }
   .badge { display: inline-block; padding: 2px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; letter-spacing: .04em; color: #0b0f17; }
   .REFUTED, .EDITED { background: var(--bad); } .SYNTHETIC, .SYNTHETIC_SUSPECTED { background: var(--warn); } .SUPPORTED { background: var(--ok); } .MISSING_CONTEXT, .OUT_OF_CONTEXT { background: var(--warn); }
+  .headline { font-size: 1.5rem; font-weight: 700; margin-bottom: 4px; } .headline.bad { color: var(--bad); } .headline.ok { color: var(--ok); } .headline.warn { color: var(--warn); } .headline.idle { color: var(--idle); }
+  .advice { font-weight: 600; margin: 6px 0 10px; } .sect { font-weight: 600; margin-top: 10px; } ul.found { margin: 4px 0 8px; padding-left: 20px; } ul.found li { margin: 4px 0; } details.more { margin-top: 10px; }
   .UNVERIFIABLE_YET, .NOT_A_CLAIM, .INCONCLUSIVE { background: var(--idle); color: #fff; }
   .claim .q { margin: 8px 0 4px; font-weight: 600; }
   .small { color: var(--mute); font-size: 13px; }
@@ -90,8 +92,8 @@
       <div id="voiceOut" class="small"></div>
       <div id="trace" class="trace" style="display:none"></div>
       <div id="links"></div>
-      <div id="act"></div>
       <div id="out"></div>
+      <div id="act"></div>
     </section>
     <section style="margin-top:16px">
       <h2>Check a notice or a message screenshot</h2>
@@ -310,38 +312,53 @@ async function makeCard(claim, box) {
   } catch (e) { box.textContent = e.message; }
 }
 
+const SAY = {
+  REFUTED: ["This is false.", "bad", "Do not forward it. Share the correction instead."],
+  SUPPORTED: ["This checks out.", "ok", "A trusted fact-check agrees with it."],
+  MISSING_CONTEXT: ["This is misleading.", "warn", "Part of it may be true, but important context is missing. Do not forward it as it is."],
+  UNVERIFIABLE_YET: ["We can't confirm this yet.", "idle", "Do not forward it until a source you trust confirms it."],
+  NOT_A_CLAIM: ["There is nothing here to check.", "idle", ""],
+};
+const SURE = { high: "We are confident in this.", medium: "We are fairly sure.", low: "There is little to go on, so treat this as a first look." };
+
 function renderClaim(c) {
+  const [headline, tone, advice] = SAY[c.label] || [c.label, "idle", ""];
   const box = el("div", "claim");
-  const head = el("div"); head.append(el("span", "badge " + c.label, c.label.replaceAll("_", " ")), " ", el("span", "small", "confidence: " + c.confidence_band));
-  box.append(head, el("div", "q", c.text));
-  const spread = el("div", "small"); box.append(spread); spreadLine(c.text, spread);
-  if (c.label === "UNVERIFIABLE_YET") { const news = el("div", "small"); box.append(news); newsLine(c.text, news); }
+  const head = el("div", "headline " + tone, headline);
+  box.append(head, el("div", "q", "“" + c.text + "”"));
   if (c.quote && c.quote !== c.text) box.append(el("div", "small", "original: " + c.quote));
+  box.append(el("div", "small", SURE[c.confidence_band] || ""));
+  if (advice) box.append(el("div", "advice", advice));
+
+  const found = el("ul", "found"); box.append(el("div", "sect", "What we found"), found);
+  if (c.citations && c.citations.length) {
+    const groups = new Map();
+    c.citations.forEach((e) => { const k = (e.publisher || "") + "|" + (e.rating || ""); if (!groups.has(k)) groups.set(k, { e, n: 0 }); groups.get(k).n++; });
+    groups.forEach(({ e, n }) => { const li = el("li"); const a = el("a", "", e.publisher || "A fact-checker"); a.href = e.url; a.target = "_blank"; a.rel = "noopener"; li.append(a, " rated this claim " + (e.rating ? "“" + e.rating + "”" : "(see the link)") + (n > 1 ? " (" + n + " reviews)" : "") + "."); found.append(li); });
+  } else found.append(el("li", "", "No fact-checker we search has covered this claim."));
+  const news = el("li"); found.append(news); if (c.label === "UNVERIFIABLE_YET" || c.label === "NOT_A_CLAIM") newsLine(c.text, news); else news.remove();
+  const spread = el("li"); found.append(spread); spreadLine(c.text, spread);
   if (c.entities && c.entities.length) {
+    c.entities.filter((e) => e.died).forEach((e) => found.append(el("li", "", "Wikidata lists a date of death for " + e.label + ": " + e.died + (e.died_references ? " (the entry cites " + e.died_references + " source" + (e.died_references > 1 ? "s" : "") + ")" : " (no source cited)") + ". It is volunteer-edited and can be wrong, so this is a hint, not a check.")));
     const chips = el("div", "chips");
     c.entities.forEach((e) => { const a = el("a", "chip", e.label + (e.description ? " - " + e.description : "")); a.href = e.url; a.target = "_blank"; a.rel = "noopener"; a.title = "Wikidata " + e.id + " (context only)"; chips.append(a); });
-    c.entities.filter((e) => e.died).forEach((e) => box.append(el("div", "small", "Wikidata lists a date of death for " + e.label + ": " + e.died + (e.died_references ? " (the entry cites " + e.died_references + " source" + (e.died_references > 1 ? "s" : "") + ")" : " (no source cited)") + ". Wikidata is edited by volunteers and can be wrong or vandalised, so this is context, not a check of the claim.")));
-    box.append(chips);
-  }
-  if (c.reasons && c.reasons.length) { const u = el("ul"); c.reasons.forEach((r) => u.append(el("li", "", r))); box.append(u); }
-  if (c.citations && c.citations.length) {
-    box.append(el("div", "small", "Evidence"));
-    const u = el("ul");
-    c.citations.forEach((e) => { const li = el("li"); const a = el("a", "", (e.publisher || "source") + (e.rating ? ": " + e.rating : "")); a.href = e.url; a.target = "_blank"; a.rel = "noopener"; li.append(a); u.append(li); });
-    box.append(u);
-  }
-  if (c.related && c.related.length) {
-    box.append(el("div", "small", "Related reviews (not used to decide)"));
-    const u = el("ul");
-    c.related.forEach((r) => { const li = el("li"); const a = el("a", "", (r.publisher || "source") + ": " + (r.rating || "")); a.href = r.url; a.target = "_blank"; a.rel = "noopener"; li.append(a, " ", el("span", "small", "match " + r.relevance + ". " + r.why_not_used)); u.append(li); });
-    box.append(u);
+    box.append(el("div", "small", "People and things named in it:"), chips);
   }
   if (["REFUTED", "SUPPORTED", "MISSING_CONTEXT"].includes(c.label) && ["medium", "high"].includes(c.confidence_band)) {
     const cardBox = el("div", "small"); const b = el("button", "ghost toggle", "Make a shareable correction card"); b.onclick = () => makeCard(c, cardBox); box.append(b, cardBox);
   }
-  if (c.explanation && c.explanation.method) box.append(explainClaim(c.explanation));
-  const foot = el("div", "small"); const a = el("a", "", "ledger entry #" + c.ledger_seq); a.href = "/ledger/" + c.ledger_seq; a.target = "_blank"; foot.append(a);
-  box.append(foot);
+
+  const more = el("details", "more"); more.append(el("summary", "small", "How we decided (for auditors)"));
+  if (c.reasons && c.reasons.length) { const u = el("ul"); c.reasons.forEach((r) => u.append(el("li", "", r))); more.append(u); }
+  if (c.related && c.related.length) {
+    more.append(el("div", "small", "Related reviews (not used to decide)"));
+    const u = el("ul");
+    c.related.forEach((r) => { const li = el("li"); const a = el("a", "", (r.publisher || "source") + ": " + (r.rating || "")); a.href = r.url; a.target = "_blank"; a.rel = "noopener"; li.append(a, " ", el("span", "small", "match " + r.relevance + ". " + r.why_not_used)); u.append(li); });
+    more.append(u);
+  }
+  if (c.explanation && c.explanation.method) more.append(explainClaim(c.explanation));
+  const foot = el("div", "small"); const a = el("a", "", "ledger entry #" + c.ledger_seq + " (tamper-evident record of this answer)"); a.href = "/ledger/" + c.ledger_seq; a.target = "_blank"; foot.append(a);
+  more.append(foot); box.append(more);
   return box;
 }
 
@@ -358,7 +375,11 @@ function streamAgent(text) {
     const open = {}; let gotResult = false;
     const es = new EventSource("/agent/stream?text=" + encodeURIComponent(text));
     const add = (cls, label, detail) => { const d = el("div", "step " + cls); d.append(Object.assign(el("b"), { textContent: label }), detail ? " " + detail : ""); trace.append(d); return d; };
-    const finish = () => { es.close(); resolve(gotResult); };
+    const finish = () => {
+      es.close();
+      if (trace.children.length && !trace.querySelector("details")) { const d = el("details"); d.append(el("summary", "small", "How the check ran (" + trace.children.length + " steps)")); [...trace.children].forEach((c) => d.append(c)); trace.append(d); }
+      resolve(gotResult);
+    };
     es.addEventListener("node_started", (m) => { const e = JSON.parse(m.data); open[e.node] = add("run", e.node); });
     es.addEventListener("tool_call", (m) => { const e = JSON.parse(m.data); add("tool", e.data.name, e.data.summary); });
     es.addEventListener("node_finished", (m) => { const e = JSON.parse(m.data); if (open[e.node]) { open[e.node].classList.remove("run"); open[e.node].append(" " + e.elapsed_ms + " ms"); } });
