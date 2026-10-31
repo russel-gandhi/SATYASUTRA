@@ -1,6 +1,6 @@
 # Build plan: clock-time schedule to the deadline
 
-Written Sat 31 Oct 2026, 13:15 IST. Deadline **Sun 2 Nov 2026, 00:00 IST**. The packages (IDs like C1, A2), their owners, files and
+Written Sat 31 Oct 2026, 13:15 IST. Deadline **Mon 2 Nov 2026, 00:00 IST** (midnight at the end of Sunday 1 Nov). The packages (IDs like C1, A2), their owners, files and
 "done when" are in [`BUILD_MAP_FINAL.md`](BUILD_MAP_FINAL.md). This file says **when**, **in what order**, and **what gets cut if a
 checkpoint fails**. Times are targets; checkpoints are fixed. If a block runs late, cut by the rules below, never move a checkpoint.
 
@@ -140,6 +140,10 @@ Raksha-lite, if built, is shown as one screen of the guidance flow with no image
 
 **Never cut:** C1 bot, C2 card, A1 official text, A2 contrast refutation, B1 voice notes, S1 Verify → Act, I2 reliability, E1
 headline numbers, E2 README, the ledger check, two rehearsals.
+
+## Added packages (31 Oct, 15:50)
+
+[`SPEC_REPLY_SPREAD_EVAL.md`](SPEC_REPLY_SPREAD_EVAL.md) adds R1 human replies, R2 news-spread timeline, R3 Gemini load test and D1 the verdict dataset and harness. R3 runs first, D1 starts at once with a different person, and D1's first dev table is part of CP2 (22:00).
 
 ## Status log
 

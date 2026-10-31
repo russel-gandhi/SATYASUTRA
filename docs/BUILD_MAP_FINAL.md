@@ -1,7 +1,7 @@
 # Build map (final): what we build, who owns it, and what "done" means
 
 Written Sat 31 Oct 2026, 13:15 IST, against branch `phase-8/prototype-ui` at `7f6036b` plus `fix/review-ledger-schema-tickets`.
-Deadline: **Sun 2 Nov 2026, 00:00 IST** (about 35 hours). The clock-time schedule is in [`BUILD_PLAN.md`](BUILD_PLAN.md).
+Deadline: **Mon 2 Nov 2026, 00:00 IST** = midnight at the end of Sunday 1 Nov (about 35 hours). The clock-time schedule is in [`BUILD_PLAN.md`](BUILD_PLAN.md).
 
 This file supersedes the scope and ownership parts of `docs/PLAN_TO_DEADLINE.md` and `docs/plan/BUILD_MAP_V3.md`. The design
 rules in `docs/plan/BIBLE.md` still hold (two verdict axes, Tier 1 or 2 decides, "cannot tell" is a result, no mock data in `src/`,
