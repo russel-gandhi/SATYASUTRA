@@ -1,80 +1,298 @@
 # SATYASUTRA
 
-A real-time fact-verification and deepfake audit engine for Indian social media (hackathon Theme 1, Civic Pulse; problem statement 4).
-You give it a claim, a forwarded message, a voice note, a photo, a video or a screenshot of a notice. It checks what it can against live
-sources and tells you what it found. When nobody reliable has checked a claim it says **"cannot tell"** instead of guessing, and every
-verdict is written to a tamper-evident ledger with its sources.
+**A fact-verification and deepfake audit engine for Indian social media, built in the open with live sources only.**
+Hackathon Theme 1, Civic Pulse (problem statement 4). This repository, FORGE, is where it was built.
 
-This repository (FORGE) is where it was built. The design is in [`docs/plan/`](docs/plan); working notes for contributors are in [`CLAUDE.md`](CLAUDE.md).
+You give it a claim, a forwarded message, a link, a PDF, a photo, a video, a voice note or a screenshot of a notice. It checks what it can
+against live sources and tells you what it found, with every source shown. When nobody reliable has checked a claim it says
+**"cannot tell"** and does not guess. Every verdict is written to a tamper-evident ledger.
 
-## What works today, and what does not
+Beyond fact-checking, it carries two safety tools for the harms that travel with misinformation in India: **Call guard**, which listens to a
+suspicious phone call and warns when the words follow a scam script, and **Private help**, a quiet page of next steps for someone whose private
+pictures are being shared or threatened.
 
-Read this before the demo. "Works" means it ran live on the date shown; the limits are stated next to each line.
+| | |
+|---|---|
+| Languages | English, Hindi, Kannada (claims and voice); Telugu and others through Gemini, less tested |
+| Inputs | text, link, PDF, image, video, voice note, notice photo, live call audio |
+| Interfaces | web app, Telegram bot, JSON API |
+| Data policy | **no mock, static or hardcoded data in product code**; enforced by `scripts/check_no_fixtures.py` |
+| Tests | 592 unit tests pass (live-network contract tests are separate); CI on every push |
 
-| Capability | State | What it does, and the limit |
+> **Read this first.** This is a hackathon prototype. Section [How well does it work?](#how-well-does-it-work) gives the measured numbers,
+> including a held-out test where one of our rules **failed** its own pass criteria. Section [Known limits](#known-limits) lists what we did not test.
+> Nothing here is claimed beyond what those sections say.
+
+---
+
+## Contents
+
+1. [The problem](#the-problem)
+2. [What it does](#what-it-does)
+3. [How a claim is decided](#how-a-claim-is-decided)
+4. [Architecture](#architecture)
+5. [Features in detail](#features-in-detail)
+6. [How well does it work?](#how-well-does-it-work)
+7. [Safety, privacy and ethics](#safety-privacy-and-ethics)
+8. [Run it](#run-it)
+9. [Using the website](#using-the-website)
+10. [API](#api)
+11. [Repository layout](#repository-layout)
+12. [Known limits](#known-limits)
+13. [Roadmap](#roadmap)
+14. [Credits and licences](#credits-and-licences)
+
+---
+
+## The problem
+
+Misinformation in India spreads in private channels (WhatsApp family groups, Telegram, regional-language video) faster than fact-checkers can reach it, and
+it arrives in forms that are hard to check by hand: a forwarded voice note, a photo that looks real, a "government notice" in a screenshot. The same
+channels carry scams (the so-called digital-arrest calls, fake KYC messages) and image-based abuse. A tool that is useful here has to:
+
+- work in the languages people actually use, on a phone, in seconds;
+- show its evidence, so a person can judge it, instead of asking to be trusted;
+- say "cannot tell" when it cannot, because a confident wrong answer does more harm than silence;
+- never become a surveillance or harassment tool itself.
+
+SATYASUTRA is our attempt at that. The design rules are in `docs/plan/`; the working notes are in [`CLAUDE.md`](CLAUDE.md).
+
+## What it does
+
+| You have | You get |
+|---|---|
+| A claim or forwarded message (any language) | A verdict (true, false, misleading, or cannot tell) with the sources behind it, shown live as each step runs |
+| A link or a PDF circular | The page read safely, its links and wording checked, and its text sent to the claim check |
+| A photo | A tamper heatmap and score, an AI-generated-image score, a match against images already debunked by fact-checkers, and the file's metadata |
+| A video | Eight sampled frames checked the same way |
+| A voice note | A transcript (Whisper), the claim check on what was said, and a synthetic-voice check |
+| A screenshot of a notice | The printed text, issuer, links and requests copied out, then checked for scam wording, look-alike links and official-text mismatch |
+| A suspicious phone call | **Call guard**: amber or red on your screen as the call goes on, with advice for that scam type |
+| Private pictures leaked or threatened | **Private help**: plain steps (keep a record, do not pay, StopNCII, Take It Down, the cyber-crime portal, 112), nothing stored |
+| Any check | A shareable **Trust Report**, a correction card (English or Hindi), and a "what to do next" plan |
+
+## How a claim is decided
+
+Two principles run through the whole system.
+
+**1. Only reliable evidence can decide a claim.** Evidence is tiered. Tier 1 is an official source (RBI and SEBI releases). Tier 2 is a fact-checker or a
+reputable outlet. Tier 3 is everything else, which is shown but never decides. A claim is **REFUTED** or **SUPPORTED** only on Tier 1 or 2 evidence, and
+**UNVERIFIABLE_YET** ("cannot tell") is a normal, correct result.
+
+**2. Models read, code decides.** Gemini is used to extract claims, translate, say whether a fact-check is about the same claim, and label news headlines. It
+never chooses the verdict. The mapping from evidence to label is plain, testable code (`claims/rules.py`), and the explanation shown to the user is exact
+(Shapley credit per evidence item), because the rules are code, not a model.
+
+The verdict labels for claims are SUPPORTED, REFUTED, MISSING_CONTEXT, UNVERIFIABLE_YET and NOT_A_CLAIM. Media never gets an "authentic" label: the options
+are EDITED, SYNTHETIC_SUSPECTED, OUT_OF_CONTEXT or INCONCLUSIVE, because a clean detector result is only weak evidence.
+
+### The evidence routes
+
+| Route | What it does | What decides |
 |---|---|---|
-| Claim check, English | **Works** | Gemini extracts the claim, the Google Fact Check API finds fact-checks, plain rules decide. Only a fact-check of the *same* claim from a trusted source can refute or support it. On our 22-claim sheet ([`docs/evaluation_2026-10-31.md`](docs/evaluation_2026-10-31.md)): 7 of 10 debunked claims refuted, 0 true claims wrongly refuted, the rest "cannot tell". It is a small hand-made sheet, not a benchmark. |
-| Claim check, Hindi | Partly | Gemini translates to English, keeps the Hindi quote; the Fact Check API is searched with the English text. A handful of Hindi claims tried, quality beyond that unproven. |
-| "Supported" verdicts | Works, rare | Seen live on 2026-10-31: "Some 90% of Americans support universal background checks" came back SUPPORTED (high) from Snopes and PolitiFact reviews rated True, and a CDC life-expectancy claim SUPPORTED (medium). Positive ratings are rare (7 of 71 reviews collected) and none were for Indian claims, so most true Indian claims will still say "cannot tell". |
-| Official text (RBI, SEBI) | Works, thin | A claim that quotes a different number than an official release is refuted. Only the latest 10 RBI releases and 30 SEBI titles are held. PIB, MoHFW and cybercrime.gov.in refuse our client, so they are not used. |
-| Web search (news outlets across the web) | **Works** | The system searches live news for the claim and reads what outlets say. Two or more reputable outlets reporting it as fact give SUPPORTED (medium at most); a fact-checker, or two reputable outlets, calling it false give REFUTED; unknown blogs are shown but never decide. Live: "Nana Patekar is dead" SUPPORTED (NDTV, The Hindu, Hindustan Times, ETV Bharat), "Chandrayaan-3 landed near the lunar south pole" SUPPORTED, the microchip claim REFUTED. **Not measured:** how often an outlet reporting a rumour is mistaken for confirmation, and old headlines matching a new claim. The outlet lists and counts are policy choices. |
-| Trust Report and Evidence Graph (`/report/<id>`) | **Works** | One shareable page per investigation with the ten sections (what was submitted, language and entities, media findings, supporting and contradicting evidence, source tiers, context checks, evidence graph, verdict in FALSE / MISLEADING / UNVERIFIED / INSUFFICIENT EVIDENCE words, limitations). Built only from records this server produced, never from client-supplied evidence; the id is a content hash, so a link never changes. English and Hindi (Hindi wording not reviewed by a native speaker). The graph holds only relationships found in that investigation. Prints to PDF from the browser. |
-| Citizen history and Command centre (`/my-investigations`, `/command`, `/about`) | **Works, small scale** | History lives in the browser (no accounts) and can be deleted. Web checks and ordinary API calls are stored on this server as investigations; requests from the Telegram bot carry a private header and are not stored, and text about leaked private images is refused by `/verify` and `/agent/stream` (409) and never stored. Limits: `GET /agent/stream` carries the text in the URL, so server access logs see it, and Telegram itself keeps the chats; the command centre has overview, a draggable evidence graph over all stored investigations, a media lab, claim intelligence (same claim across languages grouped by English text overlap), a source registry and a case workspace with notes. All numbers come from investigations stored on this server, not nationwide data; no map because no verified location data is collected; no sign-in, so anyone who opens the page sees all stored investigations. The same-claim threshold (0.6) is a policy choice, not calibrated. |
-| Links, PDF circulars, image metadata | **Works, narrow** | A public page or PDF is read (http/https, public addresses only, honest User-Agent, no login or block bypass), its links and wording are checked in code, and its text can go to the claim check. Image metadata (device, editing software, date, GPS) is reported as fact, never as a verdict. Not tested on many real circulars or JavaScript-built pages. |
-| Kannada voice notes | **Partly** | Whisper-small mislabelled a Kannada sentence as Tamil (0.36), so when its language confidence is low Gemini transcribes as a second opinion and both readings are kept. One machine-spoken sentence tested, not real speakers. |
-| India pulse (`/officials`, home panel) | Works | 23 live feeds: Google Trends India, Indian fact-checkers' newest articles, Indian outlets' headlines grouped by story (en/hi/kn). Shows media and search attention, not WhatsApp. Cluster cut is a policy choice, not calibrated. |
-| Fast clock (Bluesky stream) | Works, off by default, Bluesky only | Clusters near-identical live posts, ranks by distinct authors per minute, shows first-seen and wording changes. "First we saw" is not the true origin. |
-| Officials' view (`/officials`) | Works | Triage list of the pulse rows, disaster words first, with any verdict we already made. Word lists, not a model. |
-| Image edits (TruFor) | **Works, with misses** | Heatmap and a score; cut 0.7. Measured after sharing (shrunk, JPEG): flags 63% of spliced and 30% of copy-moved photos, and 7% of untouched ones ([`docs/calibration/trufor_map_2026-10-31.txt`](docs/calibration/trufor_map_2026-10-31.txt)). We tried adding the localisation map as a second trigger; it only raised false alarms. So a clean result is weak evidence. False-alarm rate on real social-media photos is unknown. |
-| AI-generated images (Smaug) | Works, limited | 36 of 40 AI images caught, 1 of 40 real flagged, on Commons files (`docs/calibration/smaug_2026-10-31.txt`). Misses logos and screenshots. Not tested on WhatsApp or Instagram re-uploads or newer generators. A lone hit is labelled SYNTHETIC_SUSPECTED, never a finding. |
-| Debunked-image index | Works | 117 images from fact-check feeds, matched by perceptual hash. Crops do not match. A match means "appeared in a fact-check", never "false". |
-| Video | Partly | Samples 8 frames for edits, AI-generated look and index matches. **Face swaps and AI-generated video are not detected.** We tested two pretrained face-forgery classifiers on 54 FaceForensics++ videos; the better one flagged 6 of 18 real videos, so we show nothing ([`docs/calibration/faceswap_2026-10-31.txt`](docs/calibration/faceswap_2026-10-31.txt)). A clean result is weak evidence. |
-| Voice notes to text | **Works** | Whisper small on the GPU; English clear, Hindi has word errors. Max 120 s. |
-| Real or cloned voice | Works on a small test | A wav2vec2 classifier trained on modern TTS and cloning output (Apache 2.0) runs in the GPU service. On our 39 clips (Gemini and Windows speech vs old and noisy real recordings, also after phone-style compression) the median window separated them: 19/19 caught, 0/20 real flagged ([`docs/calibration/audio_synthetic_2026-10-31.txt`](docs/calibration/audio_synthetic_2026-10-31.txt)). The earlier model, W2V2-AASIST, failed the same test. **Weak test: no cloned voices of real people, no ElevenLabs-style output, real clips are old.** A flag says "possibly synthetic", never proof; no flag never means "real". |
-| Lookalike links | Works | Checks link *names* against 27 official domains; links are never opened. "Unknown" never means "safe". |
-| Next steps (1930, cybercrime portal, Chakshu) | Works, unconfirmed | Routes come from secondary sources; the official sites refused our client, so they are marked unconfirmed. We file and send nothing. |
-| Notice checker | Works on a made-up notice | Gemini vision copies the text; code checks links, scam wording and whether an RBI/SEBI claim matches our official text. Real photographed notices not tested. |
-| Correction cards (English, Hindi) | Works | Drawn in the browser with Noto Sans Devanagari. Hindi wording is ours and not reviewed by a native speaker. |
-| Telegram bot | Works (text) | Text, voice and photo go through the same API. Voice and photo replies in Telegram were not checked live. |
-| Explanations | Works | Exact Shapley credit per evidence item and per detector. The language-model steps are not explained, and the output says so. |
-| Resilience | Works | Gemini is retried once and falls back to the next model, then to a local multilingual NLI model for the "same claim?" step. Out of quota is said plainly. |
-| Raksha (help for leaked intimate images) | **Guidance only** | A message about leaked or threatening private images gets a support plan first: keep a record, do not pay, StopNCII.org (18 and over) or Take It Down (under 18), the cyber-crime portal, report on the platform, 112 if in danger. It never asks for or handles the images, files nothing, and its Indian steps are unconfirmed on official sites. Triggered by word lists, so it will miss unusual wording. A guided step-by-step flow (`/help_me`, Hindi `/madad`) asks about safety, age (unsure counts as under 18, which shows only the child route), what is happening and where, then writes a summary from what the person typed (no model call, no legal section numbers) and lists the routes. English and Hindi; **the Hindi is our draft, not reviewed by a native speaker**, and the routes are not confirmed on official sites. Recognition has not been measured on a labelled set. Counselling, takedown handling and legal advice are roadmap. |
-| Scam Guard (`/guard`) | **Works on typed and spoken words, not tested on real calls** | Listens through the phone's microphone in 6-second pieces (or typed words), transcribes with the same Whisper service, and applies plain word rules for how scams are built (authority, threat, urgency, secrecy, code or money request, remote access); a real bank's "never share your OTP" does not alert. Sessions live in memory only and nothing is stored (tested). On our 32 written scripts: 15/16 scams reach red, 1/16 ordinary calls false-alarm ([`docs/guard-sheet.md`](docs/guard-sheet.md), `python scripts/guard_eval.py`). **Optimistic: the rules and the set were written together and the rules adjusted after the first run; no real call audio, accents or transcript errors tested; Hindi and Hinglish phrases unreviewed; no family alert; legality of listening to a call on speaker is not cleared.** It never says a call is safe. |
-| Other networks (X, WhatsApp, Facebook) | **Roadmap** | The optional live stream is Bluesky only; the India pulse reads public RSS feeds. PIB, MoHFW and PMIndia refuse our honest client (403), so they are not used. |
-| Reverse image search | **Roadmap** | Paid APIs only; lookups stay manual (Lens, Yandex). |
+| Fact Check API | Finds published fact-checks of similar claims | Only a review of the *same* claim from a trusted source, judged by Gemini or a local NLI model, and only with matching negation |
+| Official text | RBI press releases and SEBI feed in a local full-text index | A claim that quotes a different number than the official release is REFUTED (`claims/contrast.py`: both number spans must appear verbatim, parse to one number each, and differ beyond a tolerance; a number that also appears elsewhere in the passage blocks the refutation) |
+| Web search | Searches live news for the claim | Two or more distinct reputable outlets reporting it as fact give SUPPORTED (medium at most); a fact-checker, or two reputable outlets, calling it false give REFUTED; a claim worded as "tonight" or "today" whose agreeing coverage is old, or a forecast, is not counted as support |
+| Wikidata | Grounds named entities | Context only, never evidence |
+| Sensitive topics | Communal, caste and election claims | The label is held back to "cannot tell" with a `HUMAN_REVIEW` flag |
 
-Things we know we have not measured: how often TruFor and Smaug fire on ordinary social-media photos; escalation of spreading clusters
-to the claim agent has never fired on a real item; Hindi extraction beyond a few items; the thresholds above come from small sets.
+## Architecture
+
+```mermaid
+flowchart LR
+    U[Web app / Telegram / API] --> G{Input}
+    G -->|text, link, PDF| A[LangGraph claim agent]
+    G -->|image, video| M[Media checks]
+    G -->|voice, call audio| V[Whisper on GPU]
+    V --> A
+    V --> S[Call guard rules]
+    A --> X[Extract claims - Gemini]
+    X --> R[Registry: Fact Check + official text]
+    X --> W[Web search + headline labels]
+    R --> J[Judge: same / opposite claim]
+    W --> J
+    J --> D[Rules decide - plain code]
+    D --> L[(Hash-chained ledger)]
+    D --> O[Verdict + explanation + Trust Report]
+    M --> T[TruFor edits + Smaug AI score + debunked-image index]
+```
+
+- **API and UI:** FastAPI (`src/satyasutra/api/app.py`) serves JSON, server-sent events and the static pages in `ui/`. `GET /agent/stream` shows each node and tool call live.
+- **Claim agent:** a real LangGraph graph (`agent/graph.py`): read post, extract, then registry and web in parallel, then judge, then decide. It stops early if there is no checkable claim.
+- **GPU service:** `forensics/service.py` (Python 3.11, CUDA) runs TruFor (edits), Smaug (AI images), faster-whisper (speech), a wav2vec2 synthetic-voice detector and an mDeBERTa NLI model. If it is down, speech falls back to CPU.
+- **Ledger:** SQLite, hash-chained and append-only; `GET /ledger/verify` walks the chain and reports the first bad row.
+- **Fast clock:** a no-model front end that clusters near-identical posts from a live stream by MinHash, ranks them by spread, and sends only the fastest to the agent, so model calls stay within the free quota. Off by default; Bluesky only.
+- **Resilience:** Gemini calls retry once and fall back to the next model, then to a local NLI model for the "same claim?" step. Out of quota is said plainly: nothing is guessed.
+
+## Features in detail
+
+### Claim checking
+Gemini extracts checkable claims (quotes must appear verbatim in the post), translates to English and keeps the original quote. Hindi and Kannada go through the same agent. Results stream live, then a verdict card shows the sources, the Wikidata entities and a "Why this verdict" panel with each evidence item's exact credit.
+
+### Media forensics
+- **Edits (TruFor, GRIP-UNINA):** heatmap and score; labelled EDITED at or above 0.7, otherwise INCONCLUSIVE.
+- **AI-generated images (Smaug):** SYNTHETIC_SUSPECTED at or above 0.5. One detector alone never gives a firm label.
+- **Debunked-image index:** 117 images from fact-check feeds matched by perceptual hash (PDQ). A match means "appeared in a fact-check", never "false".
+- **Video:** eight frames, same checks. Face swaps and AI-generated video are **not** detected.
+- **Voice:** transcript plus a synthetic-speech label (SYNTHETIC_SUSPECTED on the median six-second window), never "real".
+
+### Notices, links and scams
+A screenshot of a notice is read by Gemini vision (copying only); code checks link names against 27 official domains (links are never opened), scam wording, and whether an RBI or SEBI claim matches the official index. The result is findings, not a verdict.
+
+### Call guard (`/guard`)
+Listens through the phone's microphone in six-second pieces (or typed words), transcribes, and applies plain word rules for how scams are built: an authority, a threat, urgency, secrecy, a request for a code or money, remote access. A bank's real "never share your OTP" warning does not alert. States: listening, be careful, this looks like a scam. A red alert shows advice for that scam type, buzzes the phone, reads the warning aloud, and offers a one-tap message to someone you trust (you choose the app and the contact). Sessions are in memory only and expire; nothing is stored. It never says a call is safe.
+
+### Private help and the Raksha flow (`/help`, `/help_me`, `/madad`)
+For leaked or threatened private images: a quiet page and a guided step-by-step flow in the Telegram bot (English and Hindi) that asks about safety, age (unsure counts as under 18), what is happening and where, then writes a summary from what the person typed. It never accepts, stores or checks the images, files nothing, and gives no legal advice. Private mode makes the server refuse to store such requests.
+
+### Trust Report, history and command centre
+Every check saves a server-side record. A **Trust Report** (`/report/<id>`) is one shareable page with ten sections, built only from records this server produced, with a content-hash id. `/my-investigations` keeps your history in your browser and lets you delete it. `/command` is a view for investigators: overview, evidence graph, media lab, claim groups across languages, a source registry and a case workspace. There is no sign-in, so the command centre shows every record on that server.
+
+### What is spreading
+`/officials` reads 23 live Indian feeds (Google Trends India, the newest articles of BOOM, Alt News, Factly, Vishvas News and Newschecker, and top headlines of Indian outlets in English, Hindi and Kannada), clusters them, and marks disaster-related topics first. It is a window on media and search attention, **not** on WhatsApp.
+
+## How well does it work?
+
+We built a labelled claim dataset (`tests/eval/`), split by hash into **dev** (used while building) and **test** (run once on a frozen, tagged version).
+Numbers describe one version on one day and come with 95 percent ranges, because the sets are small.
+
+**Held-out test split, run once on 2026-11-01** (tag `eval-freeze-2026-11-01`, lookup off, 62 rows, 0 errors; [`docs/claim-sheet-test.md`](docs/claim-sheet-test.md)):
+
+| Measure | Result |
+|---|---|
+| True claims called false | 0/15 |
+| False claims called true | **1/24** (4%, 1 to 20%) |
+| False claims refuted | 12/24 (50%) |
+| Claims that got a decided label (coverage) | 14/62 (23%) |
+| Unknowable claims answered "cannot tell" or "not a claim" | 23/23 |
+| Median / 95th percentile seconds per claim | 11.7 / 24.2 |
+
+**The web-search rule failed its own pre-written pass criteria** ([`docs/WEB_RULE_CRITERIA.md`](docs/WEB_RULE_CRITERIA.md)). A row built to fool it, the 2016
+demonetisation worded as if announced tonight, was called SUPPORTED because reputable outlets reported that event as fact. We recorded the failure beside the
+numbers and added a recency check afterwards. That check is unit-tested but **not measured on held-out data**, and it only catches claims that contain a "now" word.
+A second fix (outlets reporting a forecast do not confirm it) came from a dev row and is likewise not held-out evidence.
+
+| Other measurements | Result | Where |
+|---|---|---|
+| Dev split, lookup off (32 rows) | 0 true claims called false, 0 false called true, 7/12 false refuted, coverage 7/32 | [`docs/claim-sheet.md`](docs/claim-sheet.md) |
+| Dev split, fact-check lookup on | 29 of 32 scored, 0 wrong | [`docs/claim-sheet-factcheck-on.md`](docs/claim-sheet-factcheck-on.md) |
+| TruFor, after sharing (shrunk, JPEG) | flags 63% of spliced and 30% of copy-moved photos, 7% of untouched | [`docs/calibration/`](docs/calibration) |
+| Smaug AI-image detector | 36/40 AI images caught, 1/40 real flagged | [`docs/calibration/`](docs/calibration) |
+| Synthetic-voice detector | 19/19 fakes caught, 0/20 real flagged (weak test) | [`docs/calibration/`](docs/calibration) |
+| Call guard (32 written scripts) | 15/16 scams reach red, 1/16 ordinary calls false-alarm | [`docs/guard-sheet.md`](docs/guard-sheet.md) |
+| Raksha recognition (40 messages) | 19/20 caught, 0/20 false triggers | [`docs/raksha-sheet.md`](docs/raksha-sheet.md) |
+| Load on the free Gemini tier | one claim check costs 4 model calls: about 3 checks a minute for everyone; 3 simultaneous users wait 37 s (median) | [`docs/load_gemini.md`](docs/load_gemini.md) |
+
+Call guard and Raksha scores are **optimistic**: we wrote the rules and the test sets together, and adjusted the rules after the first run. Face-swap classifiers
+were tested on FaceForensics++ and rejected (6 of 18 real videos flagged), so nothing is shown for them.
+
+## Safety, privacy and ethics
+
+- **We never file to a government portal, defeat a CAPTCHA or bypass a login.** Our client states what it is; sources that refuse it (PIB, MoHFW, PMIndia, cybercrime.gov.in answer 403) are not used.
+- **Do not present unverified facts as verified.** "Cannot tell" is a result; media checks never say "authentic"; Call guard never says a call is safe.
+- **Private by design where it matters.** Telegram requests carry a private header and are not stored; text about leaked private images is refused by the claim endpoints (409) and never stored; Call guard audio is transcribed and dropped; `/help` is served with no caching and has a one-tap exit; stored checks can be deleted from the server and the browser.
+- **Honest limits.** `GET /agent/stream` carries the text in the URL, so server access logs see it; Telegram keeps its own chats; the command centre has no sign-in. Whether listening to a call on speaker is allowed varies by place, and the Call guard page says so.
+- **Secrets.** Keys live only in a git-ignored `.env`; error text reports exception class names, never URLs that could contain a key. Tests assert this.
+- **Licences.** TruFor is for informational and non-profit use with credit; see [Credits](#credits-and-licences).
 
 ## Run it
 
 Needs Windows, Python 3.14 for the API, Python 3.11 with CUDA for the GPU service, and ffmpeg on the PATH. Keys go in a git-ignored `.env`
-(names in `.env.example`: `GEMINI_API_KEY`, `GOOGLE_FACTCHECK_API_KEY`, `FORGE_CONTACT`, optionally `DATA_GOV_IN_API_KEY`, `TELEGRAM_BOT_TOKEN`).
+(names in `.env.example`): `GEMINI_API_KEY`, `GOOGLE_FACTCHECK_API_KEY`, `FORGE_CONTACT`, and optionally `DATA_GOV_IN_API_KEY` and `TELEGRAM_BOT_TOKEN`.
 
 ```powershell
 python -m venv .venv ; .\.venv\Scripts\pip install -e ".[dev]"
-.\scripts\start_demo.ps1                                   # starts the GPU service (TruFor, Smaug, Whisper, NLI) and the API, then checks everything
-.\.venv\Scripts\python scripts\telegram_bot.py             # optional, needs the API running
+.\scripts\start_demo.ps1                          # starts the GPU service and the API, then checks everything
+.\.venv\Scripts\python scripts\serve.py --port 8000    # or just the API and UI, with the live stream worker on
+.\.venv\Scripts\python scripts\telegram_bot.py    # optional, needs the API running
 ```
 
-Open http://127.0.0.1:8000/ (checker) and http://127.0.0.1:8000/officials. Models are not in the repository (`models/` and `forensics/`
-are git-ignored): Whisper small, W2V2-AASIST, mDeBERTa NLI and the TruFor and Smaug weights are downloaded separately; `CLAUDE.md` and
-`docs/licences.md` say where from.
+Models are not in the repository (`models/` and `forensics/` are git-ignored): Whisper small, the synthetic-voice detector, mDeBERTa NLI and the TruFor and
+Smaug weights are downloaded separately; [`docs/licences.md`](docs/licences.md) says where from.
 
-Checks: `.\.venv\Scripts\python -m pytest -q` (446 unit tests), `scripts\check_no_fixtures.py` (the no-hardcoded-data guard),
-`scripts\preflight.py` (live sources and services), `scripts\eval_claims.py` (the claim sheet).
+```powershell
+.\.venv\Scripts\python -m pytest -q                        # unit tests
+.\.venv\Scripts\python -m pytest -q -m contract            # live contract tests (need keys and network)
+.\.venv\Scripts\python scripts\check_no_fixtures.py        # the no-hardcoded-data guard
+.\.venv\Scripts\python scripts\preflight.py                # keys, sources, services, indexes, ledger
+.\.venv\Scripts\python scripts\eval\run.py --split dev --factcheck off --official snapshot --out docs\claim-sheet.md
+```
 
-## Rules we hold ourselves to
+The test split needs a clean git tree on the guarded paths and is meant to be run once per frozen version.
 
-- **No mock, static or hardcoded data in product code.** Live sources only; values live in `config/*.yaml`; a guard script enforces it on `src/`.
-- Every verdict needs evidence from a Tier 1 or 2 source; "cannot tell" is a valid answer; media checks never say "authentic".
-- We never file to a government portal, defeat a CAPTCHA or bypass a login. Our client is honest about what it is, so sources that refuse it are not used.
-- Say what was not tested. Nothing in this table is claimed beyond what it says.
+## Using the website
+
+Open http://127.0.0.1:8000/. The top bar links to everything.
+
+1. **Check:** paste a claim, link or PDF, upload an image or video, or record a voice note, then press **Investigate now**. You see each step live, then the verdict with its sources. After a check you can build a Trust Report, make a correction card, or **delete these checks**.
+2. **Call guard:** open `/guard`, read the notice, press **Start listening** and put the call on speaker. Or type what the caller says and press **Check**. Amber means be careful; red means hang up.
+3. **Private help:** open `/help` for steps if private pictures are being shared. Press **Close this page now** (or Escape) to leave at once.
+4. **My investigations:** your history, kept in your browser; delete any item.
+5. **What is spreading** and **Command centre:** the investigator views.
+
+On Telegram, send text, a voice note or a photo to the bot; send `/help_me` (Hindi `/madad`) for the guided support flow and `/forget` to clear it.
+
+## API
+
+Interactive docs at `/docs` when the server runs. The main routes:
+
+| Route | Purpose |
+|---|---|
+| `POST /verify` | Check a text or a Bluesky post; returns verdicts and writes ledger rows |
+| `GET /agent/stream?text=` | The claim agent as server-sent events, step by step |
+| `POST /media/check`, `/video/check`, `/audio/check` | Image, video and synthetic-voice checks (raw bytes) |
+| `POST /voice/transcribe` | Speech to text (raw audio, up to 120 s) |
+| `POST /notice/check`, `/url/check`, `/doc/check` | Notice screenshot, public page, PDF |
+| `GET /links/check?text=` | Lookalike-link check on link names |
+| `GET /news/check?text=` | Recent headlines for a claim (context only) |
+| `POST /act/plan`, `POST /card/spec` | "What to do next" plan, correction-card spec |
+| `POST /guard/chunk`, `/guard/text`, `DELETE /guard/{id}` | Call guard (audio or typed words; end a session) |
+| `POST /report/build`, `GET /report/{id}` | Build and open a Trust Report |
+| `DELETE /records/{id}` | Delete a stored investigation |
+| `GET /ledger/verify`, `/ledger/{seq}` | Check the ledger chain; read one entry |
+| `GET /pulse`, `/officials/data`, `/fastclock/top` | What is spreading |
+| `GET /health`, `/health/sources` | Service and source reachability |
+
+## Repository layout
+
+```
+config/       policy.yaml, thresholds.yaml, runtime.yaml, sources.yaml, prompts/, actions.yaml, raksha.yaml, scam_script.yaml, cards.yaml
+src/satyasutra/
+  api/        FastAPI app and routes          agent/      LangGraph claim agent and trace
+  claims/     extract, rules, judge, contrast, web, nli, entities
+  sources/    fact-check, official, news, web search, wikidata, probes
+  media.py, video.py, audio/, voice/            media forensics, speech, synthetic-voice checks
+  scam/, raksha/, act/                          Call guard, Raksha flow, next-step plans
+  ledger/, records.py, report.py, intel.py      ledger, stored records, Trust Report, command-centre data
+  fastclock/, ingest/, pulse.py                 stream clustering and the India pulse
+  schemas/, config.py, errors.py                typed data, strict config, typed errors
+forensics/    GPU service (TruFor, Smaug, Whisper, NLI); weights and venv are git-ignored
+ui/           static pages: checker, guard, help, report, history, command centre
+scripts/      serve, preflight, probes, calibration and evaluation scripts, the no-fixtures guard
+tests/        unit, contract (live), eval (the claim dataset), guard, raksha
+docs/         plan/, PHASES.md, calibration/, claim sheets, PITCH.md, DEMO_RUNBOOK.md, licences.md
+tools/        forge.py: the phase and ticket board
+```
+
+## Known limits
+
+- **Accuracy is measured on a small set.** 62 held-out rows, mostly finance claims, one labeller for most groups. The set cannot show rare failures, and coverage is low: most claims end as "cannot tell".
+- **The web rule has a known weakness.** An outlet reporting a rumour, or old coverage of an event stated without a "now" word, can still be mistaken for confirmation. The outlet lists and counts are policy choices, not calibrated.
+- **Gemini free tier.** About 15 calls a minute per model plus a daily limit; at roughly 3 claim checks a minute, a live demo should have no more than about 3 people checking at once.
+- **Media.** A clean TruFor or Smaug result is weak evidence; false-alarm rates on real social-media images are unknown; face swaps and AI-generated video are not detected; the synthetic-voice test has no cloned real voices.
+- **Hindi and Hinglish wording is ours and not reviewed by a native speaker** (Call guard, Raksha, correction cards, Trust Report).
+- **Call guard and Raksha** were tested on text we wrote, not on real calls or real messages. The next-step routes (1930, cybercrime.gov.in, Chakshu) come from secondary sources and are marked unconfirmed, because the official sites refuse our client.
+- **Networks.** The optional live stream is Bluesky only; nothing here sees WhatsApp.
+- **Not read or not tested:** the terms of use of the news outlets and Google News, real photographed notices (skew, glare), JavaScript-built pages, real-speaker Kannada.
+
+## Roadmap
+
+Not built, or only sketched: a "where reported" timeline for each claim; names and places in the contrast check; more language rows and a native-speaker review; WhatsApp and X ingestion (needs official access); reverse image search (paid APIs); counselling, takedown handling and legal advice for the private-image flow; official PIB, MoHFW and PMIndia sources (needs an official access route); sign-in and per-user records for the command centre; a paid model tier for real load.
 
 ## Credits and licences
 
 - **TruFor** (GRIP-UNINA, University Federico II of Naples): edit detection and heatmaps. Informational and non-profit use; credit required.
 - **Smaug AI-Image-Detector** (Abacus.AI, Apache 2.0): AI-generated image score.
-- **Whisper** (OpenAI, MIT) through faster-whisper (Systran); **W2V2-AASIST** (Tak et al., MIT); **mDeBERTa-v3 NLI** (Moritz Laurer, MIT).
+- **Whisper** (OpenAI, MIT) through faster-whisper (Systran); **mDeBERTa-v3 NLI** (Moritz Laurer, MIT); **wav2vec2 deepfake voice detector** (garystafford, Apache 2.0).
 - **Noto Sans Devanagari** (Google, SIL Open Font License). Full table, including what was not read: [`docs/licences.md`](docs/licences.md).
-- Data from the Google Fact Check Tools API, Wikidata, Wikimedia Commons, Bluesky Jetstream, RBI and SEBI feeds, and the RSS feeds of the news outlets named in `config/runtime.yaml`.
+- Data from the Google Fact Check Tools API, Wikidata, Wikimedia Commons, Bluesky Jetstream, RBI and SEBI feeds, Google News RSS, and the public RSS feeds of the outlets named in `config/runtime.yaml`.
