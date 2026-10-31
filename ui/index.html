@@ -49,6 +49,13 @@
   .stage img { max-width: 100%; max-height: 360px; display: block; }
   .stage img.heat { position: absolute; inset: 0; width: 100%; height: 100%; max-height: none; opacity: .7; mix-blend-mode: normal; pointer-events: none; }
   .toggle { margin-top: 6px; }
+  .trace { margin-top: 12px; border-left: 2px solid var(--line); padding-left: 12px; }
+  .step { font-size: 13px; margin: 4px 0; color: var(--mute); }
+  .step b { color: var(--text); font-weight: 600; }
+  .step.run b::after { content: " ..."; color: var(--accent); }
+  .step.tool { margin-left: 14px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chip { border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; font-size: 12px; text-decoration: none; color: var(--text); }
   .spin { display: none; margin-left: 4px; color: var(--mute); align-self: center; }
 </style>
 </head>
@@ -72,6 +79,7 @@
         <button class="ghost" id="chain">Check ledger integrity</button>
         <span class="spin" id="spin">working...</span>
       </div>
+      <div id="trace" class="trace" style="display:none"></div>
       <div id="out"></div>
     </section>
     <section style="margin-top:16px">
@@ -145,6 +153,11 @@ function renderClaim(c) {
   const head = el("div"); head.append(el("span", "badge " + c.label, c.label.replaceAll("_", " ")), " ", el("span", "small", "confidence: " + c.confidence_band));
   box.append(head, el("div", "q", c.text));
   if (c.quote && c.quote !== c.text) box.append(el("div", "small", "original: " + c.quote));
+  if (c.entities && c.entities.length) {
+    const chips = el("div", "chips");
+    c.entities.forEach((e) => { const a = el("a", "chip", e.label + (e.description ? " - " + e.description : "")); a.href = e.url; a.target = "_blank"; a.rel = "noopener"; a.title = "Wikidata " + e.id + " (context only)"; chips.append(a); });
+    box.append(chips);
+  }
   if (c.reasons && c.reasons.length) { const u = el("ul"); c.reasons.forEach((r) => u.append(el("li", "", r))); box.append(u); }
   if (c.citations && c.citations.length) {
     box.append(el("div", "small", "Evidence"));
@@ -163,11 +176,41 @@ function renderClaim(c) {
   return box;
 }
 
+function showResult(body, out) {
+  out.replaceChildren();
+  if (!body.claims.length) out.append(el("div", "claim small", "No checkable claim found in this text (" + body.extraction.status + "). Opinions and chatter are not claims."));
+  body.claims.forEach((c) => out.append(renderClaim(c)));
+}
+
+function streamAgent(text) {
+  return new Promise((resolve) => {
+    const trace = $("trace"), out = $("out");
+    trace.style.display = ""; trace.replaceChildren();
+    const open = {}; let gotResult = false;
+    const es = new EventSource("/agent/stream?text=" + encodeURIComponent(text));
+    const add = (cls, label, detail) => { const d = el("div", "step " + cls); d.append(Object.assign(el("b"), { textContent: label }), detail ? " " + detail : ""); trace.append(d); return d; };
+    const finish = () => { es.close(); resolve(gotResult); };
+    es.addEventListener("node_started", (m) => { const e = JSON.parse(m.data); open[e.node] = add("run", e.node); });
+    es.addEventListener("tool_call", (m) => { const e = JSON.parse(m.data); add("tool", e.data.name, e.data.summary); });
+    es.addEventListener("node_finished", (m) => { const e = JSON.parse(m.data); if (open[e.node]) { open[e.node].classList.remove("run"); open[e.node].append(" " + e.elapsed_ms + " ms"); } });
+    es.addEventListener("error", (m) => { if (m.data) { const e = JSON.parse(m.data); add("", "failed", (e.node || "") + " " + e.data.type); out.replaceChildren(el("div", "err", "The run stopped at " + (e.node || "a step") + " (" + e.data.type + "). No verdict was guessed.")); finish(); } else if (!gotResult) { finish(); } });
+    es.addEventListener("result", (m) => { gotResult = true; showResult(JSON.parse(m.data), out); });
+    es.addEventListener("run_finished", () => { setTimeout(finish, 300); });
+  });
+}
+
 async function verify() {
   const text = $("text").value.trim(), uri = $("uri").value.trim();
   const out = $("out"); out.replaceChildren();
   if (!text && !uri) return;
   $("go").disabled = true; $("spin").style.display = "inline";
+  if (!uri) {
+    const got = await streamAgent(text);
+    if (!got && !out.childNodes.length) out.append(el("div", "claim small", "No checkable claim found in this text. Opinions and chatter are not claims."));
+    $("go").disabled = false; $("spin").style.display = "none"; refreshPills();
+    return;
+  }
+  $("trace").style.display = "none";
   try {
     const body = await api("/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(uri ? { uri } : { text }) });
     const meta = el("div", "small");

@@ -5,6 +5,8 @@ Start it with:  uvicorn satyasutra.api.app:create_app --factory
 
 from __future__ import annotations
 
+import json
+import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from functools import cache
@@ -24,7 +26,8 @@ from ..cache import TTLCache
 from ..fastclock import Cluster, Escalator, FastClock, FastClockWorker
 from ..media import check_media, forensic_scores
 from ..provenance import ImageIndex
-from ..claims import ExtractionResult, Judgements, extract_claims, judge_reviews
+from ..agent.graph import AgentRun, build_claim_agent
+from ..claims import ExtractionResult, Grounded, Judgements, extract_claims, ground_entities, judge_reviews
 from ..errors import ConfigError, SourceError
 from ..ingest import author_salt, hash_author
 from ..ledger import LedgerStore, SQLiteLedgerStore
@@ -33,6 +36,7 @@ from ..pipeline import verify_post
 from ..schemas import SCHEMA_VERSION, Post
 from ..schemas.core import sha256_text
 from ..sources import FactCheckClient, FactCheckResult, ProbeResult, probe_all
+from ..sources import WikidataClient
 from ..sources.bluesky import PostNotFound, fetch_post
 from ..verdict_cache import VerdictCache, mark
 
@@ -64,6 +68,7 @@ def create_app(
     worker: FastClockWorker | None = None,
     escalator: Escalator | None = None,
     judge: Callable[[str, list], Judgements] | None = None,
+    ground: Callable[[str], Grounded] | None = None,
     analyse_image: Callable[[Config, bytes], dict] = forensic_scores,
     image_index: ImageIndex | None = None,
 ) -> FastAPI:
@@ -115,6 +120,11 @@ def create_app(
     do_extract = extract or (lambda post: extract_claims(gemini(), cfg, post))
     # The real judge needs Gemini, so it is on only when the real extractor is: callers that inject their own extract stay offline.
     do_judge = judge or ((lambda text, found: judge_reviews(gemini(), cfg, text, found)) if extract is None else None)
+    @cache
+    def wikidata() -> WikidataClient:
+        return WikidataClient(cfg, TTLCache(_path(cfg.runtime.cache_db_path)))
+
+    do_ground = ground or ((lambda text: ground_entities(gemini(), cfg, text, wikidata().search)) if extract is None else None)
     do_lookup = lookup or (lambda text, lang: factcheck().search(text, lang))
     do_fetch = fetch or (lambda uri: fetch_post(uri, cfg, salt))
 
@@ -130,6 +140,12 @@ def create_app(
     if escalator is None and worker is not None and cfg.runtime.escalation.enabled:
         escalator = Escalator(cfg, worker, audit_cluster, cluster_post)
     app_escalator = escalator
+
+    def text_post(text: str) -> Post:
+        settings = cfg.runtime.verify
+        now = datetime.now(timezone.utc)
+        return Post(id=f"{settings.text_source_id}:{sha256_text(text)[:16]}", source_id=settings.text_source_id, url="",
+                    author_hash=hash_author(salt, settings.text_source_id), text=text, posted_at=now, fetched_at=now)
 
     @app.get("/", include_in_schema=False)
     def home() -> FileResponse:
@@ -201,6 +217,27 @@ def create_app(
         return {"width": result.width, "height": result.height, "label": result.label, "reasons": result.reasons,
                 "matches": result.matches, "forensics": result.forensics, "heatmap_png_b64": heatmap}
 
+    @app.get("/agent/stream")
+    async def agent_stream(text: str = Query(min_length=1, max_length=cfg.runtime.verify.max_text_chars)) -> StreamingResponse:
+        """Run the claim agent on this text and stream its trace as Server-Sent Events, then one `result` event with the verdicts."""
+        clean = text.strip()
+        if not clean:
+            raise HTTPException(status_code=422, detail="text must not be blank")
+        job, run = uuid.uuid4().hex[:16], AgentRun()
+        graph = build_claim_agent(cfg, ledger, text_post, do_extract, do_lookup, do_judge, do_ground, run)
+
+        async def body():
+            app.state.active_traces += 1
+            try:
+                async for event in trace_events(graph, {"job": job, "text": clean}, job, cfg.runtime.trace):
+                    yield format_sse(event)
+                if run.outcome is not None:
+                    yield f"event: result\ndata: {json.dumps(verdict_body(run.outcome.post, run.outcome, run.grounded))}\n\n"
+            finally:
+                app.state.active_traces -= 1
+
+        return StreamingResponse(body(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
     @app.get("/trace/stream")
     async def trace_stream(job: str = Query(min_length=1, max_length=64, pattern=JOB_ID)) -> StreamingResponse:
         """Run the agent graph for this job and stream its trace as Server-Sent Events, each event sent as it happens.
@@ -230,9 +267,7 @@ def create_app(
                 text = request.text.strip()
                 if not text or len(text) > settings.max_text_chars:
                     raise HTTPException(status_code=422, detail=f"text must be 1 to {settings.max_text_chars} characters")
-                now = datetime.now(timezone.utc)
-                post = Post(id=f"{settings.text_source_id}:{sha256_text(text)[:16]}", source_id=settings.text_source_id, url="",
-                            author_hash=hash_author(salt, settings.text_source_id), text=text, posted_at=now, fetched_at=now)
+                post = text_post(text)
             if fastclock is not None:
                 fastclock.process(post)            # a repeat is still a post that spread: it counts toward the cluster's velocity
             cached = verdicts().get_or_compute(post.text, lambda: _run(post))
@@ -246,28 +281,35 @@ def create_app(
 
     def _run(post: Post) -> dict:
         done = verify_post(post, cfg, ledger, do_extract, do_lookup, do_judge)
-        ex = done.extraction
-        if ex.status in ("blocked", "failed"):
-            raise HTTPException(status_code=502, detail=f"claim extraction {ex.status}: {ex.reason}")
-        return {
-            "post": {"id": post.id, "url": post.url, "source_id": post.source_id},
-            "extraction": {"status": ex.status, "reason": ex.reason, "model": ex.model, "non_claims": len(ex.non_claims)},
-            "claims": [
-                {
-                    "claim_id": r.claim.id, "text": r.claim.text_en, "quote": r.claim.text_orig, "lang": r.claim.lang,
-                    "label": r.outcome.verdict.label, "confidence_band": r.outcome.verdict.confidence_band,
-                    "flags": r.outcome.verdict.flags, "reasons": r.outcome.reasons,
-                    "citations": [e.model_dump(mode="json") for e in r.outcome.verdict.evidence],
-                    "related": [{"url": a.evidence.url, "publisher": a.evidence.publisher, "rating": a.evidence.rating,
-                                 "reviewed_claim": a.evidence.reviewed_claim, "relevance": round(a.relevance, 2), "why_not_used": a.reason}
-                                for a in r.outcome.related],
-                    "ledger_seq": r.ledger_seq,
-                }
-                for r in done.results
-            ],
-        }
+        if done.extraction.status in ("blocked", "failed"):
+            raise HTTPException(status_code=502, detail=f"claim extraction {done.extraction.status}: {done.extraction.reason}")
+        return verdict_body(post, done)
 
     return app
+
+
+def verdict_body(post: Post, done, grounded: dict | None = None) -> dict:
+    """The JSON a verdict run returns. `grounded` (claim id -> Grounded) adds the knowledge-graph entities when the agent ran."""
+    ex = done.extraction
+    return {
+        "post": {"id": post.id, "url": post.url, "source_id": post.source_id},
+        "extraction": {"status": ex.status, "reason": ex.reason, "model": ex.model, "non_claims": len(ex.non_claims)},
+        "claims": [
+            {
+                "claim_id": r.claim.id, "text": r.claim.text_en, "quote": r.claim.text_orig, "lang": r.claim.lang,
+                "label": r.outcome.verdict.label, "confidence_band": r.outcome.verdict.confidence_band,
+                "flags": r.outcome.verdict.flags, "reasons": r.outcome.reasons,
+                "citations": [e.model_dump(mode="json") for e in r.outcome.verdict.evidence],
+                "related": [{"url": a.evidence.url, "publisher": a.evidence.publisher, "rating": a.evidence.rating,
+                             "reviewed_claim": a.evidence.reviewed_claim, "relevance": round(a.relevance, 2), "why_not_used": a.reason}
+                            for a in r.outcome.related],
+                "ledger_seq": r.ledger_seq,
+                **({"entities": [{"name": e.name, "id": e.id, "label": e.label, "description": e.description, "url": e.url}
+                                 for e in grounded[r.claim.id].entities]} if grounded and r.claim.id in grounded else {}),
+            }
+            for r in done.results
+        ],
+    }
 
 
 def _path(value: str) -> Path:

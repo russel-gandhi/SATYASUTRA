@@ -86,3 +86,11 @@ forensics:
   timeout_s: 120
   max_upload_bytes: 15000000
   threshold: trufor_manipulation_score
+
+knowledge_graph:
+  endpoint: https://www.wikidata.org/w/api.php
+  entity_url_template: https://www.wikidata.org/wiki/{id}
+  language: en
+  timeout_s: 15
+  max_entities: 5
+  name_max_chars: 80

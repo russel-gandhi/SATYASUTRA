@@ -49,9 +49,13 @@ def verify_post(
         outcome = decide(claim, found.evidence, config, judged=judgement.relations if judgement else None)
         if judgement and judgement.error:
             outcome.reasons.append(f"same-claim judge unavailable ({judgement.error}): strict word-overlap rule used")
-        entry = ledger.append(config.runtime.verify.ledger_kind, _payload(claim, outcome, extraction, judgement), _idem_key(claim, outcome))
-        out.results.append(ClaimResult(claim, outcome, entry.seq, found.from_cache))
+        out.results.append(ClaimResult(claim, outcome, record_verdict(config, ledger, claim, outcome, extraction, judgement), found.from_cache))
     return out
+
+
+def record_verdict(config: Config, ledger: LedgerStore, claim: Claim, outcome: RuleOutcome, extraction: ExtractionResult, judgement: Judgements | None = None) -> int:
+    """Write one verdict to the ledger and return its sequence number. The /verify path and the agent graph both end here."""
+    return ledger.append(config.runtime.verify.ledger_kind, _payload(claim, outcome, extraction, judgement), _idem_key(claim, outcome)).seq
 
 
 def _evidence_ids(outcome: RuleOutcome) -> list[str]:

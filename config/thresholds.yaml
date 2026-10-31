@@ -39,3 +39,18 @@ thresholds:
       in the 300 s window, so general chatter escalates nothing. General chatter,
       not a news event: recalibrate during one.'
     date: '2026-10-31'
+  trufor_manipulation_score:
+    value: 0.7
+    calibrated_on: 'scripts/calibrate_trufor.py measure --images 30 on the live TruFor
+      service (RTX 4060), 2026-10-31: 30 random Wikimedia Commons photos (their thumbnails,
+      already JPEG), each untouched, shrunk to 70 percent plus JPEG q80 (''shared''),
+      with a 30 percent-side patch spliced in from another photo then shared, and
+      with a region copy-moved then shared. At 0.7: false alarms 0 of 30 untouched
+      and 1 of 30 shared; detected 63 percent of splices and 20 percent of copy-moves
+      (at 0.5, the authors'' usual cut: 3 percent and 10 percent false alarms, 73
+      and 33 percent detected). Chosen high because calling a genuine image EDITED
+      is the worse error. Limits: 30 images, one detector, large self-made edits (small
+      edits will be missed), no AI-generated images and no real-world deepfakes were
+      tested, Commons photos are not social-media photos. Recalibrate on labelled
+      social-media images.'
+    date: '2026-10-31'

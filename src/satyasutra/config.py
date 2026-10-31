@@ -209,6 +209,15 @@ class ProvenanceSettings(_Strict):
     commons: CommonsSettings
 
 
+class KnowledgeGraphSettings(_Strict):
+    endpoint: str                            # Wikidata's MediaWiki API
+    entity_url_template: str                 # a human page for an entity id, with {id}
+    language: str                            # language of labels and descriptions
+    timeout_s: float = Field(gt=0)
+    max_entities: int = Field(gt=0)          # entities named in one claim, at most
+    name_max_chars: int = Field(gt=0)        # longer names are not entity names
+
+
 class ForensicsSettings(_Strict):
     url: str                                 # the local TruFor service (forensics/service.py), which runs in its own Python environment
     timeout_s: float = Field(gt=0)
@@ -241,6 +250,7 @@ class RuntimeFile(_Strict):
     trace: TraceSettings
     escalation: EscalationSettings
     forensics: ForensicsSettings
+    knowledge_graph: KnowledgeGraphSettings
 
 
 class Config(_Strict):
