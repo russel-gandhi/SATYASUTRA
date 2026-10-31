@@ -45,17 +45,25 @@ async function api(path, opts) {
   return b;
 }
 
+const outcome = new Map();   // what a check on a row said, kept across the 6 s refresh that rebuilds the rows
+
 function stateBox(r, btnRefresh) {
   const box = el("div");
   if (r.state.checked) {
     box.append(el("span", "badge " + r.state.label, r.state.label.replaceAll("_", " ")), " ", el("span", "mute", r.state.confidence_band + " confidence"));
     if (r.state.ledger_seq != null) { const a = el("a", "", " ledger entry #" + r.state.ledger_seq); a.href = "/ledger/" + r.state.ledger_seq; a.target = "_blank"; a.rel = "noopener"; box.append(a); }
   } else {
-    const b = el("button", "", "Check this now"); const msg = el("span", "mute", " not checked yet");
+    const kept = outcome.get(r.example_text);
+    const b = el("button", "", "Check this now"); const msg = el("span", kept && kept.err ? "err" : "mute", " " + (kept ? kept.text : "not checked yet"));
+    b.disabled = !!(kept && kept.busy);
     b.onclick = async () => {
-      b.disabled = true; msg.textContent = " checking...";
-      try { await api("/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: r.example_text }) }); btnRefresh(); }
-      catch (e) { msg.textContent = " " + e.message; msg.className = "err"; b.disabled = false; }
+      b.disabled = true; msg.textContent = " checking..."; msg.className = "mute"; outcome.set(r.example_text, { text: "checking...", busy: true });
+      try {
+        const d = await api("/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: r.example_text }) });
+        const n = (d.claims || []).length;
+        outcome.set(r.example_text, { text: n ? "checked" : "checked: no checkable claim found in this post (" + ((d.extraction && d.extraction.reason) || "nothing to verify") + "), so no verdict was made" });
+        btnRefresh();
+      } catch (e) { outcome.set(r.example_text, { text: e.message, err: true }); btnRefresh(); }
     };
     box.append(b, msg);
   }
