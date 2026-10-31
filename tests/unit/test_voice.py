@@ -2,6 +2,7 @@
 
 import io
 import json
+import shutil
 import struct
 import wave
 
@@ -16,6 +17,9 @@ from satyasutra.voice import Transcriber, Transcript, VoiceError
 from satyasutra.voice.transcribe import decode
 
 
+needs_ffmpeg = pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="ffmpeg is not installed (CI installs it, so these run there)")
+
+
 def wav(seconds: float, rate: int = 16000) -> bytes:
     buf = io.BytesIO()
     with wave.open(buf, "wb") as w:
@@ -26,6 +30,7 @@ def wav(seconds: float, rate: int = 16000) -> bytes:
     return buf.getvalue()
 
 
+@needs_ffmpeg
 def test_decode_reads_a_wav_to_16k_float_samples_and_refuses_junk():
     audio = decode(wav(0.5, rate=8000), 20)
     assert audio.dtype == np.float32 and abs(len(audio) - 8000) < 200          # resampled from 8 kHz to 16 kHz
@@ -33,6 +38,7 @@ def test_decode_reads_a_wav_to_16k_float_samples_and_refuses_junk():
         decode(b"this is not audio", 20)
 
 
+@needs_ffmpeg
 def test_limits_are_enforced_before_any_model_runs(tmp_path):
     cfg = load_config()
     t = Transcriber(cfg, tmp_path)
@@ -42,6 +48,7 @@ def test_limits_are_enforced_before_any_model_runs(tmp_path):
         t.transcribe(wav(cfg.runtime.voice.max_seconds + 2))
 
 
+@needs_ffmpeg
 def test_the_service_answer_is_used_and_a_low_language_probability_is_flagged(tmp_path, monkeypatch):
     cfg = load_config()
     t = Transcriber(cfg, tmp_path)
