@@ -87,6 +87,7 @@
       </div>
       <div id="trace" class="trace" style="display:none"></div>
       <div id="links"></div>
+      <div id="act"></div>
       <div id="out"></div>
     </section>
     <section style="margin-top:16px">
@@ -257,7 +258,7 @@ function streamAgent(text) {
     es.addEventListener("tool_call", (m) => { const e = JSON.parse(m.data); add("tool", e.data.name, e.data.summary); });
     es.addEventListener("node_finished", (m) => { const e = JSON.parse(m.data); if (open[e.node]) { open[e.node].classList.remove("run"); open[e.node].append(" " + e.elapsed_ms + " ms"); } });
     es.addEventListener("error", (m) => { if (m.data) { const e = JSON.parse(m.data); add("", "failed", (e.node || "") + " " + e.data.type); out.replaceChildren(el("div", "err", "The run stopped at " + (e.node || "a step") + " (" + e.data.type + "). No verdict was guessed.")); finish(); } else if (!gotResult) { finish(); } });
-    es.addEventListener("result", (m) => { gotResult = true; showResult(JSON.parse(m.data), out); });
+    es.addEventListener("result", (m) => { gotResult = true; const b = JSON.parse(m.data); showResult(b, out); showActions(text, b); });
     es.addEventListener("run_finished", () => { setTimeout(finish, 300); });
   });
 }
@@ -276,6 +277,23 @@ async function checkLinks(text) {
   } catch (_) {}
 }
 
+async function showActions(text, body) {
+  const box = $("act"); box.replaceChildren();
+  try {
+    const labels = body.claims.map((c) => c.label), seqs = body.claims.map((c) => c.ledger_seq).filter((s) => s != null);
+    const p = await api("/act/plan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, ledger_seqs: seqs, labels }) });
+    if (p.intent === "none") return;
+    const card = el("div", "claim"); card.append(el("div", "small", "What to do next - " + p.why));
+    p.routes.forEach((r) => {
+      const row = el("div", "q"); row.append(Object.assign(el("b"), { textContent: r.title + (r.contact ? " (" + r.contact + ")" : "") }), el("div", "small", r.detail));
+      if (r.url) { const a = el("a", "", r.url); a.href = r.url; a.target = "_blank"; a.rel = "noopener"; row.append(a); }
+      card.append(row);
+    });
+    const dl = el("a", "", "Download evidence pack (text file)"); dl.href = URL.createObjectURL(new Blob([p.pack], { type: "text/plain" })); dl.download = "evidence-pack.txt";
+    card.append(dl, el("div", "small", p.notice)); box.append(card);
+  } catch (_) {}
+}
+
 async function verify() {
   const text = $("text").value.trim(), uri = $("uri").value.trim();
   const out = $("out"); out.replaceChildren();
@@ -283,7 +301,9 @@ async function verify() {
   $("go").disabled = true; $("spin").style.display = "inline";
   checkLinks(text || uri);
   if (!uri) {
+    $("act").replaceChildren();
     const got = await streamAgent(text);
+    if (!got) showActions(text, { claims: [] });
     if (!got && !out.childNodes.length) out.append(el("div", "claim small", "No checkable claim found in this text. Opinions and chatter are not claims."));
     $("go").disabled = false; $("spin").style.display = "none"; refreshPills();
     return;

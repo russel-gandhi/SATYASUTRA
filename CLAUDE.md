@@ -87,6 +87,14 @@ forensics\venv311\Scripts\python forensics\service.py --port 8100          # Tru
   Evidence route `contrast` (role contradicts, tier of the passage) and `rules.decide` gives REFUTED, medium. A matching number never gives SUPPORTED.
   Live check 2026-10-31: a claim with "50,000 Crore" against an RBI notice of "29,900 Crore" refuted; the correct number and an unrelated
   number did not (one claim each, not a measured rate). Only the 10 latest RBI releases and 30 SEBI titles are indexed, so most claims retrieve nothing relevant.
+- Scam and next steps (friend's map S2, S1): `scam/links.py` + `config/official_domains.yaml` check link NAMES only (never opened) against 27 listed
+  official domains (DNS-resolved 2026-10-31): official, lookalike (embedded real domain, look-alike characters, near-miss, `@` trick),
+  similar_name, shortened, gov_style, unknown (never "safe"); `GET /links/check`. `act/plan.py` + `config/actions.yaml`: intent (money_lost,
+  scam_forward, false_claim) by plain word lists, routes (1930, cybercrime.gov.in, Chakshu on sancharsaathi.gov.in, tell your bank) with source
+  URLs and a plain-text evidence pack that cites ledger entries; `POST /act/plan`; UI "what to do next" card. **The routes come from secondary
+  sources (Vikaspedia, news); the official sites were not opened by us (cybercrime.gov.in answers 403), `confirmed_on_official_site: false`.** Nothing is filed.
+- `scripts/preflight.py` (keys by name, every source, TruFor+Smaug service, ffmpeg, indexes, ledger, API) and `scripts/start_demo.ps1` (starts both
+  services if down, then preflight) are the cold-start path.
 - Origin and spread: clusters keep their earliest `members_kept` posts (in memory, forgotten when a cluster goes idle, not persisted);
   `fastclock/trace.py` builds first post, spread timeline, wording versions with word diffs; `GET /fastclock/cluster/{id}`,
   `GET /fastclock/match?text=` (a pasted claim matches a live cluster of at least `match_min_posts` posts); UI trace panel. Accounts are

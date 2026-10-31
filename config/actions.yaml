@@ -1,0 +1,51 @@
+# Verify -> Act: what to tell someone after a verdict (friend's map S1). We prepare; the person files. Nothing here files, sends or calls anything.
+# Basis: a web search on 2026-10-31 found these routes in consistent secondary sources (Vikaspedia, state police pages, news, a bank's guidance).
+# The official sites themselves (cybercrime.gov.in refuses our client with HTTP 403) were NOT opened by us, so confirm each route on the
+# official site before showing it to the public. Wording is deliberately general: no time limits or success rates are promised.
+checked_on: '2026-10-31'
+confirmed_on_official_site: false
+
+settings:
+  min_scam_words: 2            # this many scam words (and no link finding) make a forward look like a scam attempt
+  max_text_chars: 1500         # the forward text is cut to this in the evidence pack
+
+scam_words: [otp, kyc, blocked, suspended, lottery, prize, refund, "verify your", "update your", "click the link", "click here", urgent, expires, aadhaar,
+             "pan card", electricity, arrest, customs, parcel, "work from home", "double your", "ओटीपी", "केवाईसी", "खाता बंद", "लॉटरी", "इनाम", "अरेस्ट"]
+loss_phrases: ["i paid", "i transferred", "money was debited", "amount was debited", "lost money", "i lost", "sent them money", "payment done", scammed, cheated,
+               "paid them", "पैसे कट गए", "पैसे भेज दिए", "ठगी", "धोखा"]
+
+routes:
+  call_1930:
+    title: Call the National Cyber Crime Helpline, 1930
+    detail: If money has already left your account, call 1930 as soon as you can; the sooner it is reported, the better the chance the transfer can be traced.
+    contact: "1930"
+    url: https://cybercrime.gov.in
+    source_url: https://vikaspedia.in/e-governance/citizen-services/citizen-financial-cyber-fraud-reporting-and-management-system
+  tell_bank:
+    title: Tell your bank or UPI app at once
+    detail: Use the number on the back of your card or inside your bank's own app, not a number from the forward. Ask them to block the card or account and note the complaint number.
+    source_url: https://vikaspedia.in/e-governance/citizen-services/citizen-financial-cyber-fraud-reporting-and-management-system
+  cybercrime_portal:
+    title: File the complaint yourself on the National Cyber Crime Reporting Portal
+    detail: Open cybercrime.gov.in, choose the category (financial fraud or other), and attach the evidence pack below. We do not file for you.
+    url: https://cybercrime.gov.in
+    source_url: https://vikaspedia.in/e-governance/citizen-services/citizen-financial-cyber-fraud-reporting-and-management-system
+  chakshu:
+    title: Report the suspicious call, SMS or WhatsApp on Sanchar Saathi (Chakshu)
+    detail: For a fraud attempt that has not cost you money yet. Open sancharsaathi.gov.in, choose Chakshu, pick the medium and category, and describe it. Meant for communication from the last 30 days; if money is already lost, call 1930.
+    url: https://sancharsaathi.gov.in
+    source_url: https://services.india.gov.in/service/detail/chakshu-report-suspected-fraud-communication
+  report_in_app:
+    title: Report the message inside the app you received it in
+    detail: Use the app's own report or block option so the sender is flagged. Do not forward it further, even to warn people; share the correction instead.
+  do_not:
+    title: Do not click, reply or share codes
+    detail: Do not open the link, do not call numbers in the message, and never share an OTP, PIN or card details. A real bank or office does not ask for them by message.
+  share_correction:
+    title: Share the correction, not the rumour
+    detail: Reply in the group with the verdict and the source link below instead of forwarding the original.
+
+intents:
+  money_lost: [call_1930, tell_bank, cybercrime_portal, do_not]
+  scam_forward: [do_not, chakshu, report_in_app]
+  false_claim: [share_correction, report_in_app]

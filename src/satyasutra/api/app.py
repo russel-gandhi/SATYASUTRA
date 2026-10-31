@@ -39,12 +39,19 @@ from ..schemas.core import sha256_text
 from ..sources import FactCheckClient, FactCheckResult, ProbeResult, probe_all
 from ..sources import WikidataClient
 from ..sources.bluesky import PostNotFound, fetch_post
+from ..act import build_pack, build_plan, load_actions
 from ..scam import check_links, load_domains
 from ..sources.index import OfficialIndex
 from ..verdict_cache import VerdictCache, mark
 
 ROOT = Path(__file__).resolve().parents[3]
 JOB_ID = r"^[A-Za-z0-9_-]+$"
+
+
+class ActRequest(BaseModel):
+    text: str
+    ledger_seqs: list[int] = []
+    labels: list[str] = []
 
 
 class VerifyRequest(BaseModel):
@@ -212,6 +219,18 @@ def create_app(
         return {"links": [{"link": f.link, "host": f.host, "status": f.status, "reason": f.reason, "real_domain": f.real_domain, "owner": f.owner} for f in found],
                 "checked_on": link_domains().checked_on,
                 "note": "Only the name is checked; the link is never opened. A link that is not in our list is not thereby safe."}
+
+    @app.post("/act/plan")
+    def act_plan(req: ActRequest) -> dict:
+        """The next steps for a forward, and a plain-text evidence pack the person takes to the reporting portal. Nothing is filed or sent."""
+        text = req.text.strip()
+        if not text or len(text) > cfg.runtime.verify.max_text_chars:
+            raise HTTPException(status_code=422, detail=f"text must be 1 to {cfg.runtime.verify.max_text_chars} characters")
+        actions = load_actions(config_dir() / "actions.yaml")
+        links = check_links(text, link_domains())
+        plan = build_plan(text, links, req.labels, actions)
+        pack = build_pack(text, plan, links, req.ledger_seqs[:cfg.runtime.verify.judge_max_reviews], ledger, actions)
+        return {"intent": plan.intent, "why": plan.why, "routes": plan.routes, "notice": plan.notice, "pack": pack}
 
     @app.get("/fastclock/cluster/{cluster_id}")
     def fastclock_cluster(cluster_id: int) -> dict:
