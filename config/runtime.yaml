@@ -212,3 +212,12 @@ audio_spoof:
   min_seconds: 2
   providers: [CPUExecutionProvider]
 
+officials:
+  max_rows: 15
+  label_priority: [REFUTED, MISSING_CONTEXT, SUPPORTED, UNVERIFIABLE_YET, NOT_A_CLAIM]
+  disaster_terms: [flood, floods, flooding, earthquake, cyclone, landslide, cloudburst, tsunami, "fire broke out", "building fire", wildfire, "bomb blast", "blast at",
+                   explosion, collapse, collapsed, stampede, evacuation, evacuated, "dam burst", "bridge collapse", "building collapse", "train accident",
+                   derailment, heatwave, "red alert", "orange alert", cyclonic, drought, outbreak, epidemic, "gas leak", "plane crash", "air crash", "terror attack",
+                   "terrorist attack", bombing,
+                   बाढ़, भूकंप, चक्रवात, तूफान, भूस्खलन, सुनामी, आग, धमाका, विस्फोट, हादसा, भगदड़, ढह, "बादल फटना", महामारी, "रेड अलर्ट"]
+

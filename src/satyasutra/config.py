@@ -268,6 +268,12 @@ class AudioSpoofSettings(_Strict):
     providers: list[str]
 
 
+class OfficialsSettings(_Strict):
+    disaster_terms: list[str]                # whole words or phrases (English and Hindi) that put a cluster in the disaster group, shown first
+    max_rows: int = Field(gt=0)
+    label_priority: list[str]                # when a post holds several claims, the row shows the first of these that occurs
+
+
 class VoiceSettings(_Strict):
     service_url: str                         # the GPU service (forensics/service.py); when it is down the clip is transcribed on the CPU, slowly
     service_timeout_s: float = Field(gt=0)
@@ -351,6 +357,7 @@ class RuntimeFile(_Strict):
     knowledge_graph: KnowledgeGraphSettings
     official: OfficialSettings
     voice: VoiceSettings
+    officials: OfficialsSettings
     audio_spoof: AudioSpoofSettings
     news: NewsSettings
     telegram: TelegramSettings

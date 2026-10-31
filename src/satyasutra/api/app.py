@@ -45,6 +45,7 @@ from ..scam import check_links, load_domains
 from ..voice import Transcriber, Transcript, VoiceError
 from ..audio import SpoofDetector
 from ..card import build_card, load_cards
+from ..officials import build_view
 from ..sources.index import OfficialIndex
 from ..sources.news import check_news, refresh_news_if_stale
 from ..verdict_cache import VerdictCache, mark
@@ -226,6 +227,19 @@ def create_app(
         if worker is None:
             raise HTTPException(status_code=503, detail="the fast-clock worker is not enabled (fastclock.worker_enabled in config/runtime.yaml)")
         return worker.stats()
+
+    @app.get("/officials/data")
+    def officials_data() -> dict:
+        """Spreading clusters with their topic and what we already know about each: a triage list, not a verdict. Disaster topics come first."""
+        if worker is None:
+            raise HTTPException(status_code=503, detail="the fast-clock worker is not enabled (fastclock.worker_enabled in config/runtime.yaml)")
+        rows = build_view(worker.top(), lambda text: (c.body if (c := verdicts().get(text)) else None), cfg)
+        return {"rows": rows, "stats": worker.stats(),
+                "note": "Only the Bluesky stream we watch is covered, in memory since the server started. A row says what we have already found; it is not a verdict, and topics are matched by word lists."}
+
+    @app.get("/officials", include_in_schema=False)
+    def officials_page() -> FileResponse:
+        return FileResponse(ROOT / "ui" / "officials.html", media_type="text/html")
 
     @app.get("/links/check")
     def links_check(text: str = Query(min_length=1, max_length=cfg.runtime.verify.max_text_chars)) -> dict:
