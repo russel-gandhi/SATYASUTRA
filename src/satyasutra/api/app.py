@@ -721,7 +721,7 @@ def create_app(
         return mark(cached)
 
     def _run(post: Post) -> dict:
-        done = verify_post(post, cfg, ledger, do_extract, do_lookup, do_judge, do_web)
+        done = verify_post(post, cfg, ledger, do_extract, do_lookup, do_judge, do_web, do_official)
         if done.extraction.status == "failed" and done.extraction.reason.startswith(BUSY_REASONS):
             raise HTTPException(status_code=503, detail="The language model is at its rate limit or unreachable right now, so nothing was checked and nothing was guessed. Please try again in about a minute.")
         if done.extraction.status in ("blocked", "failed"):

@@ -41,6 +41,7 @@ def verify_post(
     lookup: Callable[[str, str | None], FactCheckResult],
     judge: Callable[[str, list], Judgements] | None = None,
     web: Callable[[str], object] | None = None,
+    official: Callable[[str], object] | None = None,
 ) -> VerifyOutcome:
     extraction = extract(post)
     out = VerifyOutcome(post, extraction)
@@ -48,7 +49,10 @@ def verify_post(
         found = lookup(claim.text_en, claim.lang)
         judgement = judge(claim.text_en, found.evidence) if judge else None
         net = web(claim.text_en) if web else None
-        outcome = decide(claim, [*found.evidence, *(net.evidence if net else [])], config, judged=judgement.relations if judgement else None)
+        off = official(claim.text_en) if official else None            # same official-text contrast check the agent graph runs
+        outcome = decide(claim, [*found.evidence, *(off.contrast if off else []), *(net.evidence if net else [])], config, judged=judgement.relations if judgement else None)
+        if off and off.error:
+            outcome.reasons.append(f"official-text check unavailable ({off.error}): no official evidence used")
         if net and net.error:
             outcome.reasons.append(f"web news search unavailable ({net.error}): no web evidence used")
         if judgement and judgement.fallback:

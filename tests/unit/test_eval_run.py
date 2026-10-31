@@ -193,3 +193,16 @@ def test_build_f_needs_the_key(tmp_path, monkeypatch, capsys):
     if build_f.main(["--seeds", str(seeds)]) != 2:
         pytest.skip("a real key is present in .env on this machine")
     assert "GOOGLE_FACTCHECK_API_KEY" in capsys.readouterr().err
+
+
+def test_post_verify_the_telegram_path_runs_the_official_text_check_too(tmp_path):
+    """The bot calls POST /verify. It used to skip the official-text step, so a changed number was 'cannot tell' there and REFUTED on the web page."""
+    for contrast, label in ((True, "REFUTED"), (False, "UNVERIFIABLE_YET")):
+        d = tmp_path / f"v{contrast}"
+        d.mkdir()
+        app = create_app(load_config(CONFIG), SQLiteLedgerStore(d / "l.sqlite3", code_version=__version__),
+                         extract=lambda post: ExtractionResult("ok", [Claim(id="c1", post_id=post.id, text_en=post.text, text_orig=post.text, span=(0, len(post.text)), lang="en")], model="m", prompt_sha256="p"),
+                         lookup=lambda t, lang: FactCheckResult([], 0, False), judge=lambda t, e: Judgements({}, "m", "p"), ground=lambda t: Grounded(),
+                         official=lambda t, c=contrast: OfficialResult(contrast=[contrast_evidence()] if c else []))
+        body = TestClient(app).post("/verify", json={"text": CLAIM}).json()
+        assert body["claims"][0]["label"] == label
