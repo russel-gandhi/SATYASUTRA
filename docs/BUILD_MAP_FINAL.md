@@ -148,6 +148,12 @@ file nobody else edits; *shared* means the integrator applies the change.
 plus D1 at 3 h per person. About 25 productive hours per person remain, so Core and Social fit with Claude sessions running in
 parallel; Stretch is taken only after checkpoint CP2 passes with time to spare. S6 (health) needs no build, only demo items.
 
+**India fit (IN1 to IN7, about 11 h):** languages measured, Indian scam types, more official text, regional-language fact-check search, a sensitive-topic guard,
+voice on Indian speech and seasonal topics. Packages, order, cuts and the say or do-not-say list are in `BUILD_PLAN.md`, section "India fit".
+
+**Throughput and the funnel (TH1a to TH1d, about 3.7 h):** the benchmark that turns the "high-throughput" clause into measured numbers, and the Radar, Verifier, Responder
+framing for the pitch. Packages, the five slide numbers and the say or do-not-say rules are in `BUILD_PLAN.md`, section "Throughput and the funnel".
+
 ## 6. File ownership (avoids merge conflicts)
 
 | Owner | Files |
