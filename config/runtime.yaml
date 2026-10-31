@@ -221,3 +221,10 @@ officials:
                    "terrorist attack", bombing,
                    बाढ़, भूकंप, चक्रवात, तूफान, भूस्खलन, सुनामी, आग, धमाका, विस्फोट, हादसा, भगदड़, ढह, "बादल फटना", महामारी, "रेड अलर्ट"]
 
+notice:
+  max_image_bytes: 8000000
+  issuer_aliases: [rbi, "reserve bank", sebi, "securities and exchange board", "रिज़र्व बैंक", "भारतीय रिजर्व बैंक", "सेबी"]
+  min_coverage: 0.5
+  min_matched_words: 4
+  max_passages: 3
+

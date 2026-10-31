@@ -100,6 +100,12 @@ forensics\venv311\Scripts\python forensics\service.py --port 8100          # Tru
   Noto Sans Devanagari (`/assets/fonts`, OFL) because Pillow here has no raqm. Only for REFUTED, SUPPORTED, MISSING_CONTEXT at medium or high confidence with an
   https source; Hindi when the claim is Hindi (original quote shown). Never carries the original media. **The Hindi wording is ours and unreviewed by a native speaker.**
 - Video frames also get the AI-generated score; SYNTHETIC_SUSPECTED needs `forensics.video_ai_min_frames` (3) sampled frames over the cut (a policy choice, not calibrated).
+- Notice checker (`notice.py`, `POST /notice/check`, `config/prompts/notice.txt`): Gemini vision only copies the printed text, issuer, links, phone numbers and requests;
+  code checks link names, scam wording, and whether a notice claiming RBI/SEBI matches an item in our official index. Findings, not a verdict. A made-up scam notice
+  (Pillow-drawn, for testing) read correctly live; real photographed notices (skew, glare, Hindi) not tested.
+- Officials view (`officials.py`, `GET /officials`, `/officials/data`): spreading clusters, disaster word list (English and Hindi, tightened after 'attack' flagged a cricket chat) first,
+  state from the /verify cache only. Gemini client (`llm/gemini.py`) retries a timeout or 5xx once and falls back to the next model in `policy.gemini.models`;
+  a model at its limit surfaces as ModelBusy (503, 'try again in about a minute'), never a guess.
 - Not done: (Telegram bot done, see above) (needs a fresh token), escalation never fired live, TruFor false-alarm rate on real social-media images
   unknown, README with a real-vs-roadmap table. `tests/unit/test_trace_sse.py::test_leaving_mid_run...` failed once under full-suite load and
   passes alone (timing).

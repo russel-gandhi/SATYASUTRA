@@ -274,6 +274,14 @@ class OfficialsSettings(_Strict):
     label_priority: list[str]                # when a post holds several claims, the row shows the first of these that occurs
 
 
+class NoticeSettings(_Strict):
+    max_image_bytes: int = Field(gt=0)
+    issuer_aliases: list[str]                # words in a notice's own letterhead that claim an official issuer we hold text for (RBI, SEBI)
+    min_coverage: float = Field(gt=0, le=1)  # share of the notice's content words an official passage must contain to count as the same notice (not calibrated)
+    min_matched_words: int = Field(gt=0)
+    max_passages: int = Field(gt=0)
+
+
 class VoiceSettings(_Strict):
     service_url: str                         # the GPU service (forensics/service.py); when it is down the clip is transcribed on the CPU, slowly
     service_timeout_s: float = Field(gt=0)
@@ -357,6 +365,7 @@ class RuntimeFile(_Strict):
     knowledge_graph: KnowledgeGraphSettings
     official: OfficialSettings
     voice: VoiceSettings
+    notice: NoticeSettings
     officials: OfficialsSettings
     audio_spoof: AudioSpoofSettings
     news: NewsSettings

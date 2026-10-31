@@ -94,6 +94,12 @@
       <div id="out"></div>
     </section>
     <section style="margin-top:16px">
+      <h2>Check a notice or a message screenshot</h2>
+      <input type="file" id="notice" accept="image/*">
+      <div class="small" style="margin-top:6px">A language model copies the text from the picture; then links, scam wording and the issuer's claim are checked in code. It says what it found, not whether the notice is genuine.</div>
+      <div id="noticeOut"></div>
+    </section>
+    <section style="margin-top:16px">
       <h2>Check an image or video</h2>
       <input type="file" id="file" accept="image/*,video/*">
       <div class="small" style="margin-top:6px">Looks the image up in fact-checkers' past articles and asks TruFor (GRIP-UNINA, University of Naples) whether it was edited. It does not detect fully AI-generated images, or face-swap and AI-generated video; for video it checks a handful of frames.</div>
@@ -495,6 +501,24 @@ async function checkVoice() {
   } catch (e) { box.textContent = "Could not read the voice note: " + e.message; }
 }
 
+async function checkNotice() {
+  const f = $("notice").files[0], box = $("noticeOut"); box.replaceChildren();
+  if (!f) return;
+  box.textContent = "Reading the notice...";
+  try {
+    const n = await api("/notice/check", { method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: await f.arrayBuffer() });
+    box.replaceChildren();
+    const card = el("div", "claim");
+    card.append(el("div", "small", "Read from the image" + (n.issuer ? " (it says it is from: " + n.issuer + ")" : "") + ":"), el("div", "q", n.text || "(nothing readable)"));
+    const ul = el("ul"); n.findings.forEach((x) => { const li = el("li", x.level === "red_flag" ? "err" : "", (x.level === "red_flag" ? "Red flag: " : "") + x.text); ul.append(li); }); card.append(ul);
+    if (n.text) { const b = el("button", "ghost toggle", "Check the claims in this text"); b.onclick = () => { $("text").value = n.text; $("uri").value = ""; verify(); window.scrollTo({ top: 0, behavior: "smooth" }); }; card.append(b); }
+    card.append(el("div", "small", n.note));
+    box.append(card);
+    if (n.plan && n.plan.intent !== "none") showActions(n.text, { claims: [] });
+  } catch (e) { box.replaceChildren(el("div", "err", "Could not check the notice: " + e.message)); }
+}
+
+$("notice").onchange = checkNotice;
 $("audio").onchange = checkVoice;
 $("file").onchange = checkImage;
 $("go").onclick = verify; $("chain").onclick = chain;

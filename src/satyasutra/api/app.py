@@ -45,9 +45,11 @@ from ..scam import check_links, load_domains
 from ..voice import Transcriber, Transcript, VoiceError
 from ..audio import SpoofDetector
 from ..card import build_card, load_cards
+from ..notice import NoticeError, check_notice
 from ..officials import build_view
 from ..sources.index import OfficialIndex
 from ..sources.news import check_news, refresh_news_if_stale
+from ..sources.official import refresh_if_stale
 from ..verdict_cache import VerdictCache, mark
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -227,6 +229,22 @@ def create_app(
         if worker is None:
             raise HTTPException(status_code=503, detail="the fast-clock worker is not enabled (fastclock.worker_enabled in config/runtime.yaml)")
         return worker.stats()
+
+    @app.post("/notice/check")
+    async def notice_check(request: Request) -> dict:
+        """Raw image bytes of a notice or message screenshot. Gemini vision copies the text; plain code checks links, wording and the issuer's claim."""
+        data = await request.body()
+
+        def run() -> dict:
+            refresh_if_stale(cfg, official_index())
+            r = check_notice(gemini(), official_index(), data, cfg)
+            return {"text": r.text, "issuer": r.issuer, "urls": r.urls, "phone_numbers": r.phone_numbers, "asks_for": r.asks_for, "findings": r.findings,
+                    "official_match": r.official_match, "plan": r.plan,
+                    "note": "The text was read from the image by a language model and can contain errors. These findings are not a verdict: nothing here says the notice is genuine or fake."}
+        try:
+            return await run_in_threadpool(run)
+        except NoticeError as exc:
+            raise HTTPException(status_code=422, detail=str(exc))
 
     @app.get("/officials/data")
     def officials_data() -> dict:

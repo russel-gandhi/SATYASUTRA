@@ -6,6 +6,7 @@ and is never logged or put in an error message (httpx error text can contain the
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 import re
@@ -78,12 +79,12 @@ class GeminiClient:
             raise ConfigError(f"set {self._src.auth_env} to use {SOURCE_ID}")
         return key
 
-    def generate_json(self, prompt: str, schema: dict, system: str | None = None) -> Reply:
+    def generate_json(self, prompt: str, schema: dict, system: str | None = None, images: list[tuple[str, bytes]] | None = None) -> Reply:
         """Try each configured model in order. A model that times out, answers 5xx, is rate limited, out of quota or gone is skipped for the next one
         (free-tier quotas are per model); a bad key or a blocked prompt is not retried anywhere. The reply names the model that answered."""
         key = self._key()
         body: dict = {
-            "contents": [{"parts": [{"text": prompt}]}],
+            "contents": [{"parts": [{"text": prompt}, *({"inlineData": {"mimeType": mime, "data": base64.b64encode(raw).decode("ascii")}} for mime, raw in images or [])]}],
             "generationConfig": {"responseMimeType": "application/json", "responseSchema": schema, "temperature": 0},
         }
         if system:
