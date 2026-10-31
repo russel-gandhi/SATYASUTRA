@@ -54,11 +54,11 @@ const BAND = { high: { en: "high", hi: "उच्च" }, medium: { en: "medium",
 const EDGE_COLOR = { supports: "#3ecf8e", contradicts: "#ff6b6b", context: "#8b95ab", mentions: "#8b95ab", same_image_as: "#f5b84b", spreading_as: "#b07aff", related_not_used: "#8b95ab", records: "#8b95ab", submitted_with: "#7aa2ff" };
 const NODE_COLOR = { claim: "#7aa2ff", entity: "#8b95ab", factcheck: "#3ecf8e", news: "#3ecf8e", official: "#3ecf8e", media: "#f5b84b", cluster: "#b07aff", registry: "#8b95ab", source: "#8b95ab", provenance: "#f5b84b" };
 
-function wrapText(s, n) { const out = []; let line = ""; s.split(" ").forEach((w) => { if ((line + " " + w).trim().length > n && line) { out.push(line); line = w; } else line = (line + " " + w).trim(); }); if (line) out.push(line); return out.slice(0, 3); }
+function wrapText(s, n) { const out = []; let line = ""; s.split(" ").forEach((w) => { if ((line + " " + w).trim().length > n && line) { out.push(line); line = w; } else line = (line + " " + w).trim(); }); if (line) out.push(line); return out.length > 4 ? [...out.slice(0, 3), out[3].replace(/.{0,3}$/, "...")] : out; }
 
 function drawGraph(g, t) {
-  const W = 900, colX = { left: 20, mid: 360, right: 700 }, nw = 180, nh = 46, gap = 14;
   const claims = g.nodes.filter((n) => n.kind === "claim"), media = g.nodes.filter((n) => ["media", "cluster"].includes(n.kind));
+  const nw = 250, nh = 66, gap = 14, W = media.length ? 1000 : 700, colX = media.length ? { left: 20, mid: 375, right: 730 } : { left: 0, mid: 20, right: 430 };
   const rel = (id) => g.edges.find((e) => e.to === id || e.from === id);
   const sources = g.nodes.filter((n) => ["factcheck", "news", "official", "source", "provenance"].includes(n.kind) && !(media.length && g.edges.some((e) => e.from !== undefined && e.relation === "same_image_as" && e.to === n.id && false)));
   const entities = g.nodes.filter((n) => ["entity", "registry"].includes(n.kind));
@@ -70,8 +70,8 @@ function drawGraph(g, t) {
   place(media, colX.left, 20); place(claims, colX.mid, 20 + Math.max(0, (Math.max(sources.length, 1) * (nh + gap) - claims.length * (nh + gap)) / 2));
   place(sources, colX.right, 20);
   const bottom = 20 + Math.max(sources.length, media.length, claims.length) * (nh + gap) + 30;
-  entities.forEach((n, i) => { pos[n.id] = { x: 20 + (i % 4) * 220, y: bottom + Math.floor(i / 4) * (nh + gap) }; });
-  const H = bottom + Math.ceil(entities.length / 4) * (nh + gap) + 60;
+  entities.forEach((n, i) => { pos[n.id] = { x: 20 + (i % 3) * 270, y: bottom + Math.floor(i / 3) * (nh + gap) }; });
+  const H = bottom + Math.ceil(entities.length / 3) * (nh + gap) + 60;
   const ns = "http://www.w3.org/2000/svg", svg = document.createElementNS(ns, "svg");
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("width", "100%"); svg.style.minWidth = "640px";
   const mk = (tag, attrs, text) => { const e = document.createElementNS(ns, tag); Object.entries(attrs || {}).forEach(([k, v]) => e.setAttribute(k, v)); if (text != null) e.textContent = text; return e; };
@@ -86,11 +86,11 @@ function drawGraph(g, t) {
     const p = pos[n.id]; if (!p) return;
     const grp = mk("g", {}); if (n.url) { grp.style.cursor = "pointer"; grp.addEventListener("click", () => window.open(n.url, "_blank", "noopener")); }
     grp.append(mk("rect", { x: p.x, y: p.y, width: nw, height: nh, rx: 8, fill: "none", stroke: NODE_COLOR[n.kind] || "#8b95ab", "stroke-width": n.kind === "claim" ? 2.4 : 1.4 }));
-    wrapText(n.label, 28).forEach((ln, i, arr) => grp.append(mk("text", { x: p.x + 8, y: p.y + (nh / 2) + (i - (arr.length - 1) / 2) * 13 + 4 }, ln)));
+    wrapText(n.label, 38).forEach((ln, i, arr) => grp.append(mk("text", { x: p.x + 8, y: p.y + (nh / 2) + (i - (arr.length - 1) / 2) * 13 + 4 }, ln)));
     grp.append(mk("title", {}, n.label + (n.tier ? ` (tier ${n.tier})` : ""))); svg.append(grp);
   });
   const legend = mk("g", { class: "legend" });
-  Object.entries(t.legend).forEach(([k, v], i) => { const x = 20 + (i % 5) * 170, y = H - 36 + Math.floor(i / 5) * 16; legend.append(mk("line", { x1: x, y1: y - 4, x2: x + 22, y2: y - 4, stroke: EDGE_COLOR[k] || "#8b95ab", "stroke-width": 2 }), mk("text", { x: x + 28, y }, v)); });
+  Object.entries(t.legend).forEach(([k, v], i) => { const x = 20 + (i % 4) * 170, y = H - 52 + Math.floor(i / 4) * 16; legend.append(mk("line", { x1: x, y1: y - 4, x2: x + 22, y2: y - 4, stroke: EDGE_COLOR[k] || "#8b95ab", "stroke-width": 2 }), mk("text", { x: x + 28, y }, v)); });
   svg.append(legend);
   const box = el("div", "graphbox"); box.append(svg, el("div", "small", g.note)); return box;
 }
