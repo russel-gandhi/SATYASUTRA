@@ -62,6 +62,15 @@ def _contains(text: str, span: str) -> bool:
     return bool(span.strip()) and " ".join(span.split()).casefold() in " ".join(text.split()).casefold()
 
 
+def _appears(value: str, text: str, tol: float) -> bool:
+    """The claim's own figure occurs somewhere in the passage. A table row holds many numbers, so a different figure next to the quoted one proves nothing."""
+    mine = NUMBER.findall(value)
+    if len(mine) != 1:
+        return False
+    x = float(mine[0].replace(",", ""))
+    return any(math.isclose(x, float(n.replace(",", "")), rel_tol=tol) for n in NUMBER.findall(text))
+
+
 def _sentence_with(text: str, span: str) -> str:
     spans = re.split(r"(?<=[.!?])\s+", text)
     return next((s for s in spans if _contains(s, span)), text)
@@ -109,6 +118,8 @@ def contrast_check(client: GeminiClient, cfg: Config, claim_text: str, passages:
                 out.checked.append(note | {"fired": False, "why": "a value is not a single number"})
             elif math.isclose(a, b, rel_tol=tol):
                 out.checked.append(note | {"fired": False, "why": "the numbers match"})
+            elif _appears(cv, p.text, tol):
+                out.checked.append(note | {"fired": False, "why": "the claim's number is also in the passage (another cell of the same text): not a contradiction"})
             else:
                 sentence = _sentence_with(p.text, ov)
                 out.checked.append(note | {"fired": True, "why": f"claim says {cv}, the official text says {ov}"})
