@@ -147,25 +147,33 @@ telegram:
   local_timeout_s: 120
   retry_s: 5
   max_reply_chars: 3800            # Telegram refuses messages over 4096
-  labels:
-    REFUTED: "REFUTED: a trusted source contradicts this"
-    SUPPORTED: "SUPPORTED by a trusted source"
-    MISSING_CONTEXT: "MISSING CONTEXT"
-    UNVERIFIABLE_YET: "CANNOT TELL YET: no trusted source has checked this"
-    NOT_A_CLAIM: "Not a checkable claim"
-    EDITED: "LIKELY EDITED"
-    SYNTHETIC_SUSPECTED: "POSSIBLY AI-GENERATED (one detector only)"
-    OUT_OF_CONTEXT: "OUT OF CONTEXT"
-    INCONCLUSIVE: "INCONCLUSIVE: this does not mean the image is genuine"
+  labels:                          # one sentence per verdict, spoken plainly; {publisher} and {rating} come from the first source
+    REFUTED: "This is false. {publisher} checked this very claim and rated it \"{rating}\"."
+    SUPPORTED: "This checks out. {publisher} looked at this claim and rated it \"{rating}\"."
+    MISSING_CONTEXT: "This is misleading as it stands. {publisher} says important context is missing."
+    UNVERIFIABLE_YET: "I can't confirm this one. No fact-checker I can search has looked at this claim yet."
+    NOT_A_CLAIM: "That's an opinion, not something I can check."
+    EDITED: "This image looks edited. The forensic check found signs that part of it was changed after it was taken."
+    SYNTHETIC_SUSPECTED: "This image may be AI-generated. One detector flagged it, so treat that as a suspicion, not proof."
+    OUT_OF_CONTEXT: "This image is real but used out of context."
+    INCONCLUSIVE: "I can't tell. I found no sign of editing or AI generation, but that doesn't make the photo real: these checks miss a lot."
   messages:
-    start: "Send me a claim, a forwarded message, a voice note or a photo and I will check it. I say 'cannot tell' when no trusted source has checked it. I never file or forward anything for you."
-    none_found: "No checkable claim found. Opinions and chatter are not claims."
-    transcript: "Voice note ({language}): {text}"
-    uncertain: "The language is uncertain, so the words may be wrong."
-    voice_failed: "Could not read the voice note: {reason}"
-    image_failed: "Could not read that image."
+    start: "Send me a claim, a forwarded message, a voice note or a photo and I'll check it. If nobody reliable has checked it, I'll say so instead of guessing. I never report or forward anything for you."
+    none_found: "I didn't find a claim I can check in that. Opinions and chatter aren't claims."
+    source_line: "Read it here: {url}"
+    more_line: "{n} other review(s) say the same."
+    conflict: "Fact-checkers disagree on this one, so I won't call it either way."
+    news_reported: "It is being talked about in the news: {publisher} ran \"{title}\" ({url}). That means it's in the news, not that it's true."
+    news_not_found: "I also went through the latest stories from {n} major news outlets ({names}) and none of them is reporting this. That doesn't prove it's false, since I only see recent stories from the big outlets, but if it were a major event you'd expect to find it there. Don't forward it until a source you trust confirms it."
+    media_match: "This image has appeared in a fact-check before: {url}"
+    next_steps: "What you can do:"
+    act_notice: "I don't report anything for you. Check these details on the official sites before you rely on them."
+    transcript: "You said ({language}): {text}"
+    uncertain: "I wasn't sure about the language, so some words may be wrong."
+    voice_failed: "I couldn't read that voice note: {reason}"
+    image_failed: "I couldn't read that image."
     unsupported: "I can check text, voice notes and photos."
-    error: "Something went wrong while checking. Nothing was recorded; please try again."
+    error: "Something went wrong while checking that. Nothing was recorded, please try again."
 
 explain:
   max_players: 8

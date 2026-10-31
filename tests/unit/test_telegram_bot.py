@@ -10,20 +10,25 @@ from satyasutra.config import load_config
 CFG = load_config()
 S = CFG.runtime.telegram
 
-CLAIM = {"text": "Vaccines contain microchips.", "label": "REFUTED", "confidence_band": "medium", "ledger_seq": 7,
-         "reasons": ["rated 'False' -> refutes", "rated 'False' -> refutes", "trusted source contradicts the claim"],
-         "citations": [{"publisher": "FactCheck.org", "url": "https://example.org/a"}]}
+M = S.messages
+CLAIM = {"text": "Vaccines contain microchips.", "label": "REFUTED", "confidence_band": "medium", "ledger_seq": 7, "flags": [],
+         "reasons": ["rated 'False' -> refutes"],
+         "citations": [{"publisher": "FactCheck.org", "rating": "False", "url": "https://example.org/a"},
+                       {"publisher": "FactCheck.org", "rating": "False", "url": "https://example.org/b"}]}
 
 
-def test_claims_are_formatted_with_plain_labels_deduplicated_reasons_and_the_source():
-    out = format_claims({"claims": [CLAIM]}, S.labels, "none")
-    assert S.labels["REFUTED"] in out and "medium confidence" in out and out.count("rated 'False'") == 1 and "FactCheck.org: https://example.org/a" in out
-    assert format_claims({"claims": []}, S.labels, "none") == "none"
+def test_a_refuted_claim_is_said_plainly_with_who_checked_it_the_link_and_no_jargon():
+    out = format_claims({"claims": [CLAIM]}, S.labels, M)
+    assert 'This is false. FactCheck.org checked this very claim and rated it "False".' in out
+    assert "Read it here: https://example.org/a" in out and "1 other review(s) say the same." in out
+    assert "confidence" not in out and "->" not in out and "no trusted" not in out
+    assert format_claims({"claims": []}, S.labels, M) == M["none_found"]
+    assert M["conflict"] in format_claims({"claims": [dict(CLAIM, flags=["CONFLICT"])]}, S.labels, M)
 
 
 def test_media_result_never_calls_an_inconclusive_image_genuine():
-    out = format_media({"label": "INCONCLUSIVE", "reasons": ["no match"], "matches": [{"url": "https://example.org/f"}]}, S.labels)
-    assert "does not mean the image is genuine" in out and "Seen in a fact-check: https://example.org/f" in out
+    out = format_media({"label": "INCONCLUSIVE", "reasons": [], "matches": [{"url": "https://example.org/f"}]}, S.labels, M)
+    assert "doesn't make the photo real" in out and "appeared in a fact-check before: https://example.org/f" in out
 
 
 def bot(handler_local, handler_tg) -> TelegramBot:
@@ -37,7 +42,7 @@ def local(request: httpx.Request) -> httpx.Response:
     if request.url.path == "/verify":
         return httpx.Response(200, json={"claims": [CLAIM]})
     if request.url.path == "/news/check":
-        return httpx.Response(200, json={"status": "not_found", "outlets_checked": 8, "hits": []})
+        return httpx.Response(200, json={"status": "not_found", "outlets_checked": 8, "outlet_names": ["The Hindu", "NDTV"], "hits": []})
     if request.url.path == "/act/plan":
         return httpx.Response(200, json={"intent": "false_claim", "why": "the claim was checked and refuted", "notice": "We do not file anything.",
                                          "routes": [{"title": "Share the correction", "contact": ""}]})
@@ -56,7 +61,7 @@ def telegram(request: httpx.Request) -> httpx.Response:
 
 def test_text_goes_to_verify_then_adds_next_steps_for_a_refuted_claim():
     out = bot(local, telegram).handle({"text": "Vaccines contain microchips"})
-    assert S.labels["REFUTED"] in out and "Next steps" in out and "Share the correction" in out and "We do not file anything." in out
+    assert "This is false." in out and M["next_steps"] in out and "Share the correction" in out and M["act_notice"] in out
 
 
 def test_commands_get_the_welcome_and_unsupported_types_are_said_plainly():
@@ -67,12 +72,12 @@ def test_commands_get_the_welcome_and_unsupported_types_are_said_plainly():
 
 def test_a_voice_note_is_transcribed_shown_flagged_if_uncertain_and_then_checked():
     out = bot(local, telegram).handle({"voice": {"file_id": "f"}})
-    assert "Voice note (en): vaccines contain microchips" in out and S.messages["uncertain"] in out and S.labels["REFUTED"] in out
+    assert "You said (en): vaccines contain microchips" in out and M["uncertain"] in out and "This is false." in out
 
 
 def test_a_photo_is_checked_and_an_unreadable_one_gets_the_plain_message():
     b = bot(local, telegram)
-    assert S.labels["INCONCLUSIVE"] in b.handle({"photo": [{"file_id": "a"}, {"file_id": "b"}]})
+    assert "I can't tell." in b.handle({"photo": [{"file_id": "a"}, {"file_id": "b"}]})
     assert b.handle({"photo": [{"file_id": "bad"}]}) == S.messages["image_failed"]          # the fake Telegram serves b"junk" for it -> 422
 
 
@@ -81,5 +86,5 @@ def test_an_unchecked_claim_gets_the_news_line_and_a_checked_one_does_not():
     def verify_unchecked(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={"claims": [unchecked]}) if request.url.path == "/verify" else local(request)
     out = bot(verify_unchecked, telegram).handle({"text": "x"})
-    assert "Not in the latest headlines of 8 major outlets" in out and "not proof" in out
+    assert "latest stories from 8 major news outlets (The Hindu, NDTV)" in out and "Don't forward it" in out
     assert "headlines" not in bot(local, telegram).handle({"text": "x"})                    # the REFUTED claim is not looked up in the news

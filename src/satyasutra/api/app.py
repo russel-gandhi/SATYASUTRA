@@ -246,7 +246,7 @@ def create_app(
             index = OfficialIndex(_path(cfg.runtime.news.db_path))
             refreshed = refresh_news_if_stale(cfg, index)
             r = check_news(cfg, index, text)
-            return {"status": r.status, "note": r.note, "outlets_checked": r.outlets_checked, "outlets_with_hits": r.outlets_with_hits,
+            return {"status": r.status, "note": r.note, "outlets_checked": r.outlets_checked, "outlet_names": [f.publisher for f in cfg.runtime.news.feeds], "outlets_with_hits": r.outlets_with_hits,
                     "items_checked": r.items_checked, "oldest": r.oldest, "newest": r.newest,
                     "hits": [{"publisher": h.publisher, "title": h.title, "url": h.url, "coverage": h.coverage,
                               "published_at": h.published_at.isoformat() if h.published_at else None} for h in r.hits],

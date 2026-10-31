@@ -18,31 +18,41 @@ from ..config import Config
 log = logging.getLogger("satyasutra.bot")
 
 
-def format_claims(body: dict, labels: dict[str, str], none_found: str) -> str:
+def format_claims(body: dict, labels: dict[str, str], messages: dict[str, str]) -> str:
+    """One short paragraph per claim: the verdict in a sentence, who said so and a link. The jargon (bands, rule trail) stays on the web page."""
     claims = body.get("claims") or []
     if not claims:
-        return none_found
+        return messages["none_found"]
     parts = []
     for c in claims:
-        lines = [f"{c['text']}", f"{labels.get(c['label'], c['label'])} ({c['confidence_band']} confidence)"]
-        lines += [f"- {r}" for r in dict.fromkeys(c.get("reasons", []))][:3]
-        seen = list(dict.fromkeys(f"{x.get('publisher') or 'source'}: {x['url']}" for x in c.get("citations", []) if x.get("url")))
-        lines += seen[:2]
+        cites = [x for x in c.get("citations", []) if x.get("url")]
+        first = cites[0] if cites else {}
+        lines = [c["text"]]
+        if "CONFLICT" in c.get("flags", []):
+            lines.append(messages["conflict"])
+        else:
+            lines.append(labels.get(c["label"], c["label"]).format(publisher=first.get("publisher") or "A fact-checker", rating=first.get("rating") or ""))
+        if first:
+            lines.append(messages["source_line"].format(url=first["url"]))
+            more = len({x["url"] for x in cites}) - 1
+            if more:
+                lines.append(messages["more_line"].format(n=more))
         parts.append("\n".join(lines))
     return "\n\n".join(parts)
 
 
-def format_media(body: dict, labels: dict[str, str]) -> str:
-    lines = [labels.get(body["label"], body["label"])] + [f"- {r}" for r in body.get("reasons", [])][:4]
-    lines += [f"Seen in a fact-check: {m['url']}" for m in body.get("matches", []) if m.get("url")][:2]
+def format_media(body: dict, labels: dict[str, str], messages: dict[str, str]) -> str:
+    lines = [labels.get(body["label"], body["label"])]
+    lines += [messages["media_match"].format(url=m["url"]) for m in body.get("matches", []) if m.get("url")][:1]
     return "\n".join(lines)
 
 
-def format_news(news: dict) -> str:
+def format_news(news: dict, messages: dict[str, str]) -> str:
     if news["status"] == "reported":
-        return "In the news (context, not proof): " + "; ".join(f"{h['publisher']}: {h['title']} {h['url']}" for h in news["hits"][:2])
+        h = news["hits"][0]
+        return messages["news_reported"].format(publisher=h["publisher"], title=h["title"], url=h["url"])
     if news["status"] == "not_found":
-        return f"Not in the latest headlines of {news['outlets_checked']} major outlets. That is a signal, not proof: feeds hold only recent items."
+        return messages["news_not_found"].format(n=news["outlets_checked"], names=", ".join(news["outlet_names"]))
     return ""
 
 
@@ -71,11 +81,11 @@ class TelegramBot:
 
     def check_text(self, text: str) -> str:
         body = self.local.post("/verify", json={"text": text}).json()
-        out = format_claims(body, self.s.labels, self.s.messages["none_found"])
+        out = format_claims(body, self.s.labels, self.s.messages)
         for c in body.get("claims", []):
             if c["label"] == "UNVERIFIABLE_YET":                       # no fact-checker has covered it: say whether the news has
                 try:
-                    line = format_news(self.local.get("/news/check", params={"text": c["text"]}).json())
+                    line = format_news(self.local.get("/news/check", params={"text": c["text"]}).json(), self.s.messages)
                 except (httpx.HTTPError, ValueError, KeyError):
                     line = ""
                 out += ("\n\n" + line) if line else ""
@@ -83,8 +93,8 @@ class TelegramBot:
         plan = self.local.post("/act/plan", json={"text": text, "labels": labels,
                                                   "ledger_seqs": [c["ledger_seq"] for c in body.get("claims", []) if c.get("ledger_seq")]}).json()
         if plan.get("intent") != "none":
-            out += "\n\n" + plan["why"].capitalize() + ". Next steps:\n" + "\n".join(f"- {r['title']}" + (f" ({r['contact']})" if r.get("contact") else "") for r in plan["routes"])
-            out += "\n" + plan["notice"]
+            out += "\n\n" + self.s.messages["next_steps"] + "\n" + "\n".join(f"- {r['title']}" + (f" ({r['contact']})" if r.get("contact") else "") for r in plan["routes"])
+            out += "\n" + self.s.messages["act_notice"]
         return out
 
     def handle(self, msg: dict) -> str:
@@ -108,7 +118,7 @@ class TelegramBot:
             r = self.local.post("/media/check", content=data)
             if r.status_code != httpx.codes.OK:
                 return self.s.messages["image_failed"]
-            return format_media(r.json(), self.s.labels) + ("\n\n" + self.check_text(msg["caption"]) if msg.get("caption") else "")
+            return format_media(r.json(), self.s.labels, self.s.messages) + ("\n\n" + self.check_text(msg["caption"]) if msg.get("caption") else "")
         return self.s.messages["unsupported"]
 
     def run(self) -> None:
