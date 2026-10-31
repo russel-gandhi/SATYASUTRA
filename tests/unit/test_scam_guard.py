@@ -96,3 +96,14 @@ def test_every_scam_type_has_advice_in_both_languages():
     rules = load_script()
     assert set(rules.types) <= set(rules.advice)
     assert all(a.en.strip() and a.hi.strip() for a in rules.advice.values())
+
+
+def test_a_red_alert_carries_the_family_text_and_a_calm_call_does_not(tmp_path):
+    cfg = load_config().model_copy(deep=True)
+    cfg.runtime.report.db_path = str(tmp_path / "r.sqlite3")
+    cfg.runtime.provenance.db_path = str(tmp_path / "p.sqlite3")
+    c = TestClient(create_app(cfg))
+    calm = c.post("/guard/text", json={"session": "calm-session-1", "text": "Hi dad, the match starts at seven."}).json()
+    red = c.post("/guard/text", json={"session": "red-session-01", "text": "Tell me the OTP you received on your phone."}).json()
+    assert calm["family_alert"] is None and calm["advice"] is None
+    assert red["state"] == "scam" and red["family_alert"]["en"] and red["advice"]["hi"]

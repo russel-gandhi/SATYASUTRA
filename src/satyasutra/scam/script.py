@@ -52,6 +52,7 @@ class ScamScript(_Strict):
     types: dict[str, list[str]]
     states: dict[str, Text]
     advice: dict[str, Text]
+    family_alert: Text
 
 
 def load_script(path: Path | None = None) -> ScamScript:

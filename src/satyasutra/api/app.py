@@ -389,7 +389,7 @@ def create_app(
 
     def guard_reply(call, text: str, session_id: str) -> dict:
         v = call.add(text)
-        return {"state": v.state, "signals": v.signals, "scam_type": v.scam_type, "message": guard_rules.states[v.state].model_dump(), "advice": guard_rules.advice[v.scam_type].model_dump() if v.state == "scam" and v.scam_type in guard_rules.advice else None,
+        return {"state": v.state, "signals": v.signals, "scam_type": v.scam_type, "message": guard_rules.states[v.state].model_dump(), "family_alert": guard_rules.family_alert.model_dump() if v.state == "scam" else None, "advice": guard_rules.advice[v.scam_type].model_dump() if v.state == "scam" and v.scam_type in guard_rules.advice else None,
                 "heard": call.tail, "note": "Script words only; it cannot know who is calling. It never says a call is safe. Nothing is recorded or stored."}
 
     @app.post("/guard/chunk")
