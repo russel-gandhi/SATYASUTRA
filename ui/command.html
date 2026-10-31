@@ -24,14 +24,25 @@
   .brow { grid-template-columns: minmax(70px, 120px) 1fr 30px; } .brow > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .bar { height: 10px; min-width: 6px; }
   .it .badge { display: inline-block; width: auto; } .it .title { margin-top: 2px; } .foot { margin-top: 16px; }
   .main.full { max-width: none; padding: 14px 16px 16px; }
-  .gstage { position: relative; height: calc(100vh - 190px); min-height: 460px; margin-top: 8px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: radial-gradient(900px 500px at 50% 40%, var(--accent-soft), var(--bg)); }
-  .ghost { position: absolute; inset: 0; } svg.g { width: 100%; height: 100%; border: 0; border-radius: 0; background: transparent; display: block; cursor: grab; }
-  svg.g text { display: none; paint-order: stroke; stroke: var(--bg); stroke-width: 3px; font-size: 12px; } svg.g g.k-claim text, svg.g g:hover text { display: block; }
-  .gfilt { position: absolute; top: 10px; left: 10px; display: flex; gap: 6px; flex-wrap: wrap; z-index: 2; max-width: calc(100% - 340px); }
-  .gfilt .chip { background: var(--panel); }
-  .gside { position: absolute; top: 10px; right: 10px; width: 310px; max-height: calc(100% - 20px); overflow: auto; z-index: 2; }
-  .glegend { position: absolute; bottom: 8px; left: 12px; z-index: 2; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; }
-  @media (max-width: 860px) { .gside { position: static; width: auto; } .gfilt { max-width: none; } }
+  .gshell { display: grid; grid-template-columns: 250px minmax(0, 1fr) 300px; height: calc(100vh - 180px); min-height: 520px; margin-top: 10px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--panel); }
+  .grail, .gdetail { padding: 14px; overflow: auto; } .grail { border-right: 1px solid var(--line); } .gdetail { border-left: 1px solid var(--line); }
+  .grail h3 { margin: 0 0 8px; font-size: 14px; }
+  .gsearch { width: 100%; margin-bottom: 8px; }
+  .gitem { display: grid; grid-template-columns: 10px 1fr auto; gap: 8px; align-items: center; width: 100%; text-align: left; background: transparent; color: var(--text); border: 0; border-radius: 8px; padding: 8px; cursor: pointer; font: inherit; font-size: 13px; }
+  .gitem:hover, .gitem.on { background: var(--accent-soft); } .gitem i { width: 10px; height: 10px; border-radius: 50%; display: block; } .gitem .gt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .gstage2 { position: relative; background: radial-gradient(700px 420px at 50% 50%, var(--accent-soft), var(--bg)); min-width: 0; }
+  .gsvg { width: 100%; height: 100%; display: block; cursor: grab; user-select: none; }
+  .gsvg .ctext { font: 700 13px "Segoe UI", system-ui, sans-serif; fill: var(--text); } .gsvg .cverdict { font: 800 15px "Segoe UI", system-ui, sans-serif; }
+  .gsvg .ini { font: 700 12px "Segoe UI", system-ui, sans-serif; fill: var(--text); } .gsvg .nlab { font: 12px "Segoe UI", "Noto Sans Devanagari", system-ui, sans-serif; fill: var(--text); paint-order: stroke; stroke: var(--bg); stroke-width: 3px; }
+  .gsvg .gnode circle { transition: stroke-width .12s; } .gsvg .gnode:hover circle, .gsvg .gnode.sel circle { stroke-width: 6; }
+  .gchips { position: absolute; top: 12px; left: 12px; display: flex; gap: 6px; flex-wrap: wrap; right: 120px; }
+  .gchip { display: inline-flex; align-items: center; gap: 6px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 13px; cursor: pointer; } .gchip i { width: 9px; height: 9px; border-radius: 50%; } .gchip.off { opacity: .45; text-decoration: line-through; }
+  .gzoom { position: absolute; right: 12px; bottom: 12px; display: flex; flex-direction: column; gap: 4px; } .gzoom button { width: 38px; height: 34px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px; cursor: pointer; font: inherit; font-size: 15px; }
+  .gempty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--mute); }
+  .gkind { color: var(--mute); font-size: 12px; margin: 12px 0 4px; } .gkind:first-child { margin-top: 0; } .gtitle { font-weight: 700; line-height: 1.35; margin-bottom: 8px; overflow-wrap: anywhere; }
+  .gdl { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 13px; margin: 10px 0; } .gdl dt { color: var(--mute); } .gdl dd { margin: 0; }
+  .btnlink { display: inline-block; margin-top: 6px; padding: 8px 14px; border-radius: 8px; background: var(--accent); color: var(--accent-ink); text-decoration: none; font-weight: 600; font-size: 13px; }
+  @media (max-width: 1100px) { .gshell { grid-template-columns: 1fr; height: auto; } .gstage2 { height: 70vh; } .grail { border-right: 0; max-height: 220px; } .gdetail { border-left: 0; } }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", "Noto Sans Devanagari", "Noto Sans Kannada", sans-serif; }
   .shell { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: calc(100vh - 60px); }
@@ -135,6 +146,120 @@ function columns(perDay) {
   return box;
 }
 
+// Evidence graph explorer: pick a claim on the left and see only its own evidence, arranged by what each source says about it
+// (supports on the right, contradicts on the left, mentioned people above, context below). A force layout of every node at once is unreadable.
+const GROUPS = [
+  { key: "supports", name: "Supports", color: "#3ecf8e", angle: 0, span: 110 },
+  { key: "contradicts", name: "Contradicts", color: "#ff6b74", angle: 180, span: 130 },
+  { key: "context", name: "Context only", color: "#8d98b5", angle: 90, span: 120 },
+  { key: "entity", name: "People and places", color: "#b07aff", angle: 270, span: 90 },
+  { key: "media", name: "Images", color: "#f5b84b", angle: 315, span: 60 },
+];
+const REL_GROUP = { supports: "supports", contradicts: "contradicts", context: "context", related_not_used: "context", mentions: "entity", submitted_with: "media" };
+const SHORT = (label) => { const i = label.indexOf(":"); return i > 0 && i < 40 ? [label.slice(0, i), label.slice(i + 1).trim()] : ["", label]; };
+const initials = (s) => (s.match(/[A-Za-zऀ-෿0-9]+/g) || ["?"]).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+
+function focusOf(g, claimId) {
+  const byId = Object.fromEntries(g.nodes.map((n) => [n.id, n])), items = [];
+  g.edges.filter((e) => e.to === claimId || e.from === claimId).forEach((e) => {
+    const other = byId[e.from === claimId ? e.to : e.from]; if (!other) return;
+    const grp = REL_GROUP[e.relation] || (other.kind === "entity" ? "entity" : "context");
+    items.push({ node: other, relation: e.relation, group: grp, rating: e.rating || "", why: e.why || "" });
+    if (other.kind === "entity") g.edges.filter((x) => x.to === other.id && x.relation === "records").forEach((x) => { const f = byId[x.from]; if (f) items.push({ node: f, relation: "records", group: "entity", rating: "", why: "" }); });
+  });
+  return items;
+}
+
+function explorer(g) {
+  const root = el("div", "gshell"), rail = el("aside", "grail"), stage = el("div", "gstage2"), side = el("aside", "gdetail");
+  const claims = g.nodes.filter((n) => n.kind === "claim").map((c) => ({ ...c, count: g.edges.filter((e) => e.to === c.id || e.from === c.id).length })).sort((a, b) => b.count - a.count);
+  const search = Object.assign(el("input", "gsearch"), { type: "search", placeholder: "Search claims" }), list = el("div", "glist");
+  rail.append(el("h3", "", "Claims"), search, list);
+  let current = null, hidden = new Set(), sel = null;
+
+  const drawList = () => {
+    const q = search.value.trim().toLowerCase(); list.replaceChildren();
+    claims.filter((c) => !q || c.label.toLowerCase().includes(q)).forEach((c) => {
+      const row = el("button", "gitem" + (current && current.id === c.id ? " on" : "")), tone = (NAME[c.verdict] || ["", "idle"])[1];
+      row.append(Object.assign(el("i"), { style: "background:" + TONE_VAR[tone] }), el("span", "gt", c.label), el("span", "small", c.count + " links")); row.onclick = () => focus(c); list.append(row);
+    });
+    if (!list.children.length) list.append(el("div", "small", "No claims match."));
+  };
+  search.oninput = drawList;
+
+  function focus(c) { current = c; sel = c.id; hidden = new Set(); drawList(); drawStage(); showDetail(c, null); }
+
+  function drawStage() {
+    stage.replaceChildren();
+    const items = focusOf(g, current.id), chips = el("div", "gchips");
+    const counts = Object.fromEntries(GROUPS.map((gr) => [gr.key, items.filter((i) => i.group === gr.key).length]));
+    GROUPS.filter((gr) => counts[gr.key]).forEach((gr) => { const b = el("button", "gchip" + (hidden.has(gr.key) ? " off" : "")); b.append(Object.assign(el("i"), { style: "background:" + gr.color }), gr.name + " " + counts[gr.key]); b.onclick = () => { hidden.has(gr.key) ? hidden.delete(gr.key) : hidden.add(gr.key); drawStage(); }; chips.append(b); });
+    const svg = svgEl("svg", { class: "gsvg" }), cx = 0, cy = 0, placed = [];
+    GROUPS.forEach((gr) => {
+      if (hidden.has(gr.key)) return;
+      const its = items.filter((i) => i.group === gr.key), n = its.length; if (!n) return;
+      const span = Math.min(gr.span, Math.max(30, n * 17)), start = gr.angle - span / 2;
+      its.forEach((it, i) => {
+        const a = ((n === 1 ? gr.angle : start + (span * i) / (n - 1)) * Math.PI) / 180, ring = 250 + (i % 2) * 95 + Math.floor(n / 9) * 30;
+        placed.push({ it, gr, x: cx + ring * Math.cos(a), y: cy + ring * Math.sin(a) });
+      });
+    });
+    const edges = svgEl("g"), nodes = svgEl("g");
+    placed.forEach((p) => edges.append(svgEl("line", { x1: cx, y1: cy, x2: p.x, y2: p.y, stroke: p.gr.color, "stroke-width": p.gr.key === "supports" || p.gr.key === "contradicts" ? 2.2 : 1.2, opacity: p.gr.key === "context" ? 0.45 : 0.75, "stroke-dasharray": p.gr.key === "context" ? "4 4" : "" })));
+    const tone = (NAME[current.verdict] || ["", "idle"])[1], cc = TONE_VAR[tone];
+    const center = svgEl("g", { class: "gnode", style: "cursor:pointer" });
+    center.append(svgEl("circle", { cx, cy, r: 62, fill: "var(--panel)", stroke: cc, "stroke-width": 5 }));
+    const words = current.label.split(" "), lines = []; let ln = ""; words.forEach((w) => { if ((ln + " " + w).trim().length > 16 && ln) { lines.push(ln); ln = w; } else ln = (ln + " " + w).trim(); }); lines.push(ln);
+    lines.slice(0, 4).forEach((t, i, arr) => { const x = svgEl("text", { x: cx, y: cy + (i - (arr.length - 1) / 2) * 15 + 4, "text-anchor": "middle", class: "ctext" }); x.textContent = t.length > 17 ? t.slice(0, 16) + "…" : t; center.append(x); });
+    const vt = svgEl("text", { x: cx, y: cy + 84, "text-anchor": "middle", class: "cverdict", fill: cc }); vt.textContent = (NAME[current.verdict] || [current.verdict])[0]; center.append(vt);
+    center.onclick = () => showDetail(current, null); nodes.append(center);
+    placed.forEach((p) => {
+      const n = p.it.node, [outlet, title] = SHORT(n.label), g1 = svgEl("g", { class: "gnode" + (sel === n.id ? " sel" : ""), style: "cursor:pointer", transform: "translate(" + p.x + "," + p.y + ")" });
+      g1.append(svgEl("circle", { r: 24, fill: "var(--panel)", stroke: p.gr.color, "stroke-width": 3 }));
+      const ini = svgEl("text", { "text-anchor": "middle", y: 5, class: "ini" }); ini.textContent = n.kind === "entity" ? "◉" : initials(outlet || n.label); g1.append(ini);
+      const lab = svgEl("text", { "text-anchor": "middle", y: 42, class: "nlab" }); lab.textContent = (outlet || title).slice(0, 22); g1.append(lab);
+      const tt = svgEl("title"); tt.textContent = n.label; g1.append(tt);
+      g1.onclick = (ev) => { ev.stopPropagation(); sel = n.id; nodes.querySelectorAll(".gnode.sel").forEach((x) => x.classList.remove("sel")); g1.classList.add("sel"); showDetail(n, p); };
+      nodes.append(g1);
+    });
+    svg.append(edges, nodes);
+    // fit the content first; zoom and pan then move the view box
+    const xs = placed.map((p) => p.x).concat([-90, 90]), ys = placed.map((p) => p.y).concat([-90, 110]);
+    const x0 = Math.min(...xs) - 90, x1 = Math.max(...xs) + 90, y0 = Math.min(...ys) - 80, y1 = Math.max(...ys) + 90, fit = [x0, y0, x1 - x0, y1 - y0]; let vb2 = [...fit];
+    const apply = () => svg.setAttribute("viewBox", vb2.map((q) => q.toFixed(1)).join(" ")); apply();
+    const zoom = (k, mx, my) => { const r = svg.getBoundingClientRect(), fx = mx == null ? 0.5 : (mx - r.left) / r.width, fy = my == null ? 0.5 : (my - r.top) / r.height, px = vb2[0] + fx * vb2[2], py = vb2[1] + fy * vb2[3]; vb2 = [px - (px - vb2[0]) * k, py - (py - vb2[1]) * k, vb2[2] * k, vb2[3] * k]; apply(); };
+    svg.addEventListener("wheel", (ev) => { ev.preventDefault(); zoom(ev.deltaY < 0 ? 0.88 : 1.14, ev.clientX, ev.clientY); }, { passive: false });
+    svg.addEventListener("mousedown", (ev) => { if (ev.target.closest(".gnode")) return; const sx = ev.clientX, sy = ev.clientY, o = [...vb2], r = svg.getBoundingClientRect(); const mv = (m) => { vb2 = [o[0] - ((m.clientX - sx) / r.width) * o[2], o[1] - ((m.clientY - sy) / r.height) * o[3], o[2], o[3]]; apply(); }; const up = () => { removeEventListener("mousemove", mv); removeEventListener("mouseup", up); }; addEventListener("mousemove", mv); addEventListener("mouseup", up); });
+    const ctl = el("div", "gzoom"); [["+", () => zoom(0.8)], ["−", () => zoom(1.25)], ["Fit", () => { vb2 = [...fit]; apply(); }]].forEach(([t, f]) => { const b = el("button", "", t); b.onclick = f; b.setAttribute("aria-label", t === "+" ? "Zoom in" : t === "−" ? "Zoom out" : "Fit to view"); ctl.append(b); });
+    stage.append(svg, chips, ctl);
+    if (!placed.length) stage.append(el("div", "gempty", "This claim has no linked sources yet."));
+  }
+
+  function showDetail(n, p) {
+    side.replaceChildren();
+    const kindName = { claim: "Claim", news: "News report", factcheck: "Fact-check", official: "Official source", media: "Image", entity: "Person or place", registry: "Wikidata record" }[n.kind] || n.kind;
+    side.append(el("div", "gkind", kindName), el("div", "gtitle", n.label));
+    const rows = el("dl", "gdl"), row = (k, v) => { if (v) { rows.append(el("dt", "", k), el("dd", "", String(v))); } };
+    if (n.kind === "claim") {
+      const its = focusOf(g, n.id); side.append(badge(n.verdict));
+      row("Supports", its.filter((i) => i.group === "supports").length); row("Contradicts", its.filter((i) => i.group === "contradicts").length); row("Context only", its.filter((i) => i.group === "context").length); row("People and places", its.filter((i) => i.group === "entity").length);
+    } else {
+      const [outlet] = SHORT(n.label); row("Outlet", outlet); row("Tier", n.tier ? (n.tier === 1 ? "1 (official)" : n.tier === 2 ? "2 (reputable outlet or fact-checker)" : "3 (context only)") : ""); row("Date", n.date);
+      if (p) { row("Says about this claim", ({ supports: "It reports this as fact", contradicts: "It says this is false", context: "Related, not used to decide", entity: "Named in the claim" })[p.gr.key] || p.it.relation); row("Rating", p.it.rating); row("Not used because", p.it.why); }
+      row("About", n.description);
+    }
+    side.append(rows);
+    if (n.url) { const a = el("a", "btnlink", n.kind === "entity" || n.kind === "registry" ? "Open on Wikidata" : "Open source"); a.href = n.url; a.target = "_blank"; a.rel = "noopener"; side.append(a); }
+    if (n.kind !== "claim") {                                                  // the same source can back several claims
+      const others = g.edges.filter((e) => e.from === n.id || e.to === n.id).map((e) => (e.from === n.id ? e.to : e.from)).filter((id) => id.startsWith("claim:") && id !== (current && current.id));
+      if (others.length) { side.append(el("div", "gkind", "Also linked to")); [...new Set(others)].forEach((id) => { const c = claims.find((x) => x.id === id); if (c) { const b = el("button", "gitem"); b.append(Object.assign(el("i"), { style: "background:" + TONE_VAR[(NAME[c.verdict] || ["", "idle"])[1]] }), el("span", "gt", c.label)); b.onclick = () => focus(c); side.append(b); } }); }
+    }
+  }
+
+  root.append(rail, stage, side); drawList(); if (claims.length) focus(claims[0]);
+  return root;
+}
+
 const VIEWS = {
   async overview(v) {
     const o = await jget("/intel/overview"), t = o.totals, vd = o.verdicts;
@@ -156,14 +281,9 @@ const VIEWS = {
   async graph(v) {
     const g = await jget("/intel/graph");
     if (!g.nodes.length) { v.append(card("Evidence graph", el("div", "small", "No investigations yet. Check a claim and it appears here."))); return; }
-    const kinds = [...new Set(g.nodes.map((n) => n.kind))], on = new Set(kinds), side = el("div", "card gside"), stage = el("div", "gstage"), filt = el("div", "gfilt"), host = el("div", "ghost");
-    const draw = () => host.replaceChildren(forceGraph(g, on, (n) => showNode(side, n, g)));
-    kinds.forEach((k) => { const l = el("label", "chip"), c = Object.assign(el("input"), { type: "checkbox", checked: true }); c.onchange = () => { c.checked ? on.add(k) : on.delete(k); draw(); }; l.append(c, " " + k); filt.append(l); });
-    draw();
-    side.append(el("div", "small", "Click a node to see its source, metadata and relationships. Scroll to zoom, drag the background to move, drag a node to pull it."));
-    const lg = legend(); lg.classList.add("glegend");
-    stage.append(host, filt, side, lg); v.append(el("div", "small", g.note), stage);
+    v.append(el("div", "small", g.note + " Pick a claim to see its evidence."), explorer(g));
   },
+
 
 
   async media(v) {
