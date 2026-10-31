@@ -57,17 +57,31 @@ def _utc_now() -> datetime:
 
 
 class SQLiteLedgerStore:
-    def __init__(self, path: str | Path, code_version: str, clock: Callable[[], datetime] = _utc_now):
+    def __init__(
+        self, path: str | Path, code_version: str, clock: Callable[[], datetime] = _utc_now, read_only: bool = False,
+    ):
+        if str(path) == ":memory:":
+            # Every call opens its own connection, so an in-memory database would vanish between calls.
+            raise ValueError("SQLiteLedgerStore needs a file path; ':memory:' is not supported")
         self.path = Path(path)
         self.code_version = code_version
         self._clock = clock
-        if str(self.path) != ":memory:":
-            self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.read_only = read_only
+        if read_only:
+            # An auditor must not change what it audits: no schema creation, no trigger repair, and a file that is
+            # not a ledger fails here instead of verifying as an empty, intact chain.
+            with closing(self._connect()) as con:
+                con.execute("SELECT 1 FROM entries LIMIT 1")
+            return
+        self.path.parent.mkdir(parents=True, exist_ok=True)
         with closing(self._connect()) as con:
             con.executescript(_SCHEMA)
 
     def _connect(self) -> sqlite3.Connection:
-        con = sqlite3.connect(self.path, isolation_level=None, timeout=10)
+        if self.read_only:
+            con = sqlite3.connect(f"{self.path.resolve().as_uri()}?mode=ro", uri=True, isolation_level=None, timeout=10)
+        else:
+            con = sqlite3.connect(self.path, isolation_level=None, timeout=10)
         con.row_factory = sqlite3.Row
         return con
 
