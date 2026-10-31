@@ -1,44 +1,53 @@
-"""Audio authenticity: windowing, the no-cut behaviour (no label without a calibrated cut), and the route."""
+"""Synthetic-speech check: the label rule (median window against the calibrated cut), the unavailable service, and the route."""
 
 import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
 from satyasutra.api.app import create_app
-from satyasutra.audio import SpoofDetector, SpoofResult, window_starts
-from satyasutra.audio.spoof import pad_fixed
+from satyasutra.audio import SpoofDetector, SpoofResult
 from satyasutra.config import load_config
 from satyasutra.voice import VoiceError
 
 
-def test_windows_are_spread_evenly_and_a_short_clip_gets_one():
-    assert window_starts(100, 200, 6) == [0]
-    assert window_starts(400, 100, 3) == [0, 150, 300]
-    starts = window_starts(1000, 100, 6)
-    assert starts[0] == 0 and starts[-1] == 900 and len(starts) == 6
+def detector(monkeypatch, scores, seconds=10):
+    det = SpoofDetector(load_config())
+    monkeypatch.setattr(det, "score", lambda audio: scores)
+    monkeypatch.setattr("satyasutra.audio.spoof.decode", lambda data, t: np.zeros(int(16000 * seconds), np.float32))
+    return det
 
 
-def test_short_audio_is_tiled_to_the_models_fixed_window():
-    x = np.arange(4, dtype=np.float32)
-    assert list(pad_fixed(x, 10)) == [0, 1, 2, 3, 0, 1, 2, 3, 0, 1] and len(pad_fixed(np.zeros(50, np.float32), 20)) == 20
+def test_a_median_window_at_or_above_the_cut_is_suspected_synthetic(monkeypatch):
+    cut = load_config().thresholds.thresholds["audio_synthetic_probability"].value
+    r = detector(monkeypatch, [0.99, 0.97, 0.2]).check(b"x")
+    assert r.label == "SYNTHETIC_SUSPECTED" and r.cut == cut and r.flagged_windows == 2 and "may be synthetic" in r.reasons[0]
 
 
-def test_without_a_calibrated_cut_the_scores_are_shown_and_no_label_is_given(tmp_path, monkeypatch):
-    cfg = load_config()
-    det = SpoofDetector(cfg, tmp_path)
-    monkeypatch.setattr(det, "score", lambda audio: [-5.0, 2.0])
-    monkeypatch.setattr("satyasutra.audio.spoof.decode", lambda data, t: np.zeros(16000 * 5, np.float32))
-    r = det.check(b"x")
-    assert r.label == "INCONCLUSIVE" and r.scores == [-5.0, 2.0] and "no calibrated cut" in r.reasons[0] and "did not separate" in r.note
+def test_below_the_cut_is_inconclusive_and_never_says_the_voice_is_real(monkeypatch):
+    r = detector(monkeypatch, [0.99, 0.1, 0.05]).check(b"x")
+    assert r.label == "INCONCLUSIVE" and "does not prove the voice is real" in r.reasons[0] and r.flagged_windows == 1
 
 
-def test_a_missing_model_and_a_too_short_clip_are_said_plainly(tmp_path, monkeypatch):
-    det = SpoofDetector(load_config(), tmp_path)
-    with pytest.raises(VoiceError, match="not installed"):
-        det.score(np.zeros(100, np.float32))
+def test_one_loud_window_does_not_decide_the_clip(monkeypatch):
+    assert detector(monkeypatch, [0.1, 0.99, 0.1, 0.2]).check(b"x").label == "INCONCLUSIVE"
+
+
+def test_the_note_says_what_the_test_did_not_cover():
+    r = SpoofResult(scores=[0.5], cut=0.9, seconds=4.0)
+    assert "small" in r.note and "cloned voices of real people" in r.note
+
+
+def test_too_short_and_too_long_clips_and_a_missing_service_are_said_plainly(monkeypatch):
     monkeypatch.setattr("satyasutra.audio.spoof.decode", lambda data, t: np.zeros(16000, np.float32))
     with pytest.raises(VoiceError, match="at least"):
-        det.check(b"x")
+        SpoofDetector(load_config()).check(b"x")
+    cfg = load_config()
+    monkeypatch.setattr("satyasutra.audio.spoof.decode", lambda data, t: np.zeros(int(16000 * (cfg.runtime.voice.max_seconds + 5)), np.float32))
+    with pytest.raises(VoiceError, match="limit"):
+        SpoofDetector(cfg).check(b"x")
+    cfg.runtime.audio_spoof.service_url = "http://127.0.0.1:1"          # nothing listens there
+    with pytest.raises(VoiceError, match="not available"):
+        SpoofDetector(cfg).score(np.zeros(16000 * 5, np.float32))
 
 
 def test_the_route_returns_scores_and_maps_errors_to_422():

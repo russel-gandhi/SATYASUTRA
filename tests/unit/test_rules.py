@@ -142,6 +142,8 @@ def test_a_related_list_is_capped_by_config_and_sorted_by_relevance():
     ("Misleading", "mixed"), ("Half True", "mixed"), ("Missing Context", "mixed"),
     ("There is no evidence for this", "unproven"), ("We don't have good enough evidence for this yet", "unproven"), ("Unsupported", "unproven"),
     ("Four Pinocchios", "unmapped"), ("flawed paper", "unmapped"), ("", "unmapped"),
+    ("True", "supports"), ("Mostly True", "supports"), ("This is correct.", "supports"),             # seen live 2026-10-31
+    ("True but this job growth comes from a low base", "mixed"), ("This is not true and is a misinterpretation", "unmapped"),
 ])
 def test_classify_rating_matches_real_ratings_by_longest_leading_phrase(rating, stance):
     assert classify_rating(rating, load_config(CONFIG)) == stance

@@ -29,12 +29,12 @@ gemini:
   measured_on: "2026-10-30"
 verdict_rules:
   # Phrases are matched against the start of a normalised rating, longest phrase first. Every phrase below was seen in a live
-  # Fact Check response on 2026-10-31 (93 reviews, 14+ publishers). "supports" is empty because no positive rating appeared:
-  # fact-checkers mostly publish debunks, so a fact-check alone will rarely support a claim. Unlisted ratings stay unmapped.
+  # Fact Check response on 2026-10-31 (93 reviews, 14+ publishers). "supports" holds the three positive ratings that appeared in a
+  # second live collection (49 reviews, 2026-10-31); positives are rare (7 of 71 reviews), none for Indian claims, so few Indian claims will reach SUPPORTED. Unlisted ratings stay unmapped.
   rating_map:
     refutes: ["false", "mostly false", "tragically false", "fake", "inaccurate", "incorrect", "this is incorrect"]
-    supports: []
-    mixed: ["misleading", "missing context", "lacks context", "not the whole story", "half true", "distorts the facts", "spins the facts"]
+    supports: ["true", "mostly true", "this is correct"]     # seen live 2026-10-31 (Snopes, PolitiFact, BBC) on US and UK claims; quoted: bare true parses as a boolean
+    mixed: ["true but", "true although", "misleading", "missing context", "lacks context", "not the whole story", "half true", "distorts the facts", "spins the facts"]
     unproven: ["unsupported", "there is no evidence", "we don t have good enough evidence"]
   negations: ["not", "no", "never", "none", "without", "cannot", "neither", "nor", "n't"]   # quoted: bare no/false would parse as booleans
   min_publishers_for_high: 2

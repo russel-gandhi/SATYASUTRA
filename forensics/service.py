@@ -188,7 +188,42 @@ class Nli:
         return {"labels": labels, "probs": [[round(p, 4) for p in row] for row in probs], "seconds": round(time.time() - started, 2)}
 
 
-def handler(engine: Engine, speech: Speech, nli: Nli):
+VOICE_DIR = os.path.join(HERE, "..", "models", "wav2vec2-deepfake-voice")
+VOICE_WINDOW_S, VOICE_MAX_WINDOWS = 6, 8
+
+
+class VoiceClone:
+    """Synthetic-speech detector (garystafford/wav2vec2-deepfake-voice-detector, Apache 2.0, wav2vec2 fine-tuned on modern TTS and cloning services).
+    Takes 16 kHz mono float32 PCM, scores windows spread over the clip and returns the probability of 'fake' for each."""
+
+    def __init__(self, device: str):
+        self.device, self.model, self.fe, self.fake, self.lock = device, None, None, None, Lock()
+
+    def infer(self, pcm: bytes) -> dict:
+        started = time.time()
+        audio = np.frombuffer(pcm[: len(pcm) // 4 * 4], dtype=np.float32)
+        with self.lock:
+            if self.model is None:
+                from transformers import AutoFeatureExtractor, AutoModelForAudioClassification
+                path = os.path.normpath(VOICE_DIR)
+                self.fe = AutoFeatureExtractor.from_pretrained(path)
+                self.model = AutoModelForAudioClassification.from_pretrained(path).to(self.device).eval()
+                self.fake = [i for i, name in self.model.config.id2label.items() if "fake" in name.lower()]
+            win = SAMPLE_RATE * VOICE_WINDOW_S
+            starts = list(range(0, max(1, len(audio) - win // 2), win))[:VOICE_MAX_WINDOWS]       # same windowing as the calibration run
+            probs = []
+            for s in starts:
+                chunk = audio[s:s + win]
+                if len(chunk) < SAMPLE_RATE:
+                    continue
+                inp = self.fe(chunk, sampling_rate=SAMPLE_RATE, return_tensors="pt").to(self.device)
+                with torch.no_grad():
+                    p = torch.softmax(self.model(**inp).logits.float(), dim=-1)[0]
+                probs.append(round(float(sum(p[i] for i in self.fake)), 4))
+        return {"fake_probs": probs, "duration_s": round(len(audio) / SAMPLE_RATE, 2), "seconds": round(time.time() - started, 2)}
+
+
+def handler(engine: Engine, speech: Speech, nli: Nli, voice: VoiceClone):
     class H(BaseHTTPRequestHandler):
         def _send(self, code: int, body: dict):
             raw = json.dumps(body).encode()
@@ -205,14 +240,14 @@ def handler(engine: Engine, speech: Speech, nli: Nli):
                 self._send(404, {"detail": "not found"})
 
         def do_POST(self):
-            if self.path not in ("/analyze", "/transcribe", "/nli"):
+            if self.path not in ("/analyze", "/transcribe", "/nli", "/voiceclone"):
                 return self._send(404, {"detail": "not found"})
             size = int(self.headers.get("Content-Length") or 0)
             if not 0 < size <= MAX_BODY:
                 return self._send(413, {"detail": f"send 1 to {MAX_BODY} bytes"})
             try:
                 body = self.rfile.read(size)
-                self._send(200, {"/transcribe": speech.transcribe, "/nli": nli.infer}.get(self.path, engine.analyze)(body))
+                self._send(200, {"/transcribe": speech.transcribe, "/nli": nli.infer, "/voiceclone": voice.infer}.get(self.path, engine.analyze)(body))
             except Exception as exc:                       # the class only: never echo text that could carry paths or content
                 self._send(422, {"detail": f"could not process the input ({type(exc).__name__})"})
 
@@ -230,7 +265,7 @@ def main() -> None:
     args = ap.parse_args()
     engine = Engine(args.max_side, args.cpu)
     print(f"TruFor loaded on {engine.device}; AI detector: {engine.smaug_error or 'loaded'}; listening on 127.0.0.1:{args.port}", flush=True)
-    ThreadingHTTPServer(("127.0.0.1", args.port), handler(engine, Speech(engine.device), Nli(engine.device))).serve_forever()
+    ThreadingHTTPServer(("127.0.0.1", args.port), handler(engine, Speech(engine.device), Nli(engine.device), VoiceClone(engine.device))).serve_forever()
 
 
 if __name__ == "__main__":

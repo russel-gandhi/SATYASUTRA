@@ -1,0 +1,109 @@
+SYNTHETIC SPEECH CHECK, garystafford/wav2vec2-deepfake-voice-detector (wav2vec2, Apache 2.0), 2026-10-31.
+RESULT: on our small test it separated the clips; cut chosen at a MEDIAN window probability of 0.9. This is a weak test, read the limits.
+
+Method: the same clips that W2V2-AASIST failed on (docs/calibration/audio_2026-10-31.txt), scored by hf_audio.py in 6 s windows (first up to 30 s of each clip).
+Real (20): Wikimedia Commons speech recordings, mostly OLD or noisy (1895 and 1940s radio, Spoken Wikipedia, an interview, one real Hindi recording).
+Fake (19): 11 Gemini text-to-speech clips (English and Hindi) and 8 Windows SAPI clips.
+Run 1 = the files as collected. Run 2 = the same files squeezed like a phone voice note (8 kHz, Opus 12 kbit/s, back to 16 kHz).
+Not in the test: cloned voices of real people, ElevenLabs or similar output, other Indian languages, music or crowd noise, modern phone-recorded real speech.
+Printed per file: max and median window probability of 'fake'. The bottom lines are the cut table (caught = fakes at or above the cut, flagged = real clips at or above it).
+
+=== Run 1: as collected
+fake class idx [1]
+real real_002.wav max_fake 0.01 median_fake 0.00
+real real_003.wav max_fake 0.59 median_fake 0.06
+real real_005.wav max_fake 0.08 median_fake 0.00
+real real_006.wav max_fake 0.08 median_fake 0.01
+real real_007.wav max_fake 0.14 median_fake 0.01
+real real_008.wav max_fake 0.55 median_fake 0.27
+real real_009.wav max_fake 0.32 median_fake 0.01
+real real_010.wav max_fake 0.03 median_fake 0.00
+real real_011.wav max_fake 0.04 median_fake 0.03
+real real_013.wav max_fake 0.21 median_fake 0.05
+real real_014.wav max_fake 0.88 median_fake 0.30
+real real_015.wav max_fake 0.84 median_fake 0.05
+real real_016.wav max_fake 0.64 median_fake 0.03
+real real_017.wav max_fake 0.96 median_fake 0.01
+real real_018.wav max_fake 0.48 median_fake 0.01
+real real_019.bin max_fake 0.22 median_fake 0.00
+real real_020.wav max_fake 0.21 median_fake 0.01
+real real_021.wav max_fake 0.22 median_fake 0.00
+real real_023.wav max_fake 0.01 median_fake 0.00
+real real_hindi_dengue.ogg max_fake 0.12 median_fake 0.03
+fake fake_gemini_en_000.wav max_fake 0.99 median_fake 0.99
+fake fake_gemini_en_002.wav max_fake 0.96 median_fake 0.96
+fake fake_gemini_en_005.wav max_fake 1.00 median_fake 1.00
+fake fake_gemini_en_007.wav max_fake 1.00 median_fake 1.00
+fake fake_gemini_en_009.wav max_fake 0.99 median_fake 0.99
+fake fake_gemini_hi_001.wav max_fake 1.00 median_fake 1.00
+fake fake_gemini_hi_003.wav max_fake 1.00 median_fake 1.00
+fake fake_gemini_hi_004.wav max_fake 0.99 median_fake 0.99
+fake fake_gemini_hi_006.wav max_fake 0.99 median_fake 0.99
+fake fake_gemini_hi_008.wav max_fake 1.00 median_fake 1.00
+fake fake_gemini_hi_010.wav max_fake 0.91 median_fake 0.91
+fake fake_sapi_david_0.wav max_fake 1.00 median_fake 1.00
+fake fake_sapi_david_1.wav max_fake 1.00 median_fake 1.00
+fake fake_sapi_david_2.wav max_fake 0.99 median_fake 0.99
+fake fake_sapi_david_3.wav max_fake 1.00 median_fake 1.00
+fake fake_sapi_zira_0.wav max_fake 0.99 median_fake 0.99
+fake fake_sapi_zira_1.wav max_fake 0.99 median_fake 0.99
+fake fake_sapi_zira_2.wav max_fake 0.99 median_fake 0.99
+fake fake_sapi_zira_3.wav max_fake 0.99 median_fake 0.99
+cut 0.5 max: fakes caught 19/19 real flagged 6/20
+cut 0.5 median: fakes caught 19/19 real flagged 0/20
+cut 0.7 max: fakes caught 19/19 real flagged 3/20
+cut 0.7 median: fakes caught 19/19 real flagged 0/20
+cut 0.9 max: fakes caught 19/19 real flagged 1/20
+cut 0.9 median: fakes caught 19/19 real flagged 0/20
+cut 0.97 max: fakes caught 17/19 real flagged 0/20
+cut 0.97 median: fakes caught 17/19 real flagged 0/20
+
+=== Run 2: phone-like compression
+fake class idx [1]
+real real_002.wav max_fake 0.01 median_fake 0.00
+real real_003.wav max_fake 0.72 median_fake 0.20
+real real_005.wav max_fake 0.02 median_fake 0.01
+real real_006.wav max_fake 0.43 median_fake 0.01
+real real_007.wav max_fake 0.18 median_fake 0.02
+real real_008.wav max_fake 0.56 median_fake 0.39
+real real_009.wav max_fake 0.50 median_fake 0.02
+real real_010.wav max_fake 0.02 median_fake 0.00
+real real_011.wav max_fake 0.06 median_fake 0.04
+real real_013.wav max_fake 0.22 median_fake 0.06
+real real_014.wav max_fake 0.97 median_fake 0.88
+real real_015.wav max_fake 0.99 median_fake 0.85
+real real_016.wav max_fake 0.95 median_fake 0.28
+real real_017.wav max_fake 0.63 median_fake 0.05
+real real_018.wav max_fake 0.30 median_fake 0.06
+real real_019.wav max_fake 0.41 median_fake 0.00
+real real_020.wav max_fake 0.45 median_fake 0.03
+real real_021.wav max_fake 0.48 median_fake 0.00
+real real_023.wav max_fake 0.01 median_fake 0.00
+real real_hindi_dengue.wav max_fake 0.33 median_fake 0.05
+fake fake_gemini_en_000.wav max_fake 0.98 median_fake 0.98
+fake fake_gemini_en_002.wav max_fake 0.97 median_fake 0.97
+fake fake_gemini_en_005.wav max_fake 1.00 median_fake 1.00
+fake fake_gemini_en_007.wav max_fake 1.00 median_fake 1.00
+fake fake_gemini_en_009.wav max_fake 0.99 median_fake 0.99
+fake fake_gemini_hi_001.wav max_fake 1.00 median_fake 1.00
+fake fake_gemini_hi_003.wav max_fake 1.00 median_fake 1.00
+fake fake_gemini_hi_004.wav max_fake 0.99 median_fake 0.99
+fake fake_gemini_hi_006.wav max_fake 0.99 median_fake 0.99
+fake fake_gemini_hi_008.wav max_fake 1.00 median_fake 1.00
+fake fake_gemini_hi_010.wav max_fake 0.92 median_fake 0.92
+fake fake_sapi_david_0.wav max_fake 1.00 median_fake 1.00
+fake fake_sapi_david_1.wav max_fake 1.00 median_fake 1.00
+fake fake_sapi_david_2.wav max_fake 1.00 median_fake 1.00
+fake fake_sapi_david_3.wav max_fake 1.00 median_fake 1.00
+fake fake_sapi_zira_0.wav max_fake 1.00 median_fake 1.00
+fake fake_sapi_zira_1.wav max_fake 1.00 median_fake 1.00
+fake fake_sapi_zira_2.wav max_fake 1.00 median_fake 1.00
+fake fake_sapi_zira_3.wav max_fake 0.99 median_fake 0.99
+cut 0.5 max: fakes caught 19/19 real flagged 6/20
+cut 0.5 median: fakes caught 19/19 real flagged 2/20
+cut 0.7 max: fakes caught 19/19 real flagged 4/20
+cut 0.7 median: fakes caught 19/19 real flagged 2/20
+cut 0.9 max: fakes caught 19/19 real flagged 3/20
+cut 0.9 median: fakes caught 19/19 real flagged 0/20
+cut 0.97 max: fakes caught 18/19 real flagged 2/20
+cut 0.97 median: fakes caught 18/19 real flagged 0/20

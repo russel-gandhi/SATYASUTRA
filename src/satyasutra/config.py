@@ -260,12 +260,10 @@ class NewsSettings(_Strict):
 
 
 class AudioSpoofSettings(_Strict):
-    model_path: str                          # the W2V2-AASIST ONNX file (git-ignored; see CLAUDE.md for the download and licence)
-    window_samples: int = Field(gt=0)        # the model reads exactly this many 16 kHz samples per window
-    max_windows: int = Field(gt=0)           # windows scored per clip, spread evenly across it
-    threshold: str                           # name of the cut in thresholds.yaml: windows scoring below it look synthetic
-    min_seconds: float = Field(gt=0)         # shorter clips are refused: one window of padding says nothing
-    providers: list[str]
+    service_url: str                         # the GPU service that runs the synthetic-speech classifier (POST /voiceclone)
+    service_timeout_s: float = Field(gt=0)
+    threshold: str                           # name of the cut in thresholds.yaml: a median window at or above it looks synthetic
+    min_seconds: float = Field(gt=0)         # shorter clips are refused: one window says too little
 
 
 class OfficialsSettings(_Strict):

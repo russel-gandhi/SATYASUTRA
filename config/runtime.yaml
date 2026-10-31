@@ -205,12 +205,10 @@ news:
     - {id: news_al_jazeera, publisher: Al Jazeera, url: "https://www.aljazeera.com/xml/rss/all.xml", hosts: [aljazeera.com]}
 
 audio_spoof:
-  model_path: models/w2v2-aasist/w2v2-aasist.onnx
-  window_samples: 64600
-  max_windows: 6
-  threshold: audio_bonafide_logit
+  service_url: http://127.0.0.1:8100
+  service_timeout_s: 120
+  threshold: audio_synthetic_probability
   min_seconds: 2
-  providers: [CPUExecutionProvider]
 
 officials:
   max_rows: 15

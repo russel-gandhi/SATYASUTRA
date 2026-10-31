@@ -14,6 +14,11 @@ scam_words: [otp, kyc, blocked, suspended, lottery, prize, refund, "verify your"
 loss_phrases: ["i paid", "i transferred", "money was debited", "amount was debited", "lost money", "i lost", "sent them money", "payment done", scammed, cheated,
                "paid them", "पैसे कट गए", "पैसे भेज दिए", "ठगी", "धोखा"]
 
+intimate_phrases: ["leaked my photos", "leaked my pictures", "leaked my video", "my private photos", "my private pictures", "my private video", "intimate photos",
+                   "intimate images", "intimate video", "nude photos", "nude pictures", "nude video", "morphed photos", "morphed pictures", "morphed my", sextortion,
+                   "blackmailing me with", "threatening to leak", "threatening to share my", "threatening to post my", "revenge porn", "mere private photos",
+                   "मेरी निजी तस्वीरें", "मेरी न्यूड", "मॉर्फ", "ब्लैकमेल"]
+
 routes:
   call_1930:
     title: Call the National Cyber Crime Helpline, 1930
@@ -45,7 +50,33 @@ routes:
     title: Share the correction, not the rumour
     detail: Reply in the group with the verdict and the source link below instead of forwarding the original.
 
+  # Support for someone whose private images are being shared or used to threaten them (Raksha, kept to guidance). StopNCII and Take It Down were read about
+  # in public pages on 2026-10-31 (their own sites were not opened by us); the Indian steps reuse the routes above, which are also unconfirmed on official sites.
+  keep_evidence:
+    title: Keep a record before anything disappears
+    detail: Do not delete the messages. Take screenshots that show the sender's name or number, the date and the link where the images are posted, and save the links. Ask a trusted person to help you if it is hard to look at.
+  do_not_pay:
+    title: Do not pay, and do not send anything more
+    detail: Paying or sending more pictures usually leads to more demands. Stop replying, block the sender after you have saved the record, and do not delete the chat.
+  stopncii:
+    title: If you were 18 or older in the pictures, use StopNCII.org
+    detail: It makes a digital fingerprint of the image on your own device (the image is not uploaded) so that participating platforms can block it. It cannot remove what is on sites that do not take part, so also report on the site where it appears.
+    url: https://stopncii.org
+    source_url: https://stopncii.org
+  take_it_down:
+    title: If you were under 18 in the pictures, use Take It Down
+    detail: A service run by the US National Center for Missing and Exploited Children that works the same way; a fingerprint is made on your device and the image is not uploaded.
+    url: https://takeitdown.ncmec.org
+    source_url: https://takeitdown.ncmec.org
+  report_platform:
+    title: Report the pictures on the site or app where they appear
+    detail: Use the report option for non-consensual intimate images or harassment on that platform; most take these down faster than ordinary reports. Send the links you saved.
+  emergency_112:
+    title: If you feel in danger right now, call 112
+    detail: 112 is India's emergency number. If you are thinking of harming yourself, tell someone you trust or call a local crisis line now. You did nothing wrong by being targeted.
+
 intents:
+  intimate_images: [keep_evidence, do_not_pay, stopncii, take_it_down, cybercrime_portal, report_platform, emergency_112]
   money_lost: [call_1930, tell_bank, cybercrime_portal, do_not]
   scam_forward: [do_not, chakshu, report_in_app]
   false_claim: [share_correction, report_in_app]

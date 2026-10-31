@@ -11,7 +11,8 @@ Remote: `github.com/aadamaftabpersonal-boop/FORGEHackathon` (public).
   Put values in `config/*.yaml`. A deliberate exception needs `# forge: allow-literal <reason>` on that line.
 - Every team member must be able to explain the code, no pre-recorded demos, and core logic is built inside the event window.
 - Never auto-file to government portals, defeat CAPTCHAs or bypass logins (plan decision D42). Raksha (the support flow for leaked
-  intimate images) is roadmap only, not in this build (D52).
+  intimate images) was roadmap only (D52); on 2026-10-31 the user asked for a guidance-only version (next-steps intent `intimate_images`), which exists. It never accepts,
+  stores or checks the images, and counselling, takedown handling and legal advice stay roadmap.
 - Do not present unverified facts as verified. Say what was not tested.
 
 ## Workflow: phases, tickets, commits
@@ -79,7 +80,7 @@ forensics\venv311\Scripts\python forensics\service.py --port 8100          # Tru
 - Voice notes: `voice/transcribe.py` + `POST /voice/transcribe` (raw audio, max 120 s). ffmpeg decodes to 16 kHz mono; the GPU service
   (`forensics/service.py` `/transcribe`, faster-whisper small from `models/whisper-small`, git-ignored, 486 MB) answers first, local CPU is
   the fallback (about 1.7x slower than real time). The UI transcribes, shows the text and language, then runs the normal claim agent.
-  It reads words only; it does not detect cloned voices (B2 audio-deepfake model not approved or installed). Hindi transcripts have word errors.
+  Transcription reads words only; the synthetic-speech check is separate (see below). Hindi transcripts have word errors.
   `assets/fonts/NotoSansDevanagari.ttf` (OFL) is for the correction card, drawn in the browser because Pillow here lacks raqm.
 - Explanations (`explain.py`): SHAP-style. The verdict rules are plain code, so exact Shapley values are computed by re-running them on evidence subsets
   (credit per review; 'removing it changes the verdict?'; word overlap; what new evidence would change the label). Media: per detector score, cut, margin
@@ -92,10 +93,11 @@ forensics\venv311\Scripts\python forensics\service.py --port 8100          # Tru
   was assassinated' matched a bridge-opening headline before). Two readings only, reported (links, with the caution that outlets also report rumours) or
   not found (with how far back we looked; a signal, not proof). It never changes a verdict. UI and the Telegram bot show it for UNVERIFIABLE_YET claims.
   `min_coverage` 0.6 is a display rule, not calibrated; checked on 8 live headlines and paraphrases, not on a labelled set. Outlets' terms of use were not read; only headlines and links are shown.
-- Audio authenticity (`audio/spoof.py`, `POST /audio/check`): W2V2-AASIST ONNX (MIT, 1.26 GB, `models/w2v2-aasist/`, git-ignored, from Hugging Face
-  SpeechAntiSpoofingBenchmarks/W2V2-AASIST) runs on CPU, 6 windows of 4 s. **It failed our test** (`docs/calibration/audio_2026-10-31.txt`): real recordings
-  and modern TTS (Gemini TTS) were not separated, so there is no cut in thresholds.yaml and the route returns scores with label INCONCLUSIVE and says so.
-  The test set was weak (old radio recordings as 'real', no Indian-language clones). Do not present voice authenticity as working.
+- Synthetic speech (`audio/spoof.py`, `POST /audio/check`): the GPU service `/voiceclone` runs garystafford/wav2vec2-deepfake-voice-detector (Apache 2.0,
+  `models/wav2vec2-deepfake-voice/`, git-ignored, from Hugging Face), 6 s windows, probability of fake each; label SYNTHETIC_SUSPECTED when the MEDIAN window is at or above
+  `audio_synthetic_probability` (0.9), otherwise INCONCLUSIVE (never "real"). Test (`docs/calibration/audio_synthetic_2026-10-31.txt`): 19/19 fakes caught, 0/20 real flagged,
+  also after Opus 12 kbit/s compression; **weak data** (old noisy real clips, only Gemini and Windows TTS as fakes, no cloned real people). The first model, W2V2-AASIST, failed
+  the same data and was dropped. The UI voice-note flow shows this result under the transcript.
 - Correction cards (`card.py`, `config/cards.yaml`, `POST /card/spec`): text only (validated as CorrectionCard); the page draws a PNG on a canvas with the served
   Noto Sans Devanagari (`/assets/fonts`, OFL) because Pillow here has no raqm. Only for REFUTED, SUPPORTED, MISSING_CONTEXT at medium or high confidence with an
   https source; Hindi when the claim is Hindi (original quote shown). Never carries the original media. **The Hindi wording is ours and unreviewed by a native speaker.**
@@ -110,6 +112,10 @@ forensics\venv311\Scripts\python forensics\service.py --port 8100          # Tru
   fact-check review covers the same claim (quota, outage), the local model scores both directions; `same` needs mutual entailment at `nli.min_prob` (0.9, a policy choice,
   not calibrated), any contradiction is `opposite`. Stricter than Gemini: live, the microchip claim stays UNVERIFIABLE_YET (Gemini said REFUTED), and 'Smoking doesn't cause cancer'
   reviews are correctly `opposite`. Used only when Gemini fails; the reason line says which judge answered. Not measured on a labelled set.
+- Closed gaps 2026-10-31: SUPPORTED seen live (rating table `supports: [true, mostly true, this is correct]`, seen in Snopes, PolitiFact, BBC reviews); TruFor map tested as a
+  second trigger and rejected (`docs/calibration/trufor_map_2026-10-31.txt`); face-swap classifiers tested on FaceForensics++ and rejected (`docs/calibration/faceswap_2026-10-31.txt`,
+  `scripts/faceswap_fetch.py`, `scripts/faceswap_probe.py`, opencv-python-headless<5 in venv311); Raksha-lite = intent `intimate_images` in `config/actions.yaml` (guidance only,
+  D52 relaxed by the user's request on 2026-10-31: no images are accepted or stored).
 - Not done: (Telegram bot done, see above) (needs a fresh token), escalation never fired live, TruFor false-alarm rate on real social-media images
   unknown, README with a real-vs-roadmap table. `tests/unit/test_trace_sse.py::test_leaving_mid_run...` failed once under full-suite load and
   passes alone (timing).

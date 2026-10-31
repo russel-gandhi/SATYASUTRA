@@ -46,6 +46,7 @@ class Actions(_Strict):
     settings: Settings
     scam_words: list[str]
     loss_phrases: list[str]
+    intimate_phrases: list[str] = []
     routes: dict[str, Route]
     intents: dict[str, list[str]]
 
@@ -69,7 +70,9 @@ def _has(text: str, phrase: str) -> bool:
 def build_plan(text: str, links: list[LinkFinding], labels: list[str], a: Actions) -> ActionPlan:
     scam_hits = [w for w in a.scam_words if _has(text, w)]
     suspect = [link for link in links if link.status in SUSPECT_LINKS]
-    if any(_has(text, p) for p in a.loss_phrases):
+    if any(_has(text, p) for p in a.intimate_phrases):
+        intent, why = "intimate_images", "the message is about private images being shared or used to threaten someone"
+    elif any(_has(text, p) for p in a.loss_phrases):
         intent, why = "money_lost", "the message says money has already been paid or lost"
     elif suspect or len(scam_hits) >= a.settings.min_scam_words:
         why = (f"it contains a {suspect[0].status.replace('_', ' ')} link ({suspect[0].host})" if suspect else f"it uses scam wording ({', '.join(scam_hits[:3])})")
