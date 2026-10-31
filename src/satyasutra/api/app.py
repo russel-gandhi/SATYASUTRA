@@ -372,7 +372,7 @@ def create_app(
             raise HTTPException(status_code=422, detail=f"not an image: {exc}")
         heatmap = result.forensics.pop("heatmap_png_b64", None)
         return {"width": result.width, "height": result.height, "label": result.label, "reasons": result.reasons,
-                "matches": result.matches, "forensics": result.forensics, "heatmap_png_b64": heatmap, "explanation": result.explanation}
+                "matches": result.matches, "forensics": result.forensics, "heatmap_png_b64": heatmap, "explanation": result.explanation, "summary": result.summary}
 
     @app.post("/video/check")
     async def video_check(request: Request) -> dict:

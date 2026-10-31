@@ -63,7 +63,7 @@
   .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
   .chip { border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; font-size: 12px; text-decoration: none; color: var(--text); }
   .spin { display: none; margin-left: 4px; color: var(--mute); align-self: center; }
-.why{margin-top:8px}.whyrow{margin:6px 0;padding:6px 8px;border-left:3px solid var(--line,#ccc)}.bar{display:inline-block;width:90px;height:8px;background:#0001;border-radius:4px;vertical-align:middle;overflow:hidden}.bar>span{display:block;height:100%;background:#2e7d32}.bar>span.neg{background:#c62828}
+.plain h3{margin:8px 0 4px}.plain ol{padding-left:20px}.plain li{margin:4px 0}.why{margin-top:8px}.whyrow{margin:6px 0;padding:6px 8px;border-left:3px solid var(--line,#ccc)}.bar{display:inline-block;width:90px;height:8px;background:#0001;border-radius:4px;vertical-align:middle;overflow:hidden}.bar>span{display:block;height:100%;background:#2e7d32}.bar>span.neg{background:#c62828}
 </style>
 </head>
 <body>
@@ -245,6 +245,7 @@ function explainClaim(x) {
 function explainMedia(x) {
   const d = el("details", "why"); d.append(el("summary", "", "Why this result (SHAP-style breakdown)"));
   d.append(el("div", "small", x.method));
+  if (x.signals.every((s) => !s.shapley)) { d.append(el("div", "small", "No signal pushed the label either way, so there is nothing to attribute. The scores above are the evidence.")); d.append(el("div", "small", x.pixel_level)); return d; }
   x.signals.forEach((s) => {
     const row = el("div", "whyrow"); row.append(el("div", "", s.signal));
     if (s.score !== undefined) row.append(el("div", "small", s.score === null ? "no score" : "score " + s.score.toFixed(2) + ", cut " + s.cut + ", " + (s.over_cut ? "over" : "under") + " the cut by " + Math.abs(s.margin).toFixed(2)));
@@ -455,6 +456,23 @@ async function checkVideo(f, out) {
   } catch (e) { out.replaceChildren(el("div", "err", "Could not check the video: " + e.message)); }
 }
 
+function renderMediaSummary(s) {
+  const box = el("div", "plain");
+  box.append(el("h3", "", s.headline), el("p", "", s.meaning));
+  box.append(el("div", "small", "How we checked, step by step"));
+  const ol = el("ol");
+  s.steps.forEach((st) => { const li = el("li"); const mark = st.status === "flag" ? "⚑ " : st.status === "skip" ? "– " : "✓ "; li.append(el("b", "", mark + st.did), " ", st.result); ol.append(li); });
+  box.append(ol);
+  box.append(el("div", "small", "What this does not tell you"));
+  const no = el("ul"); s.cannot_say.forEach((x) => no.append(el("li", "", x))); box.append(no);
+  box.append(el("div", "small", s.do_next.intro));
+  const tools = el("ul");
+  s.do_next.tools.forEach((tl) => { const li = el("li"); const a = el("a", "", tl.name); a.href = tl.url; a.target = "_blank"; a.rel = "noopener"; li.append(a, " ", el("span", "small", tl.how)); tools.append(li); });
+  s.do_next.tips.forEach((x) => tools.append(el("li", "", x)));
+  box.append(tools);
+  return box;
+}
+
 async function checkImage() {
   const f = $("file").files[0]; const out = $("mediaOut"); out.replaceChildren();
   if (!f) return;
@@ -471,17 +489,21 @@ async function checkImage() {
     out.append(stage);
     if (heat) { const b = el("button", "ghost toggle", "Hide heatmap"); b.onclick = () => { heat.style.display = heat.style.display === "none" ? "" : "none"; b.textContent = heat.style.display === "none" ? "Show heatmap" : "Hide heatmap"; }; out.append(b); }
     const card = el("div", "claim"); const head = el("div");
-    head.append(el("span", "badge " + body.label, body.label.replaceAll("_", " ")));
-    if (body.forensics.available) head.append(" ", el("span", "small", "edit score " + body.forensics.score.toFixed(2) + (body.forensics.ai_score != null ? ", AI-generated score " + body.forensics.ai_score.toFixed(2) : "") + " (" + body.forensics.device + ", " + body.forensics.seconds + " s)"));
+    head.append(el("span", "badge " + body.label, body.summary ? body.summary.badge : body.label.replaceAll("_", " ")));
     card.append(head);
-    const ul = el("ul"); body.reasons.forEach((x) => ul.append(el("li", "", x))); card.append(ul);
+    if (body.summary) card.append(renderMediaSummary(body.summary));
+    const tech = el("details", "why"); tech.append(el("summary", "", "Technical details"));
+    tech.append(el("div", "small", "Label in the record: " + body.label.replaceAll("_", " ")));
+    if (body.forensics.available) tech.append(el("div", "small", "edit score " + body.forensics.score.toFixed(2) + (body.forensics.ai_score != null ? ", AI-generated score " + body.forensics.ai_score.toFixed(2) : "") + " (" + body.forensics.device + ", " + body.forensics.seconds + " s)"));
+    const ul = el("ul"); body.reasons.forEach((x) => ul.append(el("li", "", x))); tech.append(ul);
     if (body.matches.length) {
       card.append(el("div", "small", "Seen in fact-checks"));
       const m = el("ul");
       body.matches.forEach((h) => { const li = el("li"); const a = el("a", "", h.publisher + ": " + h.title); a.href = h.article_url; a.target = "_blank"; a.rel = "noopener"; li.append(a, " ", el("span", "small", "distance " + h.distance + (h.mirrored ? ", mirrored" : "") + (h.reviewed_at ? ", reviewed " + h.reviewed_at.slice(0, 10) : ""))); m.append(li); });
       card.append(m);
     }
-    if (body.explanation && body.explanation.method) card.append(explainMedia(body.explanation));
+    if (body.explanation && body.explanation.method) tech.append(explainMedia(body.explanation));
+    card.append(tech);
     out.append(card);
   } catch (e) { out.replaceChildren(el("div", "err", "Could not check the image: " + e.message)); }
 }

@@ -1,0 +1,90 @@
+# What the image check says in plain words (used by src/satyasutra/media_plain.py). One of six outcomes is chosen from the real results:
+#   clean         neither check flagged the picture
+#   edited        TruFor is at or above its cut
+#   ai_suspected  the AI-image detector is at or above its cut (one detector alone: a suspicion)
+#   both          both flagged
+#   known_image   fact-checkers have already written about this picture (and nothing else flagged it)
+#   unavailable   the forensic service did not answer and there is no fact-check match
+# The wording is ours. Every sentence says only what the check found; "nothing found" is never turned into "genuine".
+badges:
+  clean: "NOTHING FOUND"
+  edited: "EDITED"
+  ai_suspected: "MAY BE AI-MADE"
+  both: "EDITED, MAY BE AI-MADE"
+  known_image: "SEEN IN A FACT-CHECK"
+  unavailable: "NOT CHECKED"
+
+headlines:
+  clean: "No sign of editing or AI generation"
+  edited: "This picture shows signs of editing"
+  ai_suspected: "This picture may be AI-generated"
+  both: "This picture shows signs of editing and may be AI-generated"
+  known_image: "Fact-checkers have already written about this picture"
+  unavailable: "The forensic checks did not run"
+
+meanings:
+  clean: "Both of our checks came back clean. That is a real result, but it is not proof the picture is genuine."
+  edited: "Part of this picture was probably changed after it was taken. The heatmap shows where the model sees it."
+  ai_suspected: "One detector thinks an AI tool made this picture. Treat that as a strong hint, not proof."
+  both: "Part of this picture looks changed and a detector also thinks an AI tool may have made it. Treat both as strong hints, not proof."
+  known_image: "A fact-checker has already examined this picture. Read their article before you share it."
+  unavailable: "The forensic service did not answer, so nothing was checked about the picture itself and nothing was guessed."
+
+cannot_say:
+  clean:
+    - "Our checks can miss new AI tools, small AI edits, and edits that were flattened by WhatsApp or video compression."
+    - "They do not tell you who took the picture, when, or whether the story that comes with it is true. A real photo can be shared with a false story."
+  edited:
+    - "A flag means the picture was probably changed, not that the story is false. Many edits are harmless, such as crops, filters and retouching."
+    - "The check cannot say who changed it or why."
+  ai_suspected:
+    - "One detector alone can be wrong. Its cut was measured on 80 Wikimedia Commons images only."
+    - "It cannot tell a fully AI-made picture from a real photo with a small AI edit."
+  both:
+    - "Each detector alone can be wrong, and they were measured on small sets."
+    - "A flag does not tell you why the picture was changed or whether the story with it is false."
+  known_image:
+    - "A match means this picture appeared in a fact-check article. The article says what was true or false about it; this tool does not."
+    - "Cropped copies do not match, so a miss would not mean the picture is new."
+  unavailable:
+    - "Start the forensic service and run the check again."
+    - "Until then we can only say what the fact-check history shows."
+
+steps:
+  read:
+    did: "Read the picture and made a fingerprint of it."
+    result: "{width} by {height} pixels."
+  history:
+    did: "Compared the fingerprint with pictures that fact-checkers have already written about."
+    result_none: "No match. That says nothing about whether this picture is real or new."
+    result_some: "Matches {n} fact-check article(s), listed below."
+  edit:
+    did: "Asked TruFor, a forensic model, whether parts of the picture were pasted in, moved or retouched."
+    result_clean: "Nothing found. It scored {score}, and we flag pictures that score {cut} or more."
+    result_flag: "Flagged. It scored {score}, at or above our cut of {cut}. The heatmap shows where."
+    result_none: "No usable score came back, so this check did not run."
+  ai:
+    did: "Asked a second model (Smaug) whether the picture looks AI-generated."
+    result_clean: "Nothing found. It scored {score}, and we flag pictures that score {cut} or more."
+    result_flag: "Flagged. It scored {score}, at or above our cut of {cut}."
+    result_none: "This check did not run{reason}."
+  rule:
+    did: "Applied our rule to the results."
+    result:
+      clean: "No check flagged the picture, so we report 'nothing found'. We never report 'genuine' from a check that found nothing."
+      edited: "An edit flag is reported as a finding, with the heatmap."
+      ai_suspected: "One AI flag on its own is reported as a suspicion, not a finding."
+      both: "Both flags are reported, each as what it is."
+      known_image: "A match with a fact-check is reported with its link."
+      unavailable: "With no forensic result we say nothing about the picture itself."
+
+do_next:
+  intro: "To be sure, check where the picture came from:"
+  tools:
+    - {name: "Google Lens", url: "https://lens.google.com/", how: "Upload the picture to see where else it appears."}
+    - {name: "TinEye", url: "https://tineye.com/", how: "Another reverse image search; look for the oldest copy."}
+    - {name: "Yandex Images", url: "https://yandex.com/images/", how: "A third search that sometimes finds copies the others miss."}
+  tips:
+    - "Find the oldest copy. A picture that is older than the event it is said to show is the most common trick."
+    - "Check who posted it first and whether they were there."
+    - "If the picture comes with a claim, paste the claim into the claim box above and check that too."

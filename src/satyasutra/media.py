@@ -19,6 +19,7 @@ import httpx
 from .config import Config
 from .errors import ConfigError
 from .explain import explain_media
+from .media_plain import build_summary
 from .provenance import BadImage, ImageIndex, fingerprint
 
 SCOPE_NOTE = "TruFor finds edited images (splicing, copy-move, retouching). It does not detect fully AI-generated images."
@@ -35,6 +36,7 @@ class MediaResult:
     label: str
     reasons: list[str] = field(default_factory=list)
     explanation: dict = field(default_factory=dict)
+    summary: dict = field(default_factory=dict)       # the result in plain words and steps (media_plain.py)
 
 
 def label_from(edited: bool, ai_generated: bool) -> str:
@@ -105,4 +107,8 @@ def check_media(cfg: Config, data: bytes, index: ImageIndex, analyse=forensic_sc
     else:
         reasons.append("not in the debunked-image index; that says nothing about whether it is authentic")
     explanation = explain_media(cfg, forensics, matches, label, label_from) if forensics.get("available") else {}
-    return MediaResult(fp.width, fp.height, matches, forensics, label, reasons, explanation)
+    cuts = cfg.thresholds.thresholds
+    edit_cut, ai_cut = cuts.get(cfg.runtime.forensics.threshold), cuts.get(cfg.runtime.forensics.ai_threshold)
+    summary = build_summary(width=fp.width, height=fp.height, forensics=forensics, matches=matches,
+                            edit_cut=edit_cut.value if edit_cut else None, ai_cut=ai_cut.value if ai_cut else None)
+    return MediaResult(fp.width, fp.height, matches, forensics, label, reasons, explanation, summary)
