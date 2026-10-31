@@ -58,6 +58,10 @@ def _worded_as_now(text: str, cfg: Config) -> bool:
     return any(re.search(r"(?<!\w)" + re.escape(t.casefold()) + r"(?!\w)", text.casefold()) for t in cfg.runtime.report.recent_terms)
 
 
+def _is_forecast(text: str, cfg: Config) -> bool:
+    return any(re.search(r"(?<!\w)" + re.escape(t.casefold()) + r"(?!\w)", text.casefold()) for t in cfg.runtime.web.forecast_terms)
+
+
 def _clean(text: str) -> str:
     for marker in (CLAIM_OPEN, CLAIM_CLOSE, HEAD_OPEN, HEAD_CLOSE):
         text = text.replace(marker, "")
@@ -128,6 +132,9 @@ def check_web(client: GeminiClient, cfg: Config, claim_text: str, http: httpx.Cl
     con_outlets = {_norm(h.outlet): h.outlet for h, t in con if t == TIER_TRUSTED}
     fact_check_debunk = any(is_fact_checker(h.outlet, cfg) for h, t in con if t == TIER_TRUSTED)
     support_ok = len(pro_outlets) >= s.min_outlets_support
+    if support_ok and _is_forecast(claim_text, cfg):
+        support_ok = False                             # outlets report forecasts as news, which does not make the forecast true (dev row u24)
+        out.stale = "the claim is a forecast about the future: outlets reporting the forecast do not confirm it, so it is not counted as support"
     if support_ok and _worded_as_now(claim_text, cfg):
         newest = max((h.published_at for h, t in pro if t == TIER_TRUSTED and h.published_at), default=None)
         if newest is None or (now - newest).days > cfg.runtime.report.stale_days:

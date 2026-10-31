@@ -276,6 +276,7 @@ class WebSettings(_Strict):
     max_cited: int = Field(gt=0)             # headlines shown as context when they do not decide
     title_chars: int = Field(gt=0)
     min_outlets_support: int = Field(gt=0)   # distinct reputable outlets that must report it as fact before it counts as support
+    forecast_terms: list[str]                # a claim worded as a forecast cannot be confirmed by outlets reporting the forecast
     min_outlets_debunk: int = Field(gt=0)    # distinct reputable outlets that must debunk it when none of them is a fact-checker
     reputable_outlets: list[str]
     fact_checkers: list[str]

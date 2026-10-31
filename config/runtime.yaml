@@ -270,6 +270,7 @@ web:
   title_chars: 220
   min_outlets_support: 2
   min_outlets_debunk: 2
+  forecast_terms: ["will be", "will have", "will rise", "will fall", "will happen", "next year", "next month", "next week", "next season", "in 2027", "in 2028", "in 2030", "is expected to", "is forecast", "is predicted", "going to be"]   # a policy list from reading dev row u24, not calibrated
   reputable_outlets: ["Reuters", "Associated Press", "AP News", "AFP", "BBC", "BBC News", "Al Jazeera", "The Hindu", "The Indian Express", "Hindustan Times", "The Times of India", "NDTV",
                       "India Today", "The Economic Times", "Business Standard", "Mint", "Livemint", "The Wire", "Scroll.in", "ETV Bharat", "Press Trust of India", "PTI",
                       "The Telegraph", "Deccan Herald", "The New Indian Express", "Firstpost", "CNN", "The Guardian", "The New York Times", "The Washington Post",

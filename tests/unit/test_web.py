@@ -97,3 +97,8 @@ def test_fresh_coverage_still_supports_a_claim_worded_as_happening_now():
 def test_old_coverage_of_a_claim_not_worded_as_now_still_supports_it():
     r = run_text("The Chandrayaan-3 lander touched down near the lunar south pole", datetime(2023, 8, 23, tzinfo=timezone.utc))
     assert sorted(r.supporting) == ["NDTV", "The Hindu"] and r.stale == ""
+
+
+def test_outlets_reporting_a_forecast_do_not_make_the_forecast_supported():
+    r = run_text("The monsoon will be weaker than normal next year.", NOW)
+    assert r.supporting == [] and "forecast" in r.stale and {e.role for e in r.evidence} == {"context"}
