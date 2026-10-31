@@ -16,7 +16,7 @@ loss_phrases: ["i paid", "i transferred", "money was debited", "amount was debit
 
 intimate_phrases: ["leaked my photos", "leaked my pictures", "leaked my video", "my private photos", "my private pictures", "my private video", "intimate photos",
                    "intimate images", "intimate video", "nude photos", "nude pictures", "nude video", "morphed photos", "morphed pictures", "morphed my", sextortion,
-                   "blackmailing me with", "threatening to leak", "threatening to share my", "threatening to post my", "revenge porn", "mere private photos",
+                   "blackmailing me with", "blackmailed with", "threatened to leak", "leak my photos", "leak my pics", "leak my video", "इंटिमेट", "वायरल करने की धमकी", "threatening to leak", "threatening to share my", "threatening to post my", "revenge porn", "mere private photos",
                    "मेरी निजी तस्वीरें", "मेरी न्यूड", "मॉर्फ", "ब्लैकमेल"]
 
 routes:

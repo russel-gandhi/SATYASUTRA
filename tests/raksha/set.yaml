@@ -1,0 +1,43 @@
+# Recognition set for the private-images intent (package RK6). Written by us; one labeller; benign wording only. Hindi and Hinglish lines are our drafts, unreviewed.
+# trigger: true means the bot should enter help mode; false items are near-misses (news, films, other topics) that must not.
+items:
+  - {id: t01, trigger: true, text: "he is threatening to leak my private photos unless I pay"}
+  - {id: t02, trigger: true, text: "someone leaked my photos on a telegram group"}
+  - {id: t03, trigger: true, text: "this is sextortion, they have my pictures and want money"}
+  - {id: t04, trigger: true, text: "my ex is blackmailing me with my intimate photos"}
+  - {id: t05, trigger: true, text: "they morphed my pictures and are sharing them"}
+  - {id: t06, trigger: true, text: "he says he will post my nude pictures if I do not send money"}
+  - {id: t07, trigger: true, text: "mere private photos viral ho gaye hain, kya karun"}
+  - {id: t08, trigger: true, text: "मेरी निजी तस्वीरें किसी ने वायरल कर दीं"}
+  - {id: t09, trigger: true, text: "कोई मुझे ब्लैकमेल कर रहा है"}
+  - {id: t10, trigger: true, text: "he is threatening to share my video with my family"}
+  - {id: t11, trigger: true, text: "a stranger threatening to post my private pictures online"}
+  - {id: t12, trigger: true, text: "revenge porn: my old partner uploaded my video"}
+  - {id: t13, trigger: true, text: "i think someone leaked my video, please help"}
+  - {id: t14, trigger: true, text: "they are using my morphed pictures to blackmail me"}
+  - {id: t15, trigger: true, text: "my intimate video was shared without my consent"}
+  - {id: t16, trigger: true, text: "he has my pics and is saying he will send them to everyone"}
+  - {id: t17, trigger: true, text: "she is being blackmailed with her private photos, how can I help her"}
+  - {id: t18, trigger: true, text: "someone made fake nude pictures of my sister"}
+  - {id: t19, trigger: true, text: "he threatened to leak my photos"}
+  - {id: t20, trigger: true, text: "इंटिमेट वीडियो वायरल करने की धमकी दे रहा है"}
+  - {id: n01, trigger: false, text: "the film shows a character who is blackmailed by a rival"}
+  - {id: n02, trigger: false, text: "news: police arrest gang that blackmailed businessmen for money"}
+  - {id: n03, trigger: false, text: "the morphed video of the minister is fake, fact-checkers say"}
+  - {id: n04, trigger: false, text: "how do I send my photos for a passport application"}
+  - {id: n05, trigger: false, text: "RBI has banned UPI payments above 5000 rupees"}
+  - {id: n06, trigger: false, text: "my phone photos are not backing up to the cloud"}
+  - {id: n07, trigger: false, text: "this wedding video leaked my cousin's surprise, we are laughing"}
+  - {id: n08, trigger: false, text: "a leaked document shows the company plans layoffs"}
+  - {id: n09, trigger: false, text: "forwarded: win a free phone, click the link to claim your prize"}
+  - {id: n10, trigger: false, text: "मेरी तस्वीरें गैलरी में नहीं दिख रहीं"}
+  - {id: n11, trigger: false, text: "school photos for the annual day are ready for pickup"}
+  - {id: n12, trigger: false, text: "photoshopped images of the cricketer are going viral, is it real"}
+  - {id: n13, trigger: false, text: "the app asked for permission to access my camera and photos"}
+  - {id: n14, trigger: false, text: "my brother is threatening to tell mom I broke the vase"}
+  - {id: n15, trigger: false, text: "kya yeh khabar sach hai ki election mein EVM hack hua"}
+  - {id: n16, trigger: false, text: "ransomware locked our files and the attackers want bitcoin"}
+  - {id: n17, trigger: false, text: "a video of the flood has gone viral, is it from this year"}
+  - {id: n18, trigger: false, text: "the actress said her private life should be respected"}
+  - {id: n19, trigger: false, text: "how to remove my old photos from google search results"}
+  - {id: n20, trigger: false, text: "मुझे बैंक से कॉल आया कि केवाईसी अपडेट करें"}
