@@ -75,3 +75,39 @@ def test_the_route_returns_the_transcript_with_its_caveat_and_maps_errors_to_422
     assert seen["n"] == 6
     r = client.post("/voice/transcribe", content=b"bad")
     assert r.status_code == 422 and "could not read" in r.json()["detail"]
+
+
+class _Listener:
+    model = "gemini-test"
+
+    def __init__(self, data=None, fail=False):
+        self.data, self.fail, self.images = data, fail, None
+
+    def generate_json(self, prompt, schema, system=None, images=None):
+        from satyasutra.errors import SourceError
+        if self.fail:
+            raise SourceError("gemini_llm", "ModelBusy")
+        self.images = images
+        return type("R", (), {"data": self.data})()
+
+
+def test_second_opinion_replaces_an_unsure_reading_and_keeps_the_first(tmp_path):
+    from satyasutra.voice import second_opinion
+    wav = io.BytesIO()
+    with wave.open(wav, "wb") as w:
+        w.setnchannels(1); w.setsampwidth(2); w.setframerate(16000); w.writeframes(b"\x01\x00" * 1600)
+    first = Transcript("garbled", "ta", 0.36, True, 0.1, 0.1, "whisper")
+    listener = _Listener({"text": "ಕೋವಿಡ್ ಲಸಿಕೆ", "language": "KN"})
+    got = second_opinion(first, wav.getvalue(), listener, load_config())
+    assert got.text == "ಕೋವಿಡ್ ಲಸಿಕೆ" and got.language == "kn" and got.alternate == "garbled" and got.language_uncertain
+    assert listener.images[0][0] == "audio/wav"
+
+
+def test_second_opinion_failure_or_silence_keeps_the_first_reading():
+    from satyasutra.voice import second_opinion
+    wav = io.BytesIO()
+    with wave.open(wav, "wb") as w:
+        w.setnchannels(1); w.setsampwidth(2); w.setframerate(16000); w.writeframes(b"\x01\x00" * 1600)
+    first = Transcript("garbled", "ta", 0.36, True, 0.1, 0.1, "whisper")
+    assert second_opinion(first, wav.getvalue(), _Listener(fail=True), load_config()) is first
+    assert second_opinion(first, wav.getvalue(), _Listener({"text": " ", "language": "kn"}), load_config()) is first

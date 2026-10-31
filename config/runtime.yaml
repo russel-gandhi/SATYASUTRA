@@ -257,3 +257,42 @@ web:
                       "Bloomberg", "Financial Times", "Reuters India", "Hindustan Times", "Moneycontrol", "ThePrint", "The Print", "WION", "DD News", "PIB", "Press Information Bureau"]
   fact_checkers: ["Alt News", "BOOM", "BOOM Live", "Factly", "FACTLY", "Newschecker", "Vishvas News", "PIB Fact Check", "Snopes", "PolitiFact", "FactCheck.org", "AFP Fact Check",
                   "Reuters Fact Check", "The Quint", "India Today Fact Check", "Fact Crescendo", "Logically Facts", "Full Fact", "Africa Check", "Misbar", "Lead Stories", "Check4Spam", "Fact Check"]
+
+report:
+  db_path: data/reports.sqlite3
+  max_record_bytes: 4000000
+  max_records_per_report: 12
+  thumb_px: 220
+  stale_days: 14
+  recent_terms: [today, "this morning", tonight, "just now", breaking, "right now", "an hour ago", "this evening", "last night", "आज", "अभी", "आज सुबह", "कुछ देर पहले", "ತಕ್ಷಣ", "ಇಂದು", "ಈಗ"]
+  verdict_names:
+    en: {SUPPORTED: "SUPPORTED", REFUTED: "FALSE", MISSING_CONTEXT: "MISLEADING", UNVERIFIABLE_YET: "UNVERIFIED", NOT_A_CLAIM: "NOT A CLAIM"}
+    hi: {SUPPORTED: "सही", REFUTED: "झूठ", MISSING_CONTEXT: "भ्रामक", UNVERIFIABLE_YET: "अपुष्ट", NOT_A_CLAIM: "दावा नहीं"}
+  insufficient_label: {en: INSUFFICIENT EVIDENCE, hi: "पर्याप्त सबूत नहीं"}
+  tier_names:
+    en: {"1": "Official source", "2": "Reputable outlet or fact-checker", "3": "Other source (shown, never decides)", "4": "Unverified"}
+    hi: {"1": "सरकारी स्रोत", "2": "प्रतिष्ठित मीडिया या फैक्ट-चेकर", "3": "अन्य स्रोत (दिखाया जाता है, फ़ैसला नहीं करता)", "4": "असत्यापित"}
+  limitations:
+    en:
+      - "This report lists only what was actually retrieved when it was made; nothing else was consulted."
+      - "A missing source is not proof that a claim is false. UNVERIFIED means we could not find enough trusted evidence either way."
+      - "News outlets repeat each other and can be wrong, so support from news alone is capped at medium confidence."
+      - "Image, video and voice detectors miss some manipulations and can flag genuine files. A clean result is never proof that media is genuine."
+      - "Relationships shown in the graph are only those found in this investigation; they are not a map of the whole internet."
+    hi:
+      - "यह रिपोर्ट केवल वही दिखाती है जो बनाते समय सच में खोजा गया; और कोई स्रोत नहीं देखा गया।"
+      - "स्रोत न मिलना दावे के झूठ होने का सबूत नहीं है। 'अपुष्ट' का मतलब है कि दोनों ओर पर्याप्त भरोसेमंद सबूत नहीं मिला।"
+      - "समाचार संस्थान एक-दूसरे को दोहराते हैं और ग़लत भी हो सकते हैं, इसलिए सिर्फ़ समाचार से मिला समर्थन मध्यम भरोसे तक सीमित है।"
+      - "फ़ोटो, वीडियो और आवाज़ के डिटेक्टर कुछ छेड़छाड़ चूक सकते हैं और असली फ़ाइल को भी संदिग्ध बता सकते हैं। साफ़ नतीजा असली होने का सबूत नहीं है।"
+      - "ग्राफ़ में सिर्फ़ वही संबंध हैं जो इस जाँच में मिले; यह पूरे इंटरनेट का नक्शा नहीं है।"
+
+# Submitted links and documents. The page fetch uses our honest User-Agent, follows redirects by hand and refuses any hop that resolves to a
+# non-public address (loopback, private, link-local), so a pasted link cannot make this server read its own network. Limits are safety caps, not calibrated.
+inputs:
+  timeout_s: 15
+  max_bytes: 4000000
+  max_redirects: 4
+  max_pdf_pages: 30
+  max_text_chars: 6000
+  html_skip_tags: [script, style, noscript, nav, header, footer, aside, form, svg]
+  editor_terms: [photoshop, gimp, lightroom, canva, snapseed, picsart, pixlr, affinity, paint.net, facetune, remini, midjourney, stable diffusion, dall-e, firefly]

@@ -123,6 +123,14 @@ forensics\venv311\Scripts\python forensics\service.py --port 8100          # Tru
   the net and say true or false); the lists and counts are policy choices, not calibrated. Live 2026-10-31: 'Nana Patekar is dead' SUPPORTED (NDTV, The Hindu, HT, ETV Bharat, TOI...),
   'Chandrayaan-3 landed near the lunar south pole' SUPPORTED (BBC, Guardian), the microchip claim REFUTED high, an invented assassination and an invented RBI UPI ban stayed 'cannot tell'.
   Risks not measured: an outlet reporting a rumour can be labelled as fact, a claim about an old event may match old headlines, Google News terms of use were not read.
+- Trust Report (`records.py`, `report.py`, `inputs.py`, `ui/report.html`, `runtime.report`, `runtime.inputs`): every check (claims via `/agent/stream`, image, video, audio, voice, notice, page, PDF) saves a server-side
+  record and returns `record_id`; `POST /report/build {record_ids, lang}` builds the ten-section report from those records only (never client evidence) and stores it under a content-hash id;
+  `GET /report/<id>` is the page, `/report/<id>.json` the data. Graph edges exist only for relationships found in that investigation. Context check: a claim worded as happening now whose newest
+  coverage is older than `stale_days` is flagged possibly recycled (only check there is). Hindi wording unreviewed. `POST /url/check` (SSRF-safe fetch: http/https, every hop must resolve to public
+  addresses, byte cap; DNS rebinding gap stated in the module) and `POST /doc/check` (PDF via pypdf) reuse `notice.analyse_text`. Image EXIF findings via `inputs.image_metadata`.
+- Kannada: Whisper-small mislabelled a TTS Kannada sentence as Tamil (language prob 0.36) and a garbled transcript still produced a REFUTED/high verdict. Now `voice.second_opinion` (Gemini hears the
+  audio, `config/prompts/listen.txt`) replaces an unsure reading and keeps Whisper's as `alternate`; the Kannada claim then goes through extraction and translation fine. `scripts/kannada_live.py`.
+  One machine voice tested. A garbled transcript can still yield a confident verdict: the UI shows the transcript first.
 - Not done: (Telegram bot done, see above) (needs a fresh token), escalation never fired live, TruFor false-alarm rate on real social-media images
   unknown, README with a real-vs-roadmap table. `tests/unit/test_trace_sse.py::test_leaving_mid_run...` failed once under full-suite load and
   passes alone (timing).

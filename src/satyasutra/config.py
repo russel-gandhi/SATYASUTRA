@@ -275,6 +275,29 @@ class WebSettings(_Strict):
     fact_checkers: list[str]
 
 
+class InputSettings(_Strict):
+    timeout_s: float = Field(gt=0)
+    max_bytes: int = Field(gt=0)             # page or PDF download cap
+    max_redirects: int = Field(ge=0)         # each hop is re-checked against the public-address rule
+    max_pdf_pages: int = Field(gt=0)
+    max_text_chars: int = Field(gt=0)
+    html_skip_tags: list[str]                # content of these tags is never page text
+    editor_terms: list[str]                  # a Software tag containing one of these means an editor saved the file
+
+
+class ReportSettings(_Strict):
+    db_path: str                             # SQLite store of investigation records and built reports
+    max_record_bytes: int = Field(gt=0)
+    max_records_per_report: int = Field(gt=0)
+    thumb_px: int = Field(gt=0)              # longest side of the image thumbnail kept for a report
+    stale_days: int = Field(gt=0)            # a claim that says "today" but whose newest coverage is older than this is flagged as possibly recycled
+    recent_terms: list[str]
+    verdict_names: dict[str, dict[str, str]]  # language -> internal label -> the name shown on the report
+    insufficient_label: dict[str, str]
+    tier_names: dict[str, dict[str, str]]
+    limitations: dict[str, list[str]]
+
+
 class AudioSpoofSettings(_Strict):
     service_url: str                         # the GPU service that runs the synthetic-speech classifier (POST /voiceclone)
     service_timeout_s: float = Field(gt=0)
@@ -394,6 +417,8 @@ class RuntimeFile(_Strict):
     officials: OfficialsSettings
     audio_spoof: AudioSpoofSettings
     web: WebSettings
+    report: ReportSettings
+    inputs: InputSettings
     news: NewsSettings
     telegram: TelegramSettings
     explain: ExplainSettings
