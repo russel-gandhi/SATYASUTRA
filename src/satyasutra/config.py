@@ -223,6 +223,11 @@ class ForensicsSettings(_Strict):
     timeout_s: float = Field(gt=0)
     max_upload_bytes: int = Field(gt=0)      # an uploaded image larger than this is refused
     threshold: str                           # name of the calibrated cut in thresholds.yaml for the manipulation score
+    video_frames: int = Field(gt=0)          # frames sampled evenly across a video
+    max_video_bytes: int = Field(gt=0)
+    max_video_s: float = Field(gt=0)         # longer videos are refused: every sampled frame costs a model run
+    ffmpeg_timeout_s: float = Field(gt=0)
+    thumb_width: int = Field(gt=0)           # width of the frame thumbnails returned for display
 
 
 class VerifySettings(_Strict):

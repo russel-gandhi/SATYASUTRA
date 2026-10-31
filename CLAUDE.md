@@ -71,8 +71,13 @@ forensics\venv311\Scripts\python forensics\service.py --port 8100          # Tru
   The checkpoint is loaded with `weights_only=True` plus a narrow allowlist after reading its pickle statically (only tensors and a numpy scalar).
 - Starting a second server on a port a stale one holds fails silently with exit 3 and the old code keeps answering: find the PID with
   `ps -W | grep FORGE/.venv` and `kill` that one only. Never kill all python processes (a pip install or the TruFor service may be running).
-- Not done: Telegram bot (needs a fresh token), video forensics, Hindi claim check, escalation never fired live, TruFor false-alarm
-  rate on real social-media images unknown, AI-generated-image detector not chosen.
+- Hindi works through the same agent (Gemini extracts, translates to English, keeps the Hindi quote; the Fact Check API finds nothing for
+  Hindi query text, 0 hits on 4 claims, so the English rendering is what is searched). `tests/contract/test_live_hindi.py`.
+- Video: `video.py` + `POST /video/check` sample 8 frames with ffmpeg (already on PATH, no extra install), score each with TruFor and
+  the debunked-image index. Measured weakness: a spliced frame scored 0.996 as a still and 0.27 after H.264 (`scripts/video_live.py`),
+  so a clean video result is weak evidence and the result text says so. Face-swap and AI-generated video are not detected.
+- Not done: Telegram bot (needs a fresh token), escalation never fired live, TruFor false-alarm rate on real social-media images
+  unknown, AI-generated-image detector not chosen, README with a real-vs-roadmap table.
 
 ## Secrets (read this twice)
 

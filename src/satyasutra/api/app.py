@@ -25,6 +25,7 @@ from ..agent import format_sse, trace_events
 from ..cache import TTLCache
 from ..fastclock import Cluster, Escalator, FastClock, FastClockWorker
 from ..media import check_media, forensic_scores
+from ..video import check_video
 from ..provenance import ImageIndex
 from ..agent.graph import AgentRun, build_claim_agent
 from ..claims import ExtractionResult, Grounded, Judgements, extract_claims, ground_entities, judge_reviews
@@ -216,6 +217,25 @@ def create_app(
         heatmap = result.forensics.pop("heatmap_png_b64", None)
         return {"width": result.width, "height": result.height, "label": result.label, "reasons": result.reasons,
                 "matches": result.matches, "forensics": result.forensics, "heatmap_png_b64": heatmap}
+
+    @app.post("/video/check")
+    async def video_check(request: Request) -> dict:
+        """Raw video bytes in the body. Samples frames and returns per-frame scores; see satyasutra/video.py for what it cannot detect."""
+        limit = cfg.runtime.forensics.max_video_bytes
+        data = await request.body()
+        if not data or len(data) > limit:
+            raise HTTPException(status_code=422, detail=f"send 1 to {limit} bytes of video in the request body")
+        try:
+            result = await run_in_threadpool(check_video, cfg, data, images(), analyse_image)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc))
+        except RuntimeError as exc:
+            raise HTTPException(status_code=503, detail=str(exc))
+        return {
+            "duration_s": result.duration_s, "label": result.label, "reasons": result.reasons, "forensics_available": result.forensics_available,
+            "frames": [{"index": f.index, "at_s": f.at_s, "score": f.score, "flagged": f.flagged, "thumb_jpeg_b64": f.thumb_jpeg_b64,
+                        "matches": f.matches, "heatmap_png_b64": f.heatmap_png_b64, "note": f.note} for f in result.frames],
+        }
 
     @app.get("/agent/stream")
     async def agent_stream(text: str = Query(min_length=1, max_length=cfg.runtime.verify.max_text_chars)) -> StreamingResponse:

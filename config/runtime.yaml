@@ -86,6 +86,11 @@ forensics:
   timeout_s: 120
   max_upload_bytes: 15000000
   threshold: trufor_manipulation_score
+  video_frames: 8
+  max_video_bytes: 60000000
+  max_video_s: 120
+  ffmpeg_timeout_s: 30
+  thumb_width: 240
 
 knowledge_graph:
   endpoint: https://www.wikidata.org/w/api.php

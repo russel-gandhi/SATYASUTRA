@@ -48,6 +48,12 @@
   .stage { position: relative; display: inline-block; max-width: 100%; margin-top: 12px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; line-height: 0; }
   .stage img { max-width: 100%; max-height: 360px; display: block; }
   .stage img.heat { position: absolute; inset: 0; width: 100%; height: 100%; max-height: none; opacity: .7; mix-blend-mode: normal; pointer-events: none; }
+  .film { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .frame { width: 150px; }
+  .frame .stage { margin-top: 0; width: 150px; }
+  .frame .stage img { max-height: none; width: 100%; }
+  .frame.flag .stage { border-color: var(--bad); box-shadow: 0 0 0 2px var(--bad); }
+  .frame .cap { font-size: 12px; color: var(--mute); margin-top: 2px; }
   .toggle { margin-top: 6px; }
   .trace { margin-top: 12px; border-left: 2px solid var(--line); padding-left: 12px; }
   .step { font-size: 13px; margin: 4px 0; color: var(--mute); }
@@ -83,9 +89,9 @@
       <div id="out"></div>
     </section>
     <section style="margin-top:16px">
-      <h2>Check an image</h2>
-      <input type="file" id="file" accept="image/*">
-      <div class="small" style="margin-top:6px">Looks the image up in fact-checkers' past articles and asks TruFor (GRIP-UNINA, University of Naples) whether it was edited. It does not detect fully AI-generated images.</div>
+      <h2>Check an image or video</h2>
+      <input type="file" id="file" accept="image/*,video/*">
+      <div class="small" style="margin-top:6px">Looks the image up in fact-checkers' past articles and asks TruFor (GRIP-UNINA, University of Naples) whether it was edited. It does not detect fully AI-generated images, or face-swap and AI-generated video; for video it checks a handful of frames.</div>
       <div id="mediaOut"></div>
     </section>
   </div>
@@ -228,9 +234,35 @@ async function chain() {
   catch (e) { out.prepend(el("div", "err", e.message)); }
 }
 
+async function checkVideo(f, out) {
+  out.append(el("div", "small", "Sampling frames and running TruFor on each. This can take a little while."));
+  try {
+    const r = await fetch("/video/check", { method: "POST", body: f });
+    const body = await r.json();
+    if (!r.ok) throw new Error(typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail));
+    out.replaceChildren();
+    const film = el("div", "film"); const heats = [];
+    body.frames.forEach((fr) => {
+      const box = el("div", "frame" + (fr.flagged ? " flag" : "")); const stage = el("div", "stage");
+      if (fr.thumb_jpeg_b64) { const img = el("img"); img.src = "data:image/jpeg;base64," + fr.thumb_jpeg_b64; stage.append(img); }
+      if (fr.heatmap_png_b64) { const h = el("img", "heat"); h.src = "data:image/png;base64," + fr.heatmap_png_b64; h.style.display = "none"; stage.append(h); heats.push(h); }
+      box.append(stage, el("div", "cap", fr.at_s.toFixed(1) + " s  " + (fr.score === null ? "no score" : "score " + fr.score.toFixed(2))));
+      film.append(box);
+    });
+    out.append(film);
+    if (heats.length) { const b = el("button", "ghost toggle", "Show heatmaps"); b.onclick = () => { const on = heats[0].style.display === "none"; heats.forEach((h) => (h.style.display = on ? "" : "none")); b.textContent = on ? "Hide heatmaps" : "Show heatmaps"; }; out.append(b); }
+    const card = el("div", "claim"); const head = el("div");
+    head.append(el("span", "badge " + body.label, body.label.replaceAll("_", " ")), " ", el("span", "small", body.duration_s + " s video, " + body.frames.length + " frames sampled"));
+    card.append(head);
+    const ul = el("ul"); body.reasons.forEach((x) => ul.append(el("li", "", x))); card.append(ul);
+    out.append(card);
+  } catch (e) { out.replaceChildren(el("div", "err", "Could not check the video: " + e.message)); }
+}
+
 async function checkImage() {
   const f = $("file").files[0]; const out = $("mediaOut"); out.replaceChildren();
   if (!f) return;
+  if (f.type.startsWith("video/")) return checkVideo(f, out);
   out.append(el("div", "small", "Analysing " + f.name + " ..."));
   try {
     const r = await fetch("/media/check", { method: "POST", body: f });

@@ -18,5 +18,5 @@ def test_root_serves_the_page_and_it_only_calls_routes_that_exist(tmp_path):
     page = TestClient(app).get("/")
     assert page.status_code == 200 and "text/html" in page.headers["content-type"] and "SATYASUTRA" in page.text
     routes = {r.path for r in app.routes}
-    for called in ("/verify", "/health", "/ledger/verify", "/fastclock/top", "/fastclock/stats", "/media/check", "/agent/stream"):
+    for called in ("/verify", "/health", "/ledger/verify", "/fastclock/top", "/fastclock/stats", "/media/check", "/video/check", "/agent/stream"):
         assert called in routes and called in page.text
