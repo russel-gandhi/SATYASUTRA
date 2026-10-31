@@ -180,6 +180,7 @@ telegram:
     source_line: "Read it here: {url}"
     more_line: "{n} other review(s) say the same."
     conflict: "Fact-checkers disagree on this one, so I won't call it either way."
+    human_review: "This touches religion, caste or elections, so I won't call it true or false on my own. Please read the sources and check with a trusted fact-checker."
     news_reported: "It is being talked about in the news: {publisher} ran \"{title}\" ({url}). That means it's in the news, not that it's true."
     news_not_found: "I also went through the latest stories from {n} major news outlets ({names}) and none of them is reporting this. That doesn't prove it's false, since I only see recent stories from the big outlets, but if it were a major event you'd expect to find it there. Don't forward it until a source you trust confirms it."
     media_match: "This image has appeared in a fact-check before: {url}"

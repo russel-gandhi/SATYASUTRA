@@ -41,7 +41,9 @@ def format_claims(body: dict, labels: dict[str, str], messages: dict[str, str]) 
         cites = [x for x in c.get("citations", []) if x.get("url")]
         first = cites[0] if cites else {}
         lines = [c["text"]]
-        if "CONFLICT" in c.get("flags", []):
+        if "HUMAN_REVIEW" in c.get("flags", []):
+            lines.append(messages["human_review"])
+        elif "CONFLICT" in c.get("flags", []):
             lines.append(messages["conflict"])
         else:
             lines.append(labels.get(c["label"], c["label"]).format(publisher=first.get("publisher") or "A fact-checker", rating=first.get("rating") or ""))

@@ -37,6 +37,13 @@ verdict_rules:
     mixed: ["true but", "true although", "misleading", "missing context", "lacks context", "not the whole story", "half true", "distorts the facts", "spins the facts"]
     unproven: ["unsupported", "there is no evidence", "we don t have good enough evidence"]
   negations: ["not", "no", "never", "none", "without", "cannot", "neither", "nor", "n't"]   # quoted: bare no/false would parse as booleans
+  # Package A4: a claim about these topics never gets a decided label from the system alone. It ends in 'cannot tell' with a human-review flag and the
+  # evidence stays visible. Matched as whole words or phrases, case-insensitive. A policy choice, not measured; the list is deliberately short and will
+  # miss unusual wording. Hindi forms are our own and unreviewed by a native speaker.
+  sensitive_topics:
+    communal: ["communal", "riot", "riots", "lynching", "mob lynching", "love jihad", "hindu", "hindus", "muslim", "muslims", "christian", "christians", "sikh", "sikhs", "temple", "mosque", "church", "beef", "cow slaughter", "forced conversion", "हिंदू", "हिन्दू", "मुस्लिम", "मुसलमान", "दंगा", "दंगे", "मंदिर", "मस्जिद", "गोहत्या", "धर्मांतरण"]
+    caste: ["caste", "dalit", "dalits", "reservation", "जाति", "दलित", "आरक्षण"]
+    election: ["election", "elections", "voter", "voters", "voting", "ballot", "evm", "evms", "poll rigging", "bjp", "aap", "rss", "congress party", "चुनाव", "मतदान", "मतदाता", "ईवीएम", "भाजपा", "कांग्रेस"]
   min_publishers_for_high: 2
   stale_after_days: 365
   related_limit: 3

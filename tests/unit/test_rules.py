@@ -169,3 +169,25 @@ def test_the_rating_table_cannot_put_a_phrase_in_two_groups():
 def test_the_real_config_has_the_calibrated_relevance_cut():
     entry = load_config(CONFIG).thresholds.thresholds["factcheck_relevance"]
     assert entry.value == 0.9 and "OPPOSITE" in entry.calibrated_on and entry.date
+
+
+# ---- A4: sensitive topics never get a decided label from the system alone ---------------------------------------------------------
+
+def test_a_communal_rumour_rated_false_by_a_trusted_review_still_ends_in_cannot_tell_for_a_human():
+    text = "Muslims attacked a temple in the town last night"
+    out = decide(claim(text), [review("False", reviewed=text)], cfg(), now=lambda: NOW)
+    assert out.verdict.label == "UNVERIFIABLE_YET" and "HUMAN_REVIEW" in out.verdict.flags
+    assert out.verdict.evidence and all(e.role == "context" for e in out.verdict.evidence)       # the evidence stays visible
+    assert any("communal topic" in r for r in out.reasons)
+
+
+def test_supported_is_held_back_too_and_an_election_claim_in_hindi_is_caught():
+    for text in ("The election commission announced polling on 5 November", "चुनाव आयोग ने मतदान की तारीख घोषित की"):
+        out = decide(claim(text), [review("True", reviewed=text)], cfg(), now=lambda: NOW)
+        assert out.verdict.label == "UNVERIFIABLE_YET" and "HUMAN_REVIEW" in out.verdict.flags
+
+
+def test_an_ordinary_claim_and_a_word_that_only_contains_a_topic_word_are_not_held_back():
+    for text in (CLAIM, "The churchill scholarship was awarded to forty students"):
+        out = decide(claim(text), [review("False", reviewed=text)], cfg(), now=lambda: NOW)
+        assert out.verdict.label == "REFUTED" and "HUMAN_REVIEW" not in out.verdict.flags

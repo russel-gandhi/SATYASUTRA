@@ -97,6 +97,7 @@ class RatingMap(_Strict):
 class VerdictRules(_Strict):
     rating_map: RatingMap
     negations: list[str]                          # a review and a claim that differ in negation may be opposites
+    sensitive_topics: dict[str, list[str]] = Field(default_factory=dict)   # topic -> phrases; a match ends any decided label in 'cannot tell'
     min_publishers_for_high: int = Field(gt=0)
     stale_after_days: int = Field(gt=0)           # policy choice, not a measurement
     related_limit: int = Field(ge=0)
