@@ -41,4 +41,4 @@ def test_the_route_needs_the_worker_and_the_page_is_served():
     client = TestClient(create_app(load_config()))
     assert client.get("/officials/data").status_code in (200, 503)
     page = client.get("/officials")
-    assert page.status_code == 200 and "SATYASUTRA for officials" in page.text
+    assert page.status_code == 200 and "What India is reading" in page.text

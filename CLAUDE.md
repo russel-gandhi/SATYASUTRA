@@ -154,6 +154,13 @@ forensics\venv311\Scripts\python forensics\service.py --port 8100          # Tru
   sources (Vikaspedia, news); the official sites were not opened by us (cybercrime.gov.in answers 403), `confirmed_on_official_site: false`.** Nothing is filed.
 - `scripts/preflight.py` (keys by name, every source, TruFor+Smaug service, ffmpeg, indexes, ledger, API) and `scripts/start_demo.ps1` (starts both
   services if down, then preflight) are the cold-start path.
+- India pulse (`pulse.py`, `GET /pulse`, `GET /pulse/match?text=`, `runtime.pulse`) **replaces Bluesky as the "what is spreading" source** on 2026-10-31 (the user: the Bluesky stream has no relevance
+  for Indians). Three lanes, 23 live feeds, cached 300 s: Google Trends India, newest articles of BOOM / Alt News / Factly / Vishvas News / Newschecker (en, hi, kn, te), and top headlines of
+  Indian outlets in en/hi/kn clustered per language (word rarity measured per batch, `cluster_jaccard` 0.34 and `common_word_share` 0.12 are policy choices, not calibrated; one outlet under two names counts once).
+  `/officials` page and the home panel read it; `officials.annotate` adds disaster topic and cached verdict state. It is a window on Indian media and search attention, **not** on WhatsApp spread.
+  The Bluesky worker stays off by default and its code is kept. Hindi/Kannada clusters are not matched to English claims (no cross-language matching). Tests: `tests/unit/test_pulse.py` (real-shaped RSS via a transport stub).
+  **PIB, MoHFW, PMIndia still answer 403** to our honest User-Agent (Akamai); only the stock `python-httpx` UA got 200, and using it would be evading their bot protection, so it is NOT used (D42 spirit).
+  Needs the user's explicit decision or an official access route. CERT-In, NDMA, IMD answer but expose no usable RSS items.
 - Origin and spread: clusters keep their earliest `members_kept` posts (in memory, forgotten when a cluster goes idle, not persisted);
   `fastclock/trace.py` builds first post, spread timeline, wording versions with word diffs; `GET /fastclock/cluster/{id}`,
   `GET /fastclock/match?text=` (a pasted claim matches a live cluster of at least `match_min_posts` posts); UI trace panel. Accounts are

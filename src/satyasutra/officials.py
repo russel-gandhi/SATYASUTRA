@@ -43,3 +43,12 @@ def build_view(clusters: list[dict], peek: Callable[[str], dict | None], cfg: Co
         rows.append({**c, "topic": topic_of(text, cfg), "state": state_of(peek(text), cfg)})
     rows.sort(key=lambda r: (r["topic"] != DISASTER, -r["authors_per_minute"], -r["size"]))
     return rows[:cfg.runtime.officials.max_rows]
+
+
+def annotate(snap: dict, peek: Callable[[str], dict | None], cfg: Config) -> dict:
+    """The India pulse for the page: each row gets a topic (disaster words first) and what we already know from a cached verdict. Disaster rows sort first within a lane."""
+    def mark(rows: list[dict], text_of: Callable[[dict], str]) -> list[dict]:
+        out = [{**r, "topic": topic_of(text_of(r), cfg), "state": state_of(peek(text_of(r)), cfg)} for r in rows]
+        return sorted(out, key=lambda r: r["topic"] != DISASTER)
+    return {"fetched_at": snap["fetched_at"], "sources": snap["sources"], "note": snap["note"], "headlines_read": snap["headlines_read"],
+            "trending": mark(snap["trending"], lambda r: r["term"]), "rumours": mark(snap["rumours"], lambda r: r["text"]), "stories": mark(snap["stories"], lambda r: r["text"])}

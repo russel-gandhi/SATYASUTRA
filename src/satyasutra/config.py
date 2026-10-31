@@ -275,6 +275,32 @@ class WebSettings(_Strict):
     fact_checkers: list[str]
 
 
+class PulseFeed(_Strict):
+    id: str
+    language: str
+    publisher: str
+    url: str
+
+
+class PulseSettings(_Strict):
+    refresh_s: float = Field(gt=0)
+    timeout_s: float = Field(gt=0)
+    workers: int = Field(gt=0)
+    trends_url: str
+    trends_namespace: str
+    headline_feeds: list[PulseFeed]
+    fact_check_feeds: list[PulseFeed]
+    max_age_hours: float = Field(gt=0)
+    max_rumours: int = Field(gt=0)
+    max_stories: int = Field(gt=0)
+    max_trends: int = Field(gt=0)
+    trend_news_items: int = Field(gt=0)
+    cluster_jaccard: float = Field(gt=0, le=1)
+    common_word_share: float = Field(gt=0, le=1)
+    min_token_chars: int = Field(gt=0)
+    min_outlets: int = Field(gt=0)
+
+
 class IntelSettings(_Strict):
     max_records: int = Field(gt=0)
     same_claim_jaccard: float = Field(gt=0, le=1)
@@ -428,6 +454,7 @@ class RuntimeFile(_Strict):
     report: ReportSettings
     inputs: InputSettings
     intel: IntelSettings
+    pulse: PulseSettings
     news: NewsSettings
     telegram: TelegramSettings
     explain: ExplainSettings

@@ -120,12 +120,8 @@
 
   <div>
     <section>
-      <h2>What is spreading now (live Bluesky stream)</h2>
+      <h2>What India is checking right now <a class="small" href="/officials">see all</a></h2>
       <div id="clusters" class="small">Loading...</div>
-    </section>
-    <section style="margin-top:16px" id="traceSection" hidden>
-      <h2>Origin and spread</h2>
-      <div id="traceOut" class="small"></div>
     </section>
   </div>
 </main>
@@ -156,8 +152,8 @@ function pill(label, value, cls) {
 
 async function refreshPills() {
   const box = $("pills"); const items = [];
-  try { const s = await api("/fastclock/stats"); items.push(pill("posts/min", s.posts_per_minute, "good"), pill("processed", s.posts_processed), pill("clusters", s.clusters_now)); }
-  catch (_) { items.push(pill("stream", "off", "bad")); }
+  try { const s = await api("/pulse"); const ok = Object.values(s.sources).filter((x) => x.startsWith("ok")).length; items.push(pill("live Indian sources", ok + "/" + Object.keys(s.sources).length, "good"), pill("headlines read", s.headlines_read)); }
+  catch (_) { items.push(pill("India pulse", "off", "bad")); }
   try { const h = await api("/health"); items.push(pill("ledger rows", h.ledger_entries)); } catch (_) {}
   box.replaceChildren(...items);
 }
@@ -165,21 +161,17 @@ async function refreshPills() {
 async function refreshClusters() {
   const box = $("clusters");
   try {
-    const d = await api("/fastclock/top");
-    if (!d.clusters.length) { box.textContent = "No clusters yet."; return; }
-    box.replaceChildren(...d.clusters.map((c) => {
-      const row = el("div", "cluster");
-      const t = el("div", "txt", c.example_text); row.append(t);
-      const n = el("div", "nums");
-      n.append(el("span", "", c.authors_per_minute + " authors/min"), el("span", "", c.size + " posts"));
-      if (c.example_url) { const a = el("a", "", "open post"); a.href = c.example_url; a.target = "_blank"; a.rel = "noopener"; n.append(a); }
-      const use = el("a", "", "check this"); use.href = "#"; use.onclick = (e) => { e.preventDefault(); $("text").value = c.example_text; $("uri").value = ""; window.scrollTo({ top: 0, behavior: "smooth" }); };
-      n.append(use);
-      const tr = el("a", "", "trace origin and spread"); tr.href = "#"; tr.onclick = (e) => { e.preventDefault(); showTrace(c.cluster_id); }; n.append(tr);
-      row.append(n);
-      return row;
+    const d = await api("/pulse");
+    const rows = [...d.rumours.slice(0, 5).map((r) => ({ text: r.text, kind: "being fact-checked: " + r.outlet, url: r.url })), ...d.stories.filter((g) => g.language === "en").slice(0, 4).map((g) => ({ text: g.text, kind: g.size + " outlets carry it", url: g.items[0].url }))];
+    if (!rows.length) { box.textContent = "Nothing yet."; return; }
+    box.replaceChildren(...rows.map((c) => {
+      const row = el("div", "cluster"); row.append(el("div", "txt", c.text));
+      const n = el("div", "nums"); n.append(el("span", "", c.kind));
+      const a = el("a", "", "open"); a.href = c.url; a.target = "_blank"; a.rel = "noopener"; n.append(a);
+      const use = el("a", "", "check this"); use.href = "#"; use.onclick = (e) => { e.preventDefault(); $("text").value = c.text; $("uri").value = ""; window.scrollTo({ top: 0, behavior: "smooth" }); };
+      n.append(use); row.append(n); return row;
     }));
-  } catch (e) { box.textContent = "Stream panel off: " + e.message; }
+  } catch (e) { box.textContent = "Pulse unavailable: " + e.message; }
 }
 
 const SVG = "http://www.w3.org/2000/svg";
@@ -224,10 +216,11 @@ async function showTrace(id) {
 
 async function spreadLine(text, box) {
   try {
-    const m = (await api("/fastclock/match?text=" + encodeURIComponent(text))).match;
-    if (!m) { box.textContent = "Not currently spreading on the Bluesky stream we watch (no matching cluster; this does not mean it is not spreading elsewhere)."; return; }
-    box.textContent = "Spreading now on Bluesky: " + m.posts + " near-identical posts from " + m.distinct_accounts + " accounts, " + m.authors_per_minute + " authors/min. ";
-    const a = el("a", "", "trace origin and spread"); a.href = "#"; a.onclick = (e) => { e.preventDefault(); showTrace(m.cluster_id); }; box.append(a);
+    const m = await api("/pulse/match?text=" + encodeURIComponent(text));
+    if (!m.stories.length && !m.fact_checks.length) { box.textContent = "Not in today's Indian headlines or in the fact-checkers' latest articles that we read (this does not mean it is not spreading, e.g. on WhatsApp)."; return; }
+    box.textContent = "Already in the news right now: ";
+    m.fact_checks.forEach((r) => { const a = el("a", "", r.outlet + " fact-check"); a.href = r.url; a.target = "_blank"; a.rel = "noopener"; box.append(a, " "); });
+    m.stories.forEach((g) => box.append(el("span", "", g.size + " outlets (" + g.outlets.slice(0, 3).join(", ") + ") ")));
   } catch (_) { box.textContent = ""; }
 }
 
@@ -608,7 +601,8 @@ $("notice").onchange = checkNotice;
 $("audio").onchange = checkVoice;
 $("file").onchange = checkImage;
 $("go").onclick = verify; $("chain").onclick = chain;
-refreshPills(); refreshClusters(); setInterval(refreshPills, 5000); setInterval(refreshClusters, 5000);
+try { const pre = sessionStorage.getItem('jv_prefill'); if (pre) { $('text').value = pre; sessionStorage.removeItem('jv_prefill'); } } catch (_) {}
+refreshPills(); refreshClusters(); setInterval(refreshPills, 60000); setInterval(refreshClusters, 60000);
 </script>
 <script src="/static/nav.js"></script>
 </body>
