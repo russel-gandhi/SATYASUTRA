@@ -1,0 +1,32 @@
+/* Shared look for the citizen pages: light, blue, calm. The command centre sets data-theme="dark" on <html> and overrides the tokens below. */
+:root {
+  --bg: #f4f6fc; --panel: #ffffff; --line: #e0e6f3; --text: #0f1a3a; --mute: #58647f; --accent: #2b50d8; --accent-ink: #ffffff; --accent-soft: #e8edfd;
+  --ok: #17895e; --ok-soft: #e3f5ec; --bad: #cf2e3a; --bad-soft: #fdebed; --warn: #b36b00; --warn-soft: #fff3dc; --idle: #66718d; --idle-soft: #eceff6;
+  --saffron: #ff9933; --green: #138808; --navy: #0f1a3a;
+  --radius: 14px; --shadow: 0 1px 2px rgba(15, 26, 58, .06), 0 8px 24px rgba(15, 26, 58, .06);
+}
+:root[data-theme="dark"] {
+  --bg: #0a0f1f; --panel: #121a31; --line: #25304e; --text: #e8ecf8; --mute: #93a0bf; --accent: #6d8bff; --accent-ink: #0a0f1f; --accent-soft: #1b2748;
+  --ok: #3ecf8e; --ok-soft: #12362a; --bad: #ff6b74; --bad-soft: #3b1a1f; --warn: #f5b84b; --warn-soft: #3a2c10; --idle: #8d98b5; --idle-soft: #1c2540;
+  --shadow: none;
+}
+* { box-sizing: border-box; }
+html { color-scheme: light; } html[data-theme="dark"] { color-scheme: dark; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.55 "Segoe UI", system-ui, -apple-system, "Noto Sans Devanagari", "Noto Sans Kannada", "Noto Sans Telugu", sans-serif; }
+body::before { content: ""; display: block; height: 4px; background: linear-gradient(90deg, var(--saffron) 0 33.3%, #fff 33.3% 66.6%, var(--green) 66.6%); border-bottom: 1px solid var(--line); }
+a { color: var(--accent); }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+button { font: inherit; }
+.btn { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 10px; padding: 11px 20px; font-weight: 600; cursor: pointer; }
+.btn:disabled { opacity: .55; cursor: progress; }
+.btn.ghost { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+
+.jnav { display: flex; flex-wrap: wrap; gap: 4px 22px; align-items: center; padding: 12px max(16px, calc((100% - 1180px) / 2)); background: var(--panel); border-bottom: 1px solid var(--line); font-size: 14px; }
+.jnav b { display: inline-flex; align-items: center; gap: 8px; font-size: 16px; letter-spacing: .06em; margin-right: 12px; color: var(--text); }
+.jnav b svg { width: 22px; height: 22px; }
+.jnav a { color: var(--mute); text-decoration: none; padding: 6px 2px; border-bottom: 2px solid transparent; }
+.jnav a:hover { color: var(--text); }
+.jnav a.on { color: var(--text); border-color: var(--accent); font-weight: 600; }
+.jnav .sp { flex: 1; }
+.jnav .tagm { font-size: 11px; color: var(--mute); background: var(--idle-soft); border-radius: 999px; padding: 2px 10px; }
+@media print { .jnav, body::before { display: none; } }
