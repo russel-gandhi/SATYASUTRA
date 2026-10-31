@@ -201,6 +201,13 @@ described as the next step, not as built.
 **Order and cuts.** TH1a first (it also settles the "escalation never fired" caveat), then TH1b, then TH1c and TH1d. Finish by CP3 (Sun 14:00). If short, cut TH1c;
 never cut TH1a or TH1d.
 
+## Raksha and Scam Guard (31 Oct, 18:00)
+
+Detailed plan: [`PLAN_RAKSHA_SCAM_GUARD.md`](PLAN_RAKSHA_SCAM_GUARD.md). It replaces the earlier S5 and Call Guard lines. Two findings come first: the image, voice and
+notice checkers store thumbnails and transcripts, so **private mode (RK1) and image refusal in the bot (RK2) must land before Raksha is shown**; and a live call warning
+can only work as a speaker-mode listening page (Scam Guard), never as monitoring of calls in general. Core hours: Raksha RK1 to RK6 about 9.5, Scam Guard SG1 to SG3, SG5
+and SG6 about 12. Checkpoints R1 and G1 at Sat 23:00, feature freeze with CP3 at Sun 14:00.
+
 ## Status log
 
 Update at each checkpoint: time, who ran it, pass or fail, what was cut.
