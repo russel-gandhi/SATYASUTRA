@@ -1,0 +1,37 @@
+# Topics to search the Fact Check API for false claims (group F). Civic topics a forward in an Indian family group is likely to be about.
+# One per line. Add more if a topic returns few candidates.
+UPI payment
+RBI
+bank account KYC
+Aadhaar
+PAN card
+ration card
+PM Kisan
+free ration scheme
+gas cylinder subsidy
+electricity bill
+free recharge
+government job
+exam paper leak
+school closed
+flood
+earthquake
+cyclone
+heatwave
+vaccine
+COVID-19
+cancer cure
+hospital
+medicine
+petrol price
+gold price
+income tax
+GST
+election
+voting machine
+voter list
+Supreme Court
+police
+lockdown
+train
+airport

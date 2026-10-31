@@ -1,0 +1,101 @@
+# Hand-written claim rows for the verdict dataset (BUILD spec: docs/SPEC_REPLY_SPREAD_EVAL.md, package D1). Recorded test data only; never read by src/.
+# assemble.py turns this file, the old eval/claims.yaml, the official snapshot and tests/eval/f_rows.jsonl into tests/eval/claims.jsonl.
+#
+# truth: true | false | unknown   (see scripts/eval/lib.py RULES for what counts as right and as harmful)
+# T rows are true sentences taken from official releases in tests/eval/official_snapshot.jsonl; `source_match` is a piece of the release title,
+#   `slot` is the number a rumour would change and `kind` says how (percent, amount, count). Every T row with a slot gets a changed-number twin (C row).
+# Labels for T rows come from the release text, not from anyone's opinion. Labels for U and R rows were written by one labeller and
+#   still need a second, independent look (review_status: pending_second_labeller).
+
+official_true:
+  - {id: t01, source_match: "Premature redemption under Sovereign Gold Bond", slot: "14,167", kind: amount,
+     text: "The RBI has set the redemption price for premature redemption of Sovereign Gold Bond 2021-22 Series VII due on November 2, 2026 at ₹14,167 per unit."}
+  - {id: t02, source_match: "Auction of State Government Securities", slot: "29,900", kind: amount,
+     text: "State governments have offered to sell stock by auction for an aggregate amount of ₹29,900 Crore."}
+  - {id: t03, source_match: "Auction of 91-Day, 182-Day and 364-Day Treasury Bills", slot: "23,000", kind: amount,
+     text: "The RBI is auctioning 91-day, 182-day and 364-day Treasury Bills with a total notified amount of ₹23,000 crore."}
+  - {id: t04, source_match: "Lending and Deposit Rates", slot: "8.96", kind: percent,
+     text: "The weighted average lending rate on outstanding rupee loans of scheduled commercial banks remained unchanged at 8.96 per cent in September 2026."}
+  - {id: t05, source_match: "Lending and Deposit Rates", slot: "8.51", kind: percent,
+     text: "The weighted average lending rate on fresh rupee loans of scheduled commercial banks declined to 8.51 per cent in September 2026."}
+  - {id: t06, source_match: "Lending and Deposit Rates", slot: "8.55", kind: percent,
+     text: "The 1-year median MCLR of scheduled commercial banks declined to 8.55 per cent in October 2026."}
+  - {id: t07, source_match: "Lending and Deposit Rates", slot: "6.55", kind: percent,
+     text: "The weighted average domestic term deposit rate on outstanding rupee term deposits of scheduled commercial banks declined to 6.55 per cent in September 2026."}
+  - {id: t08, source_match: "International Trade in Services", slot: "39,305", kind: amount,
+     text: "India's services exports were US$ 39,305 million in September 2026."}
+  - {id: t09, source_match: "International Trade in Services", slot: "20,097", kind: amount,
+     text: "India's services imports were US$ 20,097 million in September 2026."}
+  - {id: t10, source_match: "Sectoral Deployment of Bank Credit", slot: "19.1", kind: percent,
+     text: "Non-food bank credit grew by 19.1 per cent year-on-year as on the fortnight ended September 30, 2026."}
+  - {id: t11, source_match: "Sectoral Deployment of Bank Credit", slot: "95", kind: percent,
+     text: "The 41 select scheduled commercial banks in the sectoral credit data account for about 95 per cent of total non-food credit."}
+  - {id: t12, source_match: "Government Stock - Auction Results: Cut-off", slot: "7.1218", kind: percent,
+     text: "The 6.20% GS 2029 was auctioned with a notified amount of ₹9,000 crore and an implicit yield at cut-off of 7.1218%."}
+  - {id: t13, source_match: "625", slot: "625", kind: count,
+     text: "The 625th meeting of the Central Board of the Reserve Bank of India was held in Mumbai under Governor Sanjay Malhotra."}
+  - {id: t14, source_match: "Premature redemption under Sovereign Gold Bond",
+     text: "The redemption price of a Sovereign Gold Bond is based on the simple average of the closing price of 999-purity gold over the previous three business days, as published by IBJA."}
+  - {id: t15, source_match: "Rationalisation of periodicity of KYC review for FPIs",
+     text: "SEBI has rationalised the periodicity of KYC review for FPIs."}
+  - {id: t16, source_match: "Extension of timeline with respect to compliance of Digital Accessibility Circulars",
+     text: "SEBI has extended the timeline for compliance with its Digital Accessibility Circulars."}
+
+# Claims nobody can have checked: predictions, opinions, fresh local events, vague talk. Any decided label (true or false) is a mistake.
+unknowable:
+  - {id: u01, text: "The RBI will cut the repo rate by 50 basis points in December."}
+  - {id: u02, text: "The rupee will cross 100 to the dollar by next March."}
+  - {id: u03, text: "Gold will cost two lakh rupees per 10 grams by the end of next year."}
+  - {id: u04, text: "India will win the next cricket world cup."}
+  - {id: u05, text: "It will rain heavily in Chennai next Tuesday."}
+  - {id: u06, text: "Petrol prices will fall by ten rupees before the next election."}
+  - {id: u07, text: "The new tax regime is the best thing that has happened to salaried people."}
+  - {id: u08, text: "This government has done more for farmers than any government before it."}
+  - {id: u09, text: "Online classes are worse than classroom teaching for every child."}
+  - {id: u10, text: "That film is the greatest movie ever made in India."}
+  - {id: u11, text: "A water pipe burst near our colony and supply will stop for three days."}
+  - {id: u12, text: "The weekly market in our town will be shut tomorrow because of a strike."}
+  - {id: u13, text: "My neighbour's cousin got a government job after paying an agent."}
+  - {id: u14, text: "The bus from our village to the district hospital has stopped running this week."}
+  - {id: u15, text: "A new shopping mall is going to open near the railway station next year."}
+  - {id: u16, text: "Many people are saying the new scheme has problems."}
+  - {id: u17, text: "Everyone I know says prices are going up."}
+  - {id: u18, text: "Something big is going to happen on the stock market soon."}
+  - {id: u19, text: "They are hiding the real numbers from us."}
+  - {id: u20, text: "The ministry is planning a surprise announcement for farmers."}
+  - {id: u21, text: "A famous cricketer will announce his retirement next month."}
+  - {id: u22, text: "Electricity bills will double next year."}
+  - {id: u23, text: "Our school will start the exams a week earlier this year."}
+  - {id: u24, text: "The monsoon will be weaker than normal next year."}
+  - {id: u25, text: "Mobile data plans will become free for students soon."}
+
+# False claims whose falseness we can show from sources we hold today (the PM claim: no outlet reports it and the PM was active on 31 Oct;
+# the others: the RBI release of 30 Oct says otherwise). Unlike a changed number, the contrast route does not cover names or places,
+# so "cannot tell" is the expected honest result for r02 to r04 today; REFUTED would be a win, SUPPORTED a serious failure.
+rumours:
+  - {id: r01, source_match: "", text: "Prime Minister Modi was assassinated this morning.", notes: "No major outlet reports it; the PM was active on 31 Oct 2026 (ISRO launch congratulation). Verified by hand on 31 Oct."}
+  - {id: r02, source_match: "625", text: "Shaktikanta Das is the current Governor of the Reserve Bank of India.", notes: "The RBI release of 30 Oct names Sanjay Malhotra as Governor."}
+  - {id: r03, source_match: "625", text: "The 625th meeting of the Central Board of the Reserve Bank of India was chaired by Shaktikanta Das.", notes: "Chaired by Governor Sanjay Malhotra per the release."}
+  - {id: r04, source_match: "625", text: "The 625th meeting of the Central Board of the Reserve Bank of India was held in New Delhi.", notes: "Held in Mumbai per the release."}
+
+# Hindi rows (drafts written by us, NOT reviewed by a native speaker: hindi_reviewed false). base_id points at the English row; `derive_changed`
+# adds the changed-number twin with the same slot kind. Numbers stay in western digits so the slot can be changed by code.
+hindi:
+  - {id: h01, base_id: t04, truth: true, slot: "8.96", kind: percent, derive_changed: true,
+     text: "सितंबर 2026 में अनुसूचित वाणिज्यिक बैंकों के बकाया रुपया ऋणों पर भारित औसत उधार दर 8.96 प्रतिशत पर अपरिवर्तित रही।"}
+  - {id: h02, base_id: t06, truth: true, slot: "8.55", kind: percent, derive_changed: true,
+     text: "अक्टूबर 2026 में अनुसूचित वाणिज्यिक बैंकों की एक वर्षीय औसत एमसीएलआर घटकर 8.55 प्रतिशत हो गई।"}
+  - {id: h03, base_id: t08, truth: true, slot: "39,305", kind: amount, derive_changed: true,
+     text: "सितंबर 2026 में भारत का सेवा निर्यात 39,305 मिलियन अमेरिकी डॉलर रहा।"}
+  - {id: h04, base_id: t13, truth: true, slot: "625", kind: count, derive_changed: false,
+     text: "भारतीय रिज़र्व बैंक के केंद्रीय बोर्ड की 625वीं बैठक गवर्नर संजय मल्होत्रा की अध्यक्षता में मुंबई में हुई।"}
+  - {id: h05, base_id: u01, truth: unknown,
+     text: "आरबीआई दिसंबर में रेपो दर 50 आधार अंक घटाएगा।"}
+  - {id: h06, base_id: u02, truth: unknown,
+     text: "अगले मार्च तक रुपया डॉलर के मुकाबले 100 को पार कर जाएगा।"}
+  - {id: h07, base_id: u07, truth: unknown,
+     text: "नई कर व्यवस्था वेतनभोगी लोगों के साथ हुई सबसे अच्छी चीज़ है।"}
+  - {id: h08, base_id: b-f01, truth: false,
+     text: "कोविड-19 के टीकों में माइक्रोचिप होती है।"}
+  - {id: h09, base_id: b-f04, truth: false,
+     text: "टीकों से ऑटिज़्म होता है।"}
