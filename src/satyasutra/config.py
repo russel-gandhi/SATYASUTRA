@@ -248,6 +248,19 @@ class VoiceSettings(_Strict):
     low_language_prob: float = Field(ge=0, le=1)   # below this the detected language is shown as uncertain (a display rule, not a calibrated cut)
 
 
+class TelegramSettings(_Strict):
+    api_base: str                            # Telegram Bot API host
+    local_api: str                           # our own API, which the bot calls for every check
+    token_env: str                           # name of the env var holding the bot token
+    poll_timeout_s: int = Field(gt=0)        # long-poll wait
+    request_margin_s: float = Field(gt=0)
+    local_timeout_s: float = Field(gt=0)     # a full claim check can take a while
+    retry_s: float = Field(gt=0)
+    max_reply_chars: int = Field(gt=0)
+    labels: dict[str, str]                   # verdict label -> plain words for a chat
+    messages: dict[str, str]
+
+
 class KnowledgeGraphSettings(_Strict):
     endpoint: str                            # Wikidata's MediaWiki API
     entity_url_template: str                 # a human page for an entity id, with {id}
@@ -298,6 +311,7 @@ class RuntimeFile(_Strict):
     knowledge_graph: KnowledgeGraphSettings
     official: OfficialSettings
     voice: VoiceSettings
+    telegram: TelegramSettings
 
 
 class Config(_Strict):

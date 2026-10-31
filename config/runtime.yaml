@@ -137,3 +137,32 @@ voice:
   max_seconds: 120
   decode_timeout_s: 30
   low_language_prob: 0.6
+
+telegram:
+  api_base: https://api.telegram.org
+  local_api: http://127.0.0.1:8000
+  token_env: TELEGRAM_BOT_TOKEN
+  poll_timeout_s: 30
+  request_margin_s: 10
+  local_timeout_s: 120
+  retry_s: 5
+  max_reply_chars: 3800            # Telegram refuses messages over 4096
+  labels:
+    REFUTED: "REFUTED: a trusted source contradicts this"
+    SUPPORTED: "SUPPORTED by a trusted source"
+    MISSING_CONTEXT: "MISSING CONTEXT"
+    UNVERIFIABLE_YET: "CANNOT TELL YET: no trusted source has checked this"
+    NOT_A_CLAIM: "Not a checkable claim"
+    EDITED: "LIKELY EDITED"
+    SYNTHETIC_SUSPECTED: "POSSIBLY AI-GENERATED (one detector only)"
+    OUT_OF_CONTEXT: "OUT OF CONTEXT"
+    INCONCLUSIVE: "INCONCLUSIVE: this does not mean the image is genuine"
+  messages:
+    start: "Send me a claim, a forwarded message, a voice note or a photo and I will check it. I say 'cannot tell' when no trusted source has checked it. I never file or forward anything for you."
+    none_found: "No checkable claim found. Opinions and chatter are not claims."
+    transcript: "Voice note ({language}): {text}"
+    uncertain: "The language is uncertain, so the words may be wrong."
+    voice_failed: "Could not read the voice note: {reason}"
+    image_failed: "Could not read that image."
+    unsupported: "I can check text, voice notes and photos."
+    error: "Something went wrong while checking. Nothing was recorded; please try again."
