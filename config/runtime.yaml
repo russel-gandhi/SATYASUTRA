@@ -192,6 +192,7 @@ telegram:
     image_failed: "I couldn't read that image."
     unsupported: "I can check text, voice notes and photos."
     help_intro: "I'm sorry this is happening. It is not your fault, and you do not have to deal with it alone. I will not check this message or keep it. Here is what you can do:"
+    guided_offer: "For step-by-step help in English send /help_me. हिंदी में /madad भेजिए।"
     help_no_images: "Please do not send me any photo, video or file about this. I will not open, keep or check them. Use the official services above: they are made for this. Send /forget to leave this mode and clear it."
     help_images_refused: "I am in help mode, so I did not download that file and did not look at it. Please do not send private images to anyone but the official services above. Send /forget to leave help mode."
     forgot: "Done. I am out of help mode and I keep nothing from this chat. Telegram itself still keeps the chat on its servers: you can delete it from your side."

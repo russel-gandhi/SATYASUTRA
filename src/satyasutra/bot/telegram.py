@@ -13,7 +13,12 @@ import time
 
 import httpx
 
+from datetime import date
+
+from ..act.plan import load_actions
 from ..config import Config
+from ..raksha import load_flow
+from ..raksha.flow import Session, advance, begin
 
 log = logging.getLogger("satyasutra.bot")
 NO_CLAIM_QUOTE_CHARS = 120      # how much of the user's own words is echoed back when nothing was checkable
@@ -81,6 +86,8 @@ class TelegramBot:
         self.api = httpx.Client(base_url=self.s.api_base, timeout=self.s.poll_timeout_s + self.s.request_margin_s)
         self.local = httpx.Client(base_url=self.s.local_api, timeout=self.s.local_timeout_s, headers={self.s.private_header: "1"})
         self.help_until: dict[int, float] = {}                     # chat id -> deadline; memory only, gone when the bot stops
+        self.flow, self.actions = load_flow(), load_actions()
+        self.raksha: dict[int, Session] = {}                       # the guided flow's state per chat; memory only
 
     def _call(self, method: str, **params) -> dict:
         r = self.api.post(f"/bot{self.token}/{method}", json=params)
@@ -122,7 +129,7 @@ class TelegramBot:
         plan0 = self.private_plan(text)
         if plan0:
             self.enter_help(chat)
-            return self.help_reply(plan0)
+            return self.help_reply(plan0) + "\n\n" + self.s.messages["guided_offer"]
         body = self.local.post("/verify", json={"text": text}).json()
         out = format_claims(body, self.s.labels, self.s.messages)
         for c in body.get("claims", []):
@@ -145,10 +152,21 @@ class TelegramBot:
         text = msg.get("text") or ""
         if text.startswith("/forget"):
             self.help_until.pop(chat, None)
+            self.raksha.pop(chat, None)
             return self.s.messages["forgot"]
-        if text.startswith("/help_me"):
+        if text.startswith(("/help_me", "/madad")):
             self.enter_help(chat)
-            return self.s.messages["help_intro"] + "\n\n" + self.s.messages["help_no_images"]
+            self.raksha[chat], first = begin(self.flow, "hi" if text.startswith("/madad") else "en")
+            return first
+        session = self.raksha.get(chat)
+        if session and session.expires < time.monotonic():
+            self.raksha.pop(chat, None)
+            session = None
+        if session and text and not text.startswith("/"):               # inside the flow nothing is fact-checked or sent to the local API
+            reply = advance(self.flow, session, text, self.actions, date.today())
+            if session.done:
+                self.raksha.pop(chat, None)
+            return reply
         if text and not text.startswith("/"):
             return self.check_text(text, chat)
         if text:
