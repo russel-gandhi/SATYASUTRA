@@ -16,6 +16,14 @@ Command: `python scripts/load_gemini.py --users 1,3,6`. Live API, this key and n
 |---|---|---|
 | You read one social-media post and | 0 | QuotaExhausted: 8 |
 
+## What this run found (and did not)
+
+- **Every model call failed with QuotaExhausted.** The key had used its free-tier allowance (most likely the per-day one) on the dataset runs earlier the same day, so this run measured
+  the exhausted state, not normal load: the "Other" column is the stream's `error` event (`ModelBusy`, no result). No calls-per-message table could be produced.
+- **What the person sees then:** the web page streams an error event and no verdict; the API answers 503 with "try again in about a minute". That wording is wrong for a daily limit:
+  waiting a minute will not help. Not fixed yet.
+- **Rerun** (`python scripts/load_gemini.py --users 1,3,6`) when the quota has reset, with nothing else using the key. The script now counts a `ModelBusy` event as "busy".
+
 ## Not measured
 
 - More than the listed number of simultaneous users, other days, a paid tier, or the Telegram path (it calls the same API).

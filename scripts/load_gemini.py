@@ -64,7 +64,7 @@ def one_user(client: TestClient, claim: str) -> dict:
     t = time.perf_counter()
     r = client.get("/agent/stream", params={"text": claim})
     body = r.text
-    kind = "answered" if "event: result" in body else ("busy" if r.status_code == 503 else f"no result (HTTP {r.status_code})")
+    kind = "answered" if "event: result" in body else ("busy" if (r.status_code == 503 or "ModelBusy" in body) else f"no result (HTTP {r.status_code})")
     return {"seconds": time.perf_counter() - t, "kind": kind}
 
 
