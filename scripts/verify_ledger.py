@@ -34,7 +34,7 @@ def main(argv=None) -> int:
         print(f"no ledger at {db}", file=sys.stderr)
         return 2
     try:
-        result = SQLiteLedgerStore(db, code_version=__version__).verify()
+        result = SQLiteLedgerStore(db, code_version=__version__, read_only=True).verify()
     except sqlite3.DatabaseError as exc:
         print(f"cannot read ledger: {exc}", file=sys.stderr)
         return 2

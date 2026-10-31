@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SATYASUTRA</title>
+<style>
+  :root {
+    --bg: #0b0f17; --panel: #121826; --line: #232c3f; --text: #e8ecf5; --mute: #8b95ab; --accent: #7aa2ff;
+    --ok: #3ecf8e; --bad: #ff6b6b; --warn: #f5b84b; --idle: #6b7690;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) { --bg: #f4f6fb; --panel: #fff; --line: #dde2ee; --text: #131a2a; --mute: #5d6885; --accent: #2f5bd8; --idle: #7b86a3; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { padding: 20px 16px 8px; max-width: 1180px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: baseline; justify-content: space-between; }
+  h1 { margin: 0; font-size: 22px; letter-spacing: .14em; }
+  .tag { color: var(--mute); font-size: 13px; }
+  .pills { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pill { border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; font-size: 12px; color: var(--mute); background: var(--panel); }
+  .pill b { color: var(--text); font-weight: 600; }
+  .pill.good b { color: var(--ok); } .pill.bad b { color: var(--bad); }
+  main { max-width: 1180px; margin: 0 auto; padding: 8px 16px 40px; display: grid; gap: 16px; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  h2 { margin: 0 0 10px; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--mute); font-weight: 600; }
+  textarea, input[type=text] { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 10px; font: inherit; }
+  textarea { min-height: 96px; resize: vertical; }
+  .row { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  button { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 9px 16px; font: inherit; font-weight: 600; cursor: pointer; }
+  button.ghost { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+  button:disabled { opacity: .5; cursor: progress; }
+  .claim { border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-top: 12px; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; letter-spacing: .04em; color: #0b0f17; }
+  .REFUTED, .EDITED { background: var(--bad); } .SYNTHETIC, .SYNTHETIC_SUSPECTED { background: var(--warn); } .SUPPORTED { background: var(--ok); } .MISSING_CONTEXT, .OUT_OF_CONTEXT { background: var(--warn); }
+  .UNVERIFIABLE_YET, .NOT_A_CLAIM, .INCONCLUSIVE { background: var(--idle); color: #fff; }
+  .claim .q { margin: 8px 0 4px; font-weight: 600; }
+  .small { color: var(--mute); font-size: 13px; }
+  ul { margin: 6px 0 0; padding-left: 18px; }
+  a { color: var(--accent); }
+  .cluster { padding: 10px 0; border-top: 1px solid var(--line); }
+  .cluster:first-of-type { border-top: 0; }
+  .cluster .txt { overflow-wrap: anywhere; }
+  .nums { display: flex; gap: 12px; color: var(--mute); font-size: 12px; margin-top: 2px; flex-wrap: wrap; }
+  .err { color: var(--bad); margin-top: 10px; }
+  footer { max-width: 1180px; margin: 0 auto; padding: 0 16px 28px; color: var(--mute); font-size: 12px; }
+  .stage { position: relative; display: inline-block; max-width: 100%; margin-top: 12px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; line-height: 0; }
+  .stage img { max-width: 100%; max-height: 360px; display: block; }
+  .stage img.heat { position: absolute; inset: 0; width: 100%; height: 100%; max-height: none; opacity: .7; mix-blend-mode: normal; pointer-events: none; }
+  .film { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .frame { width: 150px; }
+  .frame .stage { margin-top: 0; width: 150px; }
+  .frame .stage img { max-height: none; width: 100%; }
+  .frame.flag .stage { border-color: var(--bad); box-shadow: 0 0 0 2px var(--bad); }
+  .frame .cap { font-size: 12px; color: var(--mute); margin-top: 2px; }
+  .toggle { margin-top: 6px; }
+  .trace { margin-top: 12px; border-left: 2px solid var(--line); padding-left: 12px; }
+  .step { font-size: 13px; margin: 4px 0; color: var(--mute); }
+  .step b { color: var(--text); font-weight: 600; }
+  .step.run b::after { content: " ..."; color: var(--accent); }
+  .step.tool { margin-left: 14px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chip { border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; font-size: 12px; text-decoration: none; color: var(--text); }
+  .spin { display: none; margin-left: 4px; color: var(--mute); align-self: center; }
+.why{margin-top:8px}.whyrow{margin:6px 0;padding:6px 8px;border-left:3px solid var(--line,#ccc)}.bar{display:inline-block;width:90px;height:8px;background:#0001;border-radius:4px;vertical-align:middle;overflow:hidden}.bar>span{display:block;height:100%;background:#2e7d32}.bar>span.neg{background:#c62828}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>SATYASUTRA</h1>
+    <div class="tag">Live claim verification with an auditable ledger. It says "cannot tell" instead of guessing. <a href="/officials">For officials: what is spreading</a></div>
+  </div>
+  <div class="pills" id="pills"></div>
+</header>
+
+<main>
+  <div>
+    <section>
+      <h2>Check a claim or a Bluesky post</h2>
+      <textarea id="text" placeholder="Paste a claim or a post's text (any language)"></textarea>
+      <div class="row"><input type="text" id="uri" placeholder="or a Bluesky post address starting with at://"></div>
+      <div class="row">
+        <button id="go">Verify</button>
+        <button class="ghost" id="chain">Check ledger integrity</button>
+        <span class="spin" id="spin">working...</span>
+      </div>
+      <div class="row"><label class="small">or a voice note: <input type="file" id="audio" accept="audio/*,.ogg,.opus,.m4a,.mp3,.wav"></label></div>
+      <div id="voiceOut" class="small"></div>
+      <div id="trace" class="trace" style="display:none"></div>
+      <div id="links"></div>
+      <div id="act"></div>
+      <div id="out"></div>
+    </section>
+    <section style="margin-top:16px">
+      <h2>Check a notice or a message screenshot</h2>
+      <input type="file" id="notice" accept="image/*">
+      <div class="small" style="margin-top:6px">A language model copies the text from the picture; then links, scam wording and the issuer's claim are checked in code. It says what it found, not whether the notice is genuine.</div>
+      <div id="noticeOut"></div>
+    </section>
+    <section style="margin-top:16px">
+      <h2>Check an image or video</h2>
+      <input type="file" id="file" accept="image/*,video/*">
+      <div class="small" style="margin-top:6px">Looks the image up in fact-checkers' past articles and asks TruFor (GRIP-UNINA, University of Naples) whether it was edited. It does not detect fully AI-generated images, or face-swap and AI-generated video; for video it checks a handful of frames.</div>
+      <div id="mediaOut"></div>
+    </section>
+  </div>
+
+  <div>
+    <section>
+      <h2>What is spreading now (live Bluesky stream)</h2>
+      <div id="clusters" class="small">Loading...</div>
+    </section>
+    <section style="margin-top:16px" id="traceSection" hidden>
+      <h2>Origin and spread</h2>
+      <div id="traceOut" class="small"></div>
+    </section>
+  </div>
+</main>
+
+<footer>
+  Verdicts come from live sources only: Gemini reads the claim, the Google Fact Check API supplies reviews, and rules decide.
+  Only a review that matches the claim closely can decide it; everything else is shown as related and never used to decide.
+</footer>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
+
+async function api(path, opts) {
+  const r = await fetch(path, opts);
+  let body = null;
+  try { body = await r.json(); } catch (_) {}
+  if (!r.ok) throw new Error((body && body.detail) ? (typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail)) : "HTTP " + r.status);
+  return body;
+}
+
+function pill(label, value, cls) {
+  const p = el("span", "pill " + (cls || ""));
+  p.append(label + " ");
+  p.append(Object.assign(el("b"), { textContent: value }));
+  return p;
+}
+
+async function refreshPills() {
+  const box = $("pills"); const items = [];
+  try { const s = await api("/fastclock/stats"); items.push(pill("posts/min", s.posts_per_minute, "good"), pill("processed", s.posts_processed), pill("clusters", s.clusters_now)); }
+  catch (_) { items.push(pill("stream", "off", "bad")); }
+  try { const h = await api("/health"); items.push(pill("ledger rows", h.ledger_entries)); } catch (_) {}
+  box.replaceChildren(...items);
+}
+
+async function refreshClusters() {
+  const box = $("clusters");
+  try {
+    const d = await api("/fastclock/top");
+    if (!d.clusters.length) { box.textContent = "No clusters yet."; return; }
+    box.replaceChildren(...d.clusters.map((c) => {
+      const row = el("div", "cluster");
+      const t = el("div", "txt", c.example_text); row.append(t);
+      const n = el("div", "nums");
+      n.append(el("span", "", c.authors_per_minute + " authors/min"), el("span", "", c.size + " posts"));
+      if (c.example_url) { const a = el("a", "", "open post"); a.href = c.example_url; a.target = "_blank"; a.rel = "noopener"; n.append(a); }
+      const use = el("a", "", "check this"); use.href = "#"; use.onclick = (e) => { e.preventDefault(); $("text").value = c.example_text; $("uri").value = ""; window.scrollTo({ top: 0, behavior: "smooth" }); };
+      n.append(use);
+      const tr = el("a", "", "trace origin and spread"); tr.href = "#"; tr.onclick = (e) => { e.preventDefault(); showTrace(c.cluster_id); }; n.append(tr);
+      row.append(n);
+      return row;
+    }));
+  } catch (e) { box.textContent = "Stream panel off: " + e.message; }
+}
+
+const SVG = "http://www.w3.org/2000/svg";
+function spreadChart(timeline) {
+  const w = 320, h = 90, top = Math.max(1, ...timeline.map((p) => p.posts));
+  const svg = document.createElementNS(SVG, "svg"); svg.setAttribute("viewBox", "0 0 " + w + " " + h); svg.setAttribute("width", "100%");
+  const line = (key, color) => {
+    const pts = timeline.map((p, i) => (i * w / Math.max(1, timeline.length - 1)).toFixed(1) + "," + (h - 4 - (p[key] / top) * (h - 8)).toFixed(1)).join(" ");
+    const pl = document.createElementNS(SVG, "polyline"); pl.setAttribute("points", pts); pl.setAttribute("fill", "none"); pl.setAttribute("stroke", color); pl.setAttribute("stroke-width", "2"); return pl;
+  };
+  svg.append(line("posts", "#6ea8fe"), line("accounts", "#f0b429"));
+  return svg;
+}
+
+function fmtSpan(s) { return s < 90 ? Math.round(s) + " s" : (s / 60).toFixed(1) + " min"; }
+
+async function showTrace(id) {
+  const sec = $("traceSection"), box = $("traceOut"); sec.hidden = false; box.textContent = "Loading...";
+  try {
+    const t = await api("/fastclock/cluster/" + id);
+    const parts = [];
+    if (t.first_post) {
+      const f = el("div", "claim"); f.append(el("div", "small", "First post we saw (account " + t.first_post.account + ", " + new Date(t.first_post.seen_at).toLocaleTimeString() + ")"), el("div", "q", t.first_post.text));
+      if (t.first_post.url) { const a = el("a", "", "open post"); a.href = t.first_post.url; a.target = "_blank"; a.rel = "noopener"; f.append(a); }
+      parts.push(f);
+    }
+    parts.push(el("div", "small", t.posts_seen + " posts from " + t.distinct_accounts_stored + " accounts over " + fmtSpan(t.span_s) + (t.stored_all_posts ? "" : " (only the earliest " + t.posts_stored + " posts are stored; accounts counted among those)")));
+    const legend = el("div", "small"); legend.append(Object.assign(el("span"), { textContent: "blue: posts, yellow: distinct accounts (cumulative)" })); parts.push(spreadChart(t.timeline), legend);
+    if (t.variants.length > 1) {
+      parts.push(el("div", "small", "Wording changes (" + t.variants_total + " distinct versions):"));
+      t.variants.forEach((v, i) => {
+        const d = el("div", "claim"); d.append(el("div", "small", "version " + (i + 1) + " - first seen +" + fmtSpan(v.first_seen_s) + ", " + v.posts + " post(s)"));
+        if (v.diff_from_previous.length) d.append(el("div", "small", v.diff_from_previous.map((o) => (o.op === "added" ? "+ " : "- ") + o.text).join("   ")));
+        else d.append(el("div", "q", v.text));
+        parts.push(d);
+      });
+    }
+    parts.push(el("div", "small", t.scope_note));
+    box.replaceChildren(...parts);
+  } catch (e) { box.textContent = "Trace unavailable: " + e.message; }
+}
+
+async function spreadLine(text, box) {
+  try {
+    const m = (await api("/fastclock/match?text=" + encodeURIComponent(text))).match;
+    if (!m) { box.textContent = "Not currently spreading on the Bluesky stream we watch (no matching cluster; this does not mean it is not spreading elsewhere)."; return; }
+    box.textContent = "Spreading now on Bluesky: " + m.posts + " near-identical posts from " + m.distinct_accounts + " accounts, " + m.authors_per_minute + " authors/min. ";
+    const a = el("a", "", "trace origin and spread"); a.href = "#"; a.onclick = (e) => { e.preventDefault(); showTrace(m.cluster_id); }; box.append(a);
+  } catch (_) { box.textContent = ""; }
+}
+
+function bar(v) {
+  const w = el("span", "bar"); const i = el("span", v < 0 ? "neg" : ""); i.style.width = Math.min(100, Math.abs(v) * 100) + "%"; w.append(i); return w;
+}
+
+function explainClaim(x) {
+  const d = el("details", "why"); d.append(el("summary", "", "Why this verdict (SHAP-style breakdown)"));
+  d.append(el("div", "small", x.method));
+  if (!x.evidence.length) d.append(el("div", "small", "No evidence was found, so there is nothing to attribute."));
+  x.evidence.forEach((r) => {
+    const row = el("div", "whyrow");
+    row.append(el("div", "", (r.publisher || "source") + (r.rating ? ": " + r.rating : "") + (r.decided ? "  [used to decide]" : "  [not used]")));
+    if (r.shapley !== null) { const line = el("div", "small"); line.append(bar(r.shapley), " credit " + r.shapley.toFixed(2)); row.append(line); }
+    row.append(el("div", "small", r.flips_verdict_if_removed ? "Removing this would change the verdict." : "Removing this alone would not change the verdict."));
+    if (r.why_not_used) row.append(el("div", "small", "Why not used: " + r.why_not_used));
+    if (r.words) row.append(el("div", "small", "Shared words: " + (r.words.shared.join(", ") || "none") + ". Only in the claim: " + (r.words.only_in_claim.join(", ") || "none") + ". Only in the review: " + (r.words.only_in_review.join(", ") || "none") + "."));
+    d.append(row);
+  });
+  if (x.counterfactuals.length) { d.append(el("div", "small", "What would change it")); const u = el("ul"); x.counterfactuals.forEach((c) => u.append(el("li", "small", c))); d.append(u); }
+  d.append(el("div", "small", x.not_attributed));
+  return d;
+}
+
+function explainMedia(x) {
+  const d = el("details", "why"); d.append(el("summary", "", "Why this result (SHAP-style breakdown)"));
+  d.append(el("div", "small", x.method));
+  x.signals.forEach((s) => {
+    const row = el("div", "whyrow"); row.append(el("div", "", s.signal));
+    if (s.score !== undefined) row.append(el("div", "small", s.score === null ? "no score" : "score " + s.score.toFixed(2) + ", cut " + s.cut + ", " + (s.over_cut ? "over" : "under") + " the cut by " + Math.abs(s.margin).toFixed(2)));
+    else row.append(el("div", "small", s.matches + " match(es). " + s.meaning));
+    const line = el("div", "small"); line.append(bar(s.shapley), " credit " + s.shapley.toFixed(2)); row.append(line);
+    d.append(row);
+  });
+  d.append(el("div", "small", x.pixel_level));
+  return d;
+}
+
+async function newsLine(text, box) {
+  try {
+    const n = await api("/news/check?text=" + encodeURIComponent(text));
+    if (n.status === "reported") {
+      box.append("In the news (context, not proof that it is true): ");
+      n.hits.forEach((h) => { const a = el("a", "", h.publisher + ": " + h.title); a.href = h.url; a.target = "_blank"; a.rel = "noopener"; box.append(a, " | "); });
+    } else box.textContent = n.note;
+  } catch (_) { box.textContent = ""; }
+}
+
+let deva = null;
+function loadFont() {
+  if (!deva) { deva = new FontFace("NotoDeva", "url(/assets/fonts/NotoSansDevanagari.ttf)"); deva.load().then((f) => document.fonts.add(f)).catch(() => {}); }
+  return deva.loaded || Promise.resolve();
+}
+
+function wrap(ctx, text, maxW) {
+  const lines = []; let line = "";
+  text.split(/\s+/).forEach((w) => { const t = line ? line + " " + w : w; if (ctx.measureText(t).width > maxW && line) { lines.push(line); line = w; } else line = t; });
+  if (line) lines.push(line);
+  return lines;
+}
+
+async function drawCard(spec) {
+  await loadFont();
+  const W = 1080, pad = 64, font = (px, w) => (w || "") + " " + px + "px NotoDeva, system-ui, sans-serif";
+  const c = document.createElement("canvas"), ctx = c.getContext("2d"); c.width = W; c.height = 2000;
+  const blocks = [["claim_label", 30, "600"], ["claim", 44, ""], ["sentence", 38, ""], ["source", 30, ""]];
+  const measure = (text, px, w) => { ctx.font = font(px, w); return wrap(ctx, text, W - 2 * pad); };
+  const claimLines = measure(spec.claim, 44, ""), sentLines = measure(spec.sentence, 38, ""), srcLines = measure(spec.links[0].replace(/^https:\/\//, ""), 28, "");
+  const head = 190, height = head + 60 + 40 + claimLines.length * 58 + 50 + sentLines.length * 52 + 64 + 36 + srcLines.length * 40 + 60 + 50 + 80;
+  c.height = height; ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, height);
+  ctx.fillStyle = spec.color; ctx.fillRect(0, 0, W, head);
+  ctx.fillStyle = "#fff"; ctx.font = font(78, "700"); ctx.textBaseline = "middle"; ctx.fillText(spec.headline, pad, head / 2);
+  let y = head + 60; ctx.textBaseline = "alphabetic"; ctx.fillStyle = "#555"; ctx.font = font(28, "600"); ctx.fillText(spec.claim_label, pad, y);
+  y += 40; ctx.fillStyle = "#111"; ctx.font = font(44, ""); claimLines.forEach((l) => { y += 58; ctx.fillText(l, pad, y); });
+  y += 50; ctx.font = font(38, ""); sentLines.forEach((l) => { y += 52; ctx.fillText(l, pad, y); });
+  y += 64; ctx.fillStyle = "#555"; ctx.font = font(26, "600"); ctx.fillText(spec.source_label, pad, y);
+  ctx.fillStyle = "#0b57d0"; ctx.font = font(28, ""); srcLines.forEach((l) => { y += 40; ctx.fillText(l, pad, y); });
+  y += 60; ctx.fillStyle = "#111"; ctx.font = font(32, "700"); ctx.fillText(spec.footer, pad, y);
+  y += 50; ctx.fillStyle = "#777"; ctx.font = font(24, ""); ctx.fillText(spec.ledger, pad, y);
+  return c;
+}
+
+async function makeCard(claim, box) {
+  box.textContent = "Making the card...";
+  try {
+    const spec = await api("/card/spec", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ claim }) });
+    const canvas = await drawCard(spec); canvas.style.maxWidth = "100%"; canvas.style.border = "1px solid #8884"; canvas.style.borderRadius = "8px";
+    const dl = el("a", "", "Download the card (PNG)"); dl.href = "#"; dl.onclick = (e) => { e.preventDefault(); canvas.toBlob((b) => { const u = URL.createObjectURL(b), a = document.createElement("a"); a.href = u; a.download = spec.filename + ".png"; a.click(); setTimeout(() => URL.revokeObjectURL(u), 1000); }); };
+    box.replaceChildren(canvas, el("div"), dl, el("div", "small", "The card carries the answer and the source link, never the original image or video. " + (spec.lang === "hi" ? "The Hindi wording has not been reviewed by a native speaker." : "")));
+  } catch (e) { box.textContent = e.message; }
+}
+
+function renderClaim(c) {
+  const box = el("div", "claim");
+  const head = el("div"); head.append(el("span", "badge " + c.label, c.label.replaceAll("_", " ")), " ", el("span", "small", "confidence: " + c.confidence_band));
+  box.append(head, el("div", "q", c.text));
+  const spread = el("div", "small"); box.append(spread); spreadLine(c.text, spread);
+  if (c.label === "UNVERIFIABLE_YET") { const news = el("div", "small"); box.append(news); newsLine(c.text, news); }
+  if (c.quote && c.quote !== c.text) box.append(el("div", "small", "original: " + c.quote));
+  if (c.entities && c.entities.length) {
+    const chips = el("div", "chips");
+    c.entities.forEach((e) => { const a = el("a", "chip", e.label + (e.description ? " - " + e.description : "")); a.href = e.url; a.target = "_blank"; a.rel = "noopener"; a.title = "Wikidata " + e.id + " (context only)"; chips.append(a); });
+    box.append(chips);
+  }
+  if (c.reasons && c.reasons.length) { const u = el("ul"); c.reasons.forEach((r) => u.append(el("li", "", r))); box.append(u); }
+  if (c.citations && c.citations.length) {
+    box.append(el("div", "small", "Evidence"));
+    const u = el("ul");
+    c.citations.forEach((e) => { const li = el("li"); const a = el("a", "", (e.publisher || "source") + (e.rating ? ": " + e.rating : "")); a.href = e.url; a.target = "_blank"; a.rel = "noopener"; li.append(a); u.append(li); });
+    box.append(u);
+  }
+  if (c.related && c.related.length) {
+    box.append(el("div", "small", "Related reviews (not used to decide)"));
+    const u = el("ul");
+    c.related.forEach((r) => { const li = el("li"); const a = el("a", "", (r.publisher || "source") + ": " + (r.rating || "")); a.href = r.url; a.target = "_blank"; a.rel = "noopener"; li.append(a, " ", el("span", "small", "match " + r.relevance + ". " + r.why_not_used)); u.append(li); });
+    box.append(u);
+  }
+  if (["REFUTED", "SUPPORTED", "MISSING_CONTEXT"].includes(c.label) && ["medium", "high"].includes(c.confidence_band)) {
+    const cardBox = el("div", "small"); const b = el("button", "ghost toggle", "Make a shareable correction card"); b.onclick = () => makeCard(c, cardBox); box.append(b, cardBox);
+  }
+  if (c.explanation && c.explanation.method) box.append(explainClaim(c.explanation));
+  const foot = el("div", "small"); const a = el("a", "", "ledger entry #" + c.ledger_seq); a.href = "/ledger/" + c.ledger_seq; a.target = "_blank"; foot.append(a);
+  box.append(foot);
+  return box;
+}
+
+function showResult(body, out) {
+  out.replaceChildren();
+  if (!body.claims.length) out.append(el("div", "claim small", "No checkable claim found in this text (" + body.extraction.status + "). Opinions and chatter are not claims."));
+  body.claims.forEach((c) => out.append(renderClaim(c)));
+}
+
+function streamAgent(text) {
+  return new Promise((resolve) => {
+    const trace = $("trace"), out = $("out");
+    trace.style.display = ""; trace.replaceChildren();
+    const open = {}; let gotResult = false;
+    const es = new EventSource("/agent/stream?text=" + encodeURIComponent(text));
+    const add = (cls, label, detail) => { const d = el("div", "step " + cls); d.append(Object.assign(el("b"), { textContent: label }), detail ? " " + detail : ""); trace.append(d); return d; };
+    const finish = () => { es.close(); resolve(gotResult); };
+    es.addEventListener("node_started", (m) => { const e = JSON.parse(m.data); open[e.node] = add("run", e.node); });
+    es.addEventListener("tool_call", (m) => { const e = JSON.parse(m.data); add("tool", e.data.name, e.data.summary); });
+    es.addEventListener("node_finished", (m) => { const e = JSON.parse(m.data); if (open[e.node]) { open[e.node].classList.remove("run"); open[e.node].append(" " + e.elapsed_ms + " ms"); } });
+    es.addEventListener("error", (m) => { if (m.data) { const e = JSON.parse(m.data); add("", "failed", (e.node || "") + " " + e.data.type); out.replaceChildren(el("div", "err", e.data.type === "ModelBusy" ? "The language model is at its free-tier limit or unreachable right now. Nothing was checked and nothing was guessed. Please try again in about a minute." : "The run stopped at " + (e.node || "a step") + " (" + e.data.type + "). No verdict was guessed.")); finish(); } else if (!gotResult) { finish(); } });
+    es.addEventListener("result", (m) => { gotResult = true; const b = JSON.parse(m.data); showResult(b, out); showActions(text, b); });
+    es.addEventListener("run_finished", () => { setTimeout(finish, 300); });
+  });
+}
+
+const LINK_CLASS = { lookalike: "err", similar_name: "err", shortened: "claim", gov_style: "claim", unknown: "claim", official: "claim" };
+async function checkLinks(text) {
+  const box = $("links"); box.replaceChildren();
+  try {
+    const d = await api("/links/check?text=" + encodeURIComponent(text));
+    d.links.filter((l) => l.status !== "unknown").forEach((l) => {
+      const row = el("div", LINK_CLASS[l.status] || "claim");
+      row.append(Object.assign(el("b"), { textContent: l.status === "official" ? "Official link: " : l.status === "shortened" ? "Shortened link: " : l.status === "gov_style" ? "Government-style link: " : "Possible lookalike link: " }), l.reason + ".");
+      box.append(row);
+    });
+    if (d.links.some((l) => l.status === "lookalike" || l.status === "similar_name")) box.append(el("div", "small", "Do not open it or enter details. We checked the name only and never opened the link. To report a cyber fraud, use the official national portal or call the helpline from the official website."));
+  } catch (_) {}
+}
+
+async function showActions(text, body) {
+  const box = $("act"); box.replaceChildren();
+  try {
+    const labels = body.claims.map((c) => c.label), seqs = body.claims.map((c) => c.ledger_seq).filter((s) => s != null);
+    const p = await api("/act/plan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, ledger_seqs: seqs, labels }) });
+    if (p.intent === "none") return;
+    const card = el("div", "claim"); card.append(el("div", "small", "What to do next - " + p.why));
+    p.routes.forEach((r) => {
+      const row = el("div", "q"); row.append(Object.assign(el("b"), { textContent: r.title + (r.contact ? " (" + r.contact + ")" : "") }), el("div", "small", r.detail));
+      if (r.url) { const a = el("a", "", r.url); a.href = r.url; a.target = "_blank"; a.rel = "noopener"; row.append(a); }
+      card.append(row);
+    });
+    const dl = el("a", "", "Download evidence pack (text file)"); dl.href = URL.createObjectURL(new Blob([p.pack], { type: "text/plain" })); dl.download = "evidence-pack.txt";
+    card.append(dl, el("div", "small", p.notice)); box.append(card);
+  } catch (_) {}
+}
+
+async function verify() {
+  const text = $("text").value.trim(), uri = $("uri").value.trim();
+  const out = $("out"); out.replaceChildren();
+  if (!text && !uri) return;
+  $("go").disabled = true; $("spin").style.display = "inline";
+  checkLinks(text || uri);
+  if (!uri) {
+    $("act").replaceChildren();
+    const got = await streamAgent(text);
+    if (!got) showActions(text, { claims: [] });
+    if (!got && !out.childNodes.length) out.append(el("div", "claim small", "No checkable claim found in this text. Opinions and chatter are not claims."));
+    $("go").disabled = false; $("spin").style.display = "none"; refreshPills();
+    return;
+  }
+  $("trace").style.display = "none";
+  try {
+    const body = await api("/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(uri ? { uri } : { text }) });
+    const meta = el("div", "small");
+    meta.textContent = body.from_cache ? "answered from cache" : "computed just now";
+    out.append(meta);
+    if (!body.claims.length) out.append(el("div", "claim small", "No checkable claim found in this text (" + body.extraction.status + "). Opinions and chatter are not claims."));
+    body.claims.forEach((c) => out.append(renderClaim(c)));
+  } catch (e) { out.append(el("div", "err", "Could not verify: " + e.message)); }
+  finally { $("go").disabled = false; $("spin").style.display = "none"; refreshPills(); }
+}
+
+async function chain() {
+  const out = $("out");
+  try { const r = await api("/ledger/verify"); out.prepend(el("div", "claim", r.ok ? "Ledger intact: " + r.checked + " entries verified." : "Ledger BROKEN at entry " + r.first_bad_seq + ": " + r.reason)); }
+  catch (e) { out.prepend(el("div", "err", e.message)); }
+}
+
+async function checkVideo(f, out) {
+  out.append(el("div", "small", "Sampling frames and running TruFor on each. This can take a little while."));
+  try {
+    const r = await fetch("/video/check", { method: "POST", body: f });
+    const body = await r.json();
+    if (!r.ok) throw new Error(typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail));
+    out.replaceChildren();
+    const film = el("div", "film"); const heats = [];
+    body.frames.forEach((fr) => {
+      const box = el("div", "frame" + (fr.flagged ? " flag" : "")); const stage = el("div", "stage");
+      if (fr.thumb_jpeg_b64) { const img = el("img"); img.src = "data:image/jpeg;base64," + fr.thumb_jpeg_b64; stage.append(img); }
+      if (fr.heatmap_png_b64) { const h = el("img", "heat"); h.src = "data:image/png;base64," + fr.heatmap_png_b64; h.style.display = "none"; stage.append(h); heats.push(h); }
+      box.append(stage, el("div", "cap", fr.at_s.toFixed(1) + " s  " + (fr.score === null ? "no score" : "edit " + fr.score.toFixed(2)) + (fr.ai_score != null ? ", AI " + fr.ai_score.toFixed(2) : "")));
+      film.append(box);
+    });
+    out.append(film);
+    if (heats.length) { const b = el("button", "ghost toggle", "Show heatmaps"); b.onclick = () => { const on = heats[0].style.display === "none"; heats.forEach((h) => (h.style.display = on ? "" : "none")); b.textContent = on ? "Hide heatmaps" : "Show heatmaps"; }; out.append(b); }
+    const card = el("div", "claim"); const head = el("div");
+    head.append(el("span", "badge " + body.label, body.label.replaceAll("_", " ")), " ", el("span", "small", body.duration_s + " s video, " + body.frames.length + " frames sampled"));
+    card.append(head);
+    const ul = el("ul"); body.reasons.forEach((x) => ul.append(el("li", "", x))); card.append(ul);
+    out.append(card);
+  } catch (e) { out.replaceChildren(el("div", "err", "Could not check the video: " + e.message)); }
+}
+
+async function checkImage() {
+  const f = $("file").files[0]; const out = $("mediaOut"); out.replaceChildren();
+  if (!f) return;
+  if (f.type.startsWith("video/")) return checkVideo(f, out);
+  out.append(el("div", "small", "Analysing " + f.name + " ..."));
+  try {
+    const r = await fetch("/media/check", { method: "POST", body: f });
+    const body = await r.json();
+    if (!r.ok) throw new Error(typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail));
+    out.replaceChildren();
+    const stage = el("div", "stage"); const img = el("img"); img.src = URL.createObjectURL(f); stage.append(img);
+    let heat = null;
+    if (body.heatmap_png_b64) { heat = el("img", "heat"); heat.src = "data:image/png;base64," + body.heatmap_png_b64; stage.append(heat); }
+    out.append(stage);
+    if (heat) { const b = el("button", "ghost toggle", "Hide heatmap"); b.onclick = () => { heat.style.display = heat.style.display === "none" ? "" : "none"; b.textContent = heat.style.display === "none" ? "Show heatmap" : "Hide heatmap"; }; out.append(b); }
+    const card = el("div", "claim"); const head = el("div");
+    head.append(el("span", "badge " + body.label, body.label.replaceAll("_", " ")));
+    if (body.forensics.available) head.append(" ", el("span", "small", "edit score " + body.forensics.score.toFixed(2) + (body.forensics.ai_score != null ? ", AI-generated score " + body.forensics.ai_score.toFixed(2) : "") + " (" + body.forensics.device + ", " + body.forensics.seconds + " s)"));
+    card.append(head);
+    const ul = el("ul"); body.reasons.forEach((x) => ul.append(el("li", "", x))); card.append(ul);
+    if (body.matches.length) {
+      card.append(el("div", "small", "Seen in fact-checks"));
+      const m = el("ul");
+      body.matches.forEach((h) => { const li = el("li"); const a = el("a", "", h.publisher + ": " + h.title); a.href = h.article_url; a.target = "_blank"; a.rel = "noopener"; li.append(a, " ", el("span", "small", "distance " + h.distance + (h.mirrored ? ", mirrored" : "") + (h.reviewed_at ? ", reviewed " + h.reviewed_at.slice(0, 10) : ""))); m.append(li); });
+      card.append(m);
+    }
+    if (body.explanation && body.explanation.method) card.append(explainMedia(body.explanation));
+    out.append(card);
+  } catch (e) { out.replaceChildren(el("div", "err", "Could not check the image: " + e.message)); }
+}
+
+async function checkVoice() {
+  const f = $("audio").files[0], box = $("voiceOut"); box.replaceChildren();
+  if (!f) return;
+  box.textContent = "Reading the voice note...";
+  try {
+    const t = await api("/voice/transcribe", { method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: await f.arrayBuffer() });
+    box.replaceChildren(el("div", "", "Transcript (" + t.language + ", " + Math.round(t.language_prob * 100) + "% sure of the language, " + t.seconds + " s): " + t.text));
+    if (t.language_uncertain) box.append(el("div", "", "The language is uncertain, so the words may be wrong. Check the text before verifying."));
+    box.append(el("div", "", t.note));
+    box.append(el("div", "", "Real or cloned voice: not checked. The pretrained detector we tried did not pass our own test, so we give no verdict on the voice."));
+    $("text").value = t.text; $("uri").value = "";
+    if (t.text.trim()) verify();
+  } catch (e) { box.textContent = "Could not read the voice note: " + e.message; }
+}
+
+async function checkNotice() {
+  const f = $("notice").files[0], box = $("noticeOut"); box.replaceChildren();
+  if (!f) return;
+  box.textContent = "Reading the notice...";
+  try {
+    const n = await api("/notice/check", { method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: await f.arrayBuffer() });
+    box.replaceChildren();
+    const card = el("div", "claim");
+    card.append(el("div", "small", "Read from the image" + (n.issuer ? " (it says it is from: " + n.issuer + ")" : "") + ":"), el("div", "q", n.text || "(nothing readable)"));
+    const ul = el("ul"); n.findings.forEach((x) => { const li = el("li", x.level === "red_flag" ? "err" : "", (x.level === "red_flag" ? "Red flag: " : "") + x.text); ul.append(li); }); card.append(ul);
+    if (n.text) { const b = el("button", "ghost toggle", "Check the claims in this text"); b.onclick = () => { $("text").value = n.text; $("uri").value = ""; verify(); window.scrollTo({ top: 0, behavior: "smooth" }); }; card.append(b); }
+    card.append(el("div", "small", n.note));
+    box.append(card);
+    if (n.plan && n.plan.intent !== "none") showActions(n.text, { claims: [] });
+  } catch (e) { box.replaceChildren(el("div", "err", "Could not check the notice: " + e.message)); }
+}
+
+$("notice").onchange = checkNotice;
+$("audio").onchange = checkVoice;
+$("file").onchange = checkImage;
+$("go").onclick = verify; $("chain").onclick = chain;
+refreshPills(); refreshClusters(); setInterval(refreshPills, 5000); setInterval(refreshClusters, 5000);
+</script>
+</body>
+</html>

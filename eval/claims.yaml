@@ -1,0 +1,27 @@
+# Evaluation claim sheet (friend's map E1). A small hand-made set, NOT an independent benchmark: the truth labels are widely documented facts and
+# widely debunked rumours chosen by us, in the same words people use. It exists to measure three things honestly: how often a false claim is refuted,
+# how often a TRUE claim is wrongly refuted (the error that matters most), and how often the system says "cannot tell". Test data only; never imported by src/.
+# truth: false = a widely debunked claim; true = a well-established fact; unknown = no fact-checker can have covered it.
+claims:
+  - {id: f01, truth: false, text: "COVID-19 vaccines contain microchips"}
+  - {id: f02, truth: false, text: "5G towers spread the coronavirus"}
+  - {id: f03, truth: false, text: "Drinking hot water cures coronavirus"}
+  - {id: f04, truth: false, text: "Vaccines cause autism"}
+  - {id: f05, truth: false, text: "Humans only use 10 percent of their brains"}
+  - {id: f06, truth: false, text: "The Great Wall of China is visible from space with the naked eye"}
+  - {id: f07, truth: false, text: "Eating garlic prevents coronavirus"}
+  - {id: f08, truth: false, text: "Drinking bleach cures COVID-19"}
+  - {id: f09, truth: false, text: "Smoking does not cause cancer"}
+  - {id: f10, truth: false, text: "The COVID-19 vaccine changes your DNA"}
+  - {id: t01, truth: true, text: "Smoking causes lung cancer"}
+  - {id: t02, truth: true, text: "The Earth orbits the Sun"}
+  - {id: t03, truth: true, text: "Water boils at 100 degrees Celsius at sea level"}
+  - {id: t04, truth: true, text: "New Delhi is the capital of India"}
+  - {id: t05, truth: true, text: "Mount Everest is the highest mountain above sea level"}
+  - {id: t06, truth: true, text: "Measles is a vaccine-preventable disease"}
+  - {id: t07, truth: true, text: "Handwashing with soap reduces the spread of infections"}
+  - {id: t08, truth: true, text: "Vaccines save millions of lives every year"}
+  - {id: u01, truth: unknown, text: "Prime Minister Modi was assassinated this morning"}
+  - {id: u02, truth: unknown, text: "A bridge in Mumbai collapsed an hour ago and 40 people died"}
+  - {id: u03, truth: unknown, text: "The RBI has banned all UPI payments from tomorrow"}
+  - {id: u04, truth: unknown, text: "Schools in Delhi will be closed for the next two weeks"}

@@ -31,6 +31,16 @@ fastclock:
   max_clusters: 5000
   result_ttl_s: 3600
   top_n: 10
+  worker_enabled: false
+  queue_max: 2000
+  latency_samples: 2000
+  repeat_keys_kept: 20000
+  example_text_chars: 200
+  members_kept: 400
+  member_text_chars: 300
+  trace_buckets: 12
+  variants_shown: 8
+  match_min_posts: 2
 extract:
   max_claims_per_post: 5
 
@@ -41,6 +51,11 @@ verify:
   text_source_id: api_text
   uri_prefix: "at://"
   ledger_kind: verdict
+  # Starting values, not measured: there is no data yet on how fast fact-checks appear or change. Revisit with real repeat traffic.
+  # The Fact Check lookup keeps its own cache (sources.yaml, 600 s), so a verdict can be up to the TTL plus that old.
+  cache_ttl_decided_s: 21600
+  cache_ttl_undecided_s: 900
+  judge_max_reviews: 10        # one Gemini call per claim covers up to this many reviews
 
 provenance:
   db_path: data/provenance.sqlite3
@@ -63,3 +78,160 @@ provenance:
 
 trace:
   summary_max_chars: 200
+
+escalation:
+  enabled: false
+  reserve_per_minute: 5        # of policy.gemini.requests_per_minute; the rest is the escalation budget
+  tick_s: 5
+  retry_after_s: 300
+  max_audits_kept: 1000
+
+forensics:
+  url: http://127.0.0.1:8100
+  timeout_s: 120
+  max_upload_bytes: 15000000
+  threshold: trufor_manipulation_score
+  ai_threshold: smaug_ai_generated_score
+  video_frames: 8
+  video_ai_min_frames: 3
+  max_video_bytes: 60000000
+  max_video_s: 120
+  ffmpeg_timeout_s: 30
+  thumb_width: 240
+
+knowledge_graph:
+  endpoint: https://www.wikidata.org/w/api.php
+  entity_url_template: https://www.wikidata.org/wiki/{id}
+  language: en
+  timeout_s: 15
+  max_entities: 5
+  name_max_chars: 80
+
+official:
+  db_path: data/official.sqlite3
+  timeout_s: 20
+  refresh_s: 900
+  max_items_per_feed: 30
+  max_passage_chars: 1500
+  max_results: 5
+  min_token_chars: 3
+  contrast_rel_tol: 0.0001
+  feeds:
+    - id: rbi_press
+      publisher: Reserve Bank of India
+      url: https://www.rbi.org.in/pressreleases_rss.xml
+      tier: 1
+    - id: sebi_feed
+      publisher: Securities and Exchange Board of India
+      url: https://www.sebi.gov.in/sebirss.xml
+      tier: 1
+
+voice:
+  service_url: http://127.0.0.1:8100
+  service_timeout_s: 120
+  model_dir: models/whisper-small
+  device: cpu
+  compute_type: int8
+  beam_size: 5
+  vad_filter: true
+  max_bytes: 10000000
+  max_seconds: 120
+  decode_timeout_s: 30
+  low_language_prob: 0.6
+
+telegram:
+  api_base: https://api.telegram.org
+  local_api: http://127.0.0.1:8000
+  token_env: TELEGRAM_BOT_TOKEN
+  poll_timeout_s: 30
+  request_margin_s: 10
+  local_timeout_s: 120
+  retry_s: 5
+  max_reply_chars: 3800            # Telegram refuses messages over 4096
+  labels:                          # one sentence per verdict, spoken plainly; {publisher} and {rating} come from the first source
+    REFUTED: "This is false. {publisher} checked this very claim and rated it \"{rating}\"."
+    SUPPORTED: "This checks out. {publisher} looked at this claim and rated it \"{rating}\"."
+    MISSING_CONTEXT: "This is misleading as it stands. {publisher} says important context is missing."
+    UNVERIFIABLE_YET: "I can't confirm this one. No fact-checker I can search has looked at this claim yet."
+    NOT_A_CLAIM: "That's an opinion, not something I can check."
+    EDITED: "This image looks edited. The forensic check found signs that part of it was changed after it was taken."
+    SYNTHETIC_SUSPECTED: "This image may be AI-generated. One detector flagged it, so treat that as a suspicion, not proof."
+    OUT_OF_CONTEXT: "This image is real but used out of context."
+    INCONCLUSIVE: "I can't tell. I found no sign of editing or AI generation, but that doesn't make the photo real: these checks miss a lot."
+  messages:
+    start: "Send me a claim, a forwarded message, a voice note or a photo and I'll check it. If nobody reliable has checked it, I'll say so instead of guessing. I never report or forward anything for you."
+    none_found: "I didn't find a claim I can check in that. Opinions and chatter aren't claims."
+    source_line: "Read it here: {url}"
+    more_line: "{n} other review(s) say the same."
+    conflict: "Fact-checkers disagree on this one, so I won't call it either way."
+    news_reported: "It is being talked about in the news: {publisher} ran \"{title}\" ({url}). That means it's in the news, not that it's true."
+    news_not_found: "I also went through the latest stories from {n} major news outlets ({names}) and none of them is reporting this. That doesn't prove it's false, since I only see recent stories from the big outlets, but if it were a major event you'd expect to find it there. Don't forward it until a source you trust confirms it."
+    media_match: "This image has appeared in a fact-check before: {url}"
+    next_steps: "What you can do:"
+    act_notice: "I don't report anything for you. Check these details on the official sites before you rely on them."
+    transcript: "You said ({language}): {text}"
+    uncertain: "I wasn't sure about the language, so some words may be wrong."
+    voice_failed: "I couldn't read that voice note: {reason}"
+    image_failed: "I couldn't read that image."
+    unsupported: "I can check text, voice notes and photos."
+    error: "Something went wrong while checking that. Nothing was recorded, please try again."
+
+explain:
+  max_players: 8
+  words_shown: 12
+
+news:
+  db_path: data/news.sqlite3
+  timeout_s: 20
+  refresh_s: 600
+  max_items_per_feed: 60
+  max_passage_chars: 600
+  max_candidates: 60
+  max_results: 4
+  min_token_chars: 3
+  stem_chars: 6
+  min_coverage: 0.6
+  min_matched_words: 2
+  stopwords: [the, and, was, were, has, have, had, are, for, with, that, this, from, will, would, been, being, but, not, you, your, they, their,
+              his, her, its, who, what, when, where, which, said, says, new, after, before, into, over, than, then, there, these, those, about, also]
+  feeds:
+    - {id: news_the_hindu, publisher: The Hindu, url: "https://www.thehindu.com/news/national/feeder/default.rss", hosts: [thehindu.com]}
+    - {id: news_indian_express, publisher: The Indian Express, url: "https://indianexpress.com/section/india/feed/", hosts: [indianexpress.com]}
+    - {id: news_ndtv, publisher: NDTV, url: "https://feeds.feedburner.com/ndtvnews-top-stories", hosts: [ndtv.com]}
+    - {id: news_hindustan_times, publisher: Hindustan Times, url: "https://www.hindustantimes.com/feeds/rss/india-news/rssfeed.xml", hosts: [hindustantimes.com]}
+    - {id: news_toi, publisher: The Times of India, url: "https://timesofindia.indiatimes.com/rssfeeds/-2128936835.cms", hosts: [indiatimes.com]}
+    - {id: news_bbc_india, publisher: BBC News (India), url: "https://feeds.bbci.co.uk/news/world/asia/india/rss.xml", hosts: [bbc.com, bbc.co.uk]}
+    - {id: news_mint, publisher: Mint, url: "https://www.livemint.com/rss/news", hosts: [livemint.com]}
+    - {id: news_al_jazeera, publisher: Al Jazeera, url: "https://www.aljazeera.com/xml/rss/all.xml", hosts: [aljazeera.com]}
+
+audio_spoof:
+  model_path: models/w2v2-aasist/w2v2-aasist.onnx
+  window_samples: 64600
+  max_windows: 6
+  threshold: audio_bonafide_logit
+  min_seconds: 2
+  providers: [CPUExecutionProvider]
+
+officials:
+  max_rows: 15
+  label_priority: [REFUTED, MISSING_CONTEXT, SUPPORTED, UNVERIFIABLE_YET, NOT_A_CLAIM]
+  disaster_terms: [flood, floods, flooding, earthquake, cyclone, landslide, cloudburst, tsunami, "fire broke out", "building fire", wildfire, "bomb blast", "blast at",
+                   explosion, collapse, collapsed, stampede, evacuation, evacuated, "dam burst", "bridge collapse", "building collapse", "train accident",
+                   derailment, heatwave, "red alert", "orange alert", cyclonic, drought, outbreak, epidemic, "gas leak", "plane crash", "air crash", "terror attack",
+                   "terrorist attack", bombing,
+                   बाढ़, भूकंप, चक्रवात, तूफान, भूस्खलन, सुनामी, आग, धमाका, विस्फोट, हादसा, भगदड़, ढह, "बादल फटना", महामारी, "रेड अलर्ट"]
+
+notice:
+  max_image_bytes: 8000000
+  issuer_aliases: [rbi, "reserve bank", sebi, "securities and exchange board", "रिज़र्व बैंक", "भारतीय रिजर्व बैंक", "सेबी"]
+  min_coverage: 0.5
+  min_matched_words: 4
+  max_passages: 3
+
+nli:
+  service_url: http://127.0.0.1:8100
+  timeout_s: 60
+  min_prob: 0.9
+  max_reviews: 8
+  model_label: mdeberta-v3-nli (local fallback)
+

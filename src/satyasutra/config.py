@@ -69,6 +69,8 @@ class GeminiPolicy(_Strict):
     request_timeout_s: float = Field(gt=0)
     max_retries: int = Field(ge=0)               # extra attempts after a 429 that names a short retry delay
     max_retry_wait_s: float = Field(ge=0)        # a longer retry delay than this is reported, not waited out
+    transient_retries: int = Field(ge=0)         # extra attempts on a timeout or a 5xx before the next model is tried
+    transient_backoff_s: float = Field(ge=0)     # wait before such a retry
     requests_per_minute: int | None = None      # filled from docs/gemini_limits.md after a measurement
     measured_on: str = ""
 
@@ -156,6 +158,16 @@ class FastClockSettings(_Strict):
     max_clusters: int = Field(gt=0)
     result_ttl_s: float = Field(gt=0)
     top_n: int = Field(gt=0)
+    worker_enabled: bool                     # start the live worker with the API; off so the API and its tests run with no network
+    queue_max: int = Field(gt=0)             # posts waiting for the clock; beyond this the oldest are dropped and counted
+    latency_samples: int = Field(gt=0)       # per-post times kept for the median and p95
+    repeat_keys_kept: int = Field(gt=0)      # recent text keys remembered to count exact repeats
+    example_text_chars: int = Field(gt=0)    # an example post's text is cut to this length in /fastclock/top
+    members_kept: int = Field(gt=0)          # earliest posts stored per cluster for the origin and spread trace; later ones are only counted
+    member_text_chars: int = Field(gt=0)     # stored text per trace member (a Bluesky post is at most 300 characters)
+    trace_buckets: int = Field(gt=0)         # points on the spread timeline
+    variants_shown: int = Field(gt=0)        # distinct wordings listed in a trace
+    match_min_posts: int = Field(gt=0)       # a pasted claim is matched only to clusters with at least this many posts
 
     @model_validator(mode="after")
     def _bands_divide(self) -> "FastClockSettings":
@@ -166,6 +178,14 @@ class FastClockSettings(_Strict):
 
 class ExtractSettings(_Strict):
     max_claims_per_post: int = Field(gt=0)
+
+
+class EscalationSettings(_Strict):
+    enabled: bool                            # audit top clusters automatically; off so the API and its tests spend no model calls
+    reserve_per_minute: int = Field(ge=0)    # of the Gemini requests per minute, kept free for people calling /verify
+    tick_s: float = Field(gt=0)              # how often the escalator looks at the ranking when it has nothing to do
+    retry_after_s: float = Field(gt=0)       # a cluster whose audit failed waits this long before it is eligible again
+    max_audits_kept: int = Field(gt=0)       # audit results remembered, oldest forgotten first
 
 
 class TraceSettings(_Strict):
@@ -196,6 +216,135 @@ class ProvenanceSettings(_Strict):
     commons: CommonsSettings
 
 
+class OfficialFeed(_Strict):
+    id: str                                  # becomes the evidence source_id
+    publisher: str
+    url: str                                 # an RSS feed; its host must be in policy allowed_domains
+    tier: int = Field(ge=1, le=4)
+    lang: str = "en"
+
+
+class OfficialSettings(_Strict):
+    db_path: str                             # SQLite FTS5 index of official passages
+    feeds: list[OfficialFeed]
+    timeout_s: float = Field(gt=0)
+    refresh_s: float = Field(gt=0)           # the feeds are fetched again when the index is older than this
+    max_items_per_feed: int = Field(gt=0)
+    max_passage_chars: int = Field(gt=0)     # a passage is cut to this length before indexing
+    max_results: int = Field(gt=0)           # passages returned for one claim
+    min_token_chars: int = Field(gt=0)       # shorter query words are ignored
+    contrast_rel_tol: float = Field(ge=0)    # two numbers within this relative difference are the same (policy choice: rounding)
+
+
+class NewsFeed(_Strict):
+    id: str
+    publisher: str
+    url: str                                 # an RSS feed of a news outlet
+    hosts: list[str]                         # item links must be on one of these hosts, or the item is skipped
+
+
+class NewsSettings(_Strict):
+    db_path: str                             # separate SQLite index from the official one: news is context, never Tier 1 or 2 evidence
+    feeds: list[NewsFeed]
+    timeout_s: float = Field(gt=0)
+    refresh_s: float = Field(gt=0)
+    max_items_per_feed: int = Field(gt=0)
+    max_passage_chars: int = Field(gt=0)
+    max_candidates: int = Field(gt=0)        # headlines pulled from the index per claim before the coverage test
+    max_results: int = Field(gt=0)           # matching headlines shown
+    min_token_chars: int = Field(gt=0)
+    stem_chars: int = Field(gt=0)            # two words match when they share this many leading characters (assassinated ~ assassination)
+    min_coverage: float = Field(gt=0, le=1)  # share of the claim's content words a headline must contain (a display rule, not calibrated)
+    min_matched_words: int = Field(gt=0)
+    stopwords: list[str]
+
+
+class AudioSpoofSettings(_Strict):
+    model_path: str                          # the W2V2-AASIST ONNX file (git-ignored; see CLAUDE.md for the download and licence)
+    window_samples: int = Field(gt=0)        # the model reads exactly this many 16 kHz samples per window
+    max_windows: int = Field(gt=0)           # windows scored per clip, spread evenly across it
+    threshold: str                           # name of the cut in thresholds.yaml: windows scoring below it look synthetic
+    min_seconds: float = Field(gt=0)         # shorter clips are refused: one window of padding says nothing
+    providers: list[str]
+
+
+class OfficialsSettings(_Strict):
+    disaster_terms: list[str]                # whole words or phrases (English and Hindi) that put a cluster in the disaster group, shown first
+    max_rows: int = Field(gt=0)
+    label_priority: list[str]                # when a post holds several claims, the row shows the first of these that occurs
+
+
+class NoticeSettings(_Strict):
+    max_image_bytes: int = Field(gt=0)
+    issuer_aliases: list[str]                # words in a notice's own letterhead that claim an official issuer we hold text for (RBI, SEBI)
+    min_coverage: float = Field(gt=0, le=1)  # share of the notice's content words an official passage must contain to count as the same notice (not calibrated)
+    min_matched_words: int = Field(gt=0)
+    max_passages: int = Field(gt=0)
+
+
+class NliSettings(_Strict):
+    service_url: str                         # the GPU service (forensics/service.py) that hosts the NLI model
+    timeout_s: float = Field(gt=0)
+    min_prob: float = Field(gt=0, le=1)      # entailment or contradiction probability needed to call a relation (a policy choice, not calibrated)
+    max_reviews: int = Field(gt=0)
+    model_label: str                         # recorded as the judge when this model answers
+
+
+class VoiceSettings(_Strict):
+    service_url: str                         # the GPU service (forensics/service.py); when it is down the clip is transcribed on the CPU, slowly
+    service_timeout_s: float = Field(gt=0)
+    model_dir: str                           # a faster-whisper model folder (git-ignored; see CLAUDE.md for the download)
+    device: str                              # "cpu" or "cuda"
+    compute_type: str
+    beam_size: int = Field(gt=0)
+    vad_filter: bool                         # skip silence before transcribing
+    max_bytes: int = Field(gt=0)
+    max_seconds: float = Field(gt=0)         # longer audio is refused
+    decode_timeout_s: float = Field(gt=0)    # ffmpeg is given this long to decode a clip
+    low_language_prob: float = Field(ge=0, le=1)   # below this the detected language is shown as uncertain (a display rule, not a calibrated cut)
+
+
+class ExplainSettings(_Strict):
+    max_players: int = Field(gt=0)           # evidence items up to this many get exact Shapley values (the work doubles per item); more get leave-one-out only
+    words_shown: int = Field(gt=0)           # words listed per side in the word-overlap view
+
+
+class TelegramSettings(_Strict):
+    api_base: str                            # Telegram Bot API host
+    local_api: str                           # our own API, which the bot calls for every check
+    token_env: str                           # name of the env var holding the bot token
+    poll_timeout_s: int = Field(gt=0)        # long-poll wait
+    request_margin_s: float = Field(gt=0)
+    local_timeout_s: float = Field(gt=0)     # a full claim check can take a while
+    retry_s: float = Field(gt=0)
+    max_reply_chars: int = Field(gt=0)
+    labels: dict[str, str]                   # verdict label -> plain words for a chat
+    messages: dict[str, str]
+
+
+class KnowledgeGraphSettings(_Strict):
+    endpoint: str                            # Wikidata's MediaWiki API
+    entity_url_template: str                 # a human page for an entity id, with {id}
+    language: str                            # language of labels and descriptions
+    timeout_s: float = Field(gt=0)
+    max_entities: int = Field(gt=0)          # entities named in one claim, at most
+    name_max_chars: int = Field(gt=0)        # longer names are not entity names
+
+
+class ForensicsSettings(_Strict):
+    url: str                                 # the local TruFor service (forensics/service.py), which runs in its own Python environment
+    timeout_s: float = Field(gt=0)
+    max_upload_bytes: int = Field(gt=0)      # an uploaded image larger than this is refused
+    threshold: str                           # name of the calibrated cut in thresholds.yaml for the manipulation score
+    ai_threshold: str                        # name of the calibrated cut for the AI-generated probability from the same service
+    video_frames: int = Field(gt=0)          # frames sampled evenly across a video
+    video_ai_min_frames: int = Field(gt=0)   # this many sampled frames over the AI-generated cut make the video SYNTHETIC_SUSPECTED (a policy choice: one frame is within the per-image false-flag rate)
+    max_video_bytes: int = Field(gt=0)
+    max_video_s: float = Field(gt=0)         # longer videos are refused: every sampled frame costs a model run
+    ffmpeg_timeout_s: float = Field(gt=0)
+    thumb_width: int = Field(gt=0)           # width of the frame thumbnails returned for display
+
+
 class VerifySettings(_Strict):
     posts_endpoint: str                      # Bluesky AppView getPosts, used when /verify is given a post URI
     timeout_s: float = Field(gt=0)
@@ -203,6 +352,9 @@ class VerifySettings(_Strict):
     text_source_id: str                      # source_id recorded for text posted straight to /verify
     uri_prefix: str                          # what a Bluesky post URI starts with
     ledger_kind: str
+    cache_ttl_decided_s: float = Field(gt=0)     # how long a decided verdict (REFUTED, SUPPORTED, MISSING_CONTEXT) is served from cache
+    cache_ttl_undecided_s: float = Field(gt=0)   # UNVERIFIABLE_YET and no-claim results expire sooner: new fact-checks appear
+    judge_max_reviews: int = Field(gt=0)         # reviews per claim sent to the same-claim judge, in one call
 
 
 class RuntimeFile(_Strict):
@@ -216,6 +368,18 @@ class RuntimeFile(_Strict):
     verify: VerifySettings
     provenance: ProvenanceSettings
     trace: TraceSettings
+    escalation: EscalationSettings
+    forensics: ForensicsSettings
+    knowledge_graph: KnowledgeGraphSettings
+    official: OfficialSettings
+    voice: VoiceSettings
+    nli: NliSettings
+    notice: NoticeSettings
+    officials: OfficialsSettings
+    audio_spoof: AudioSpoofSettings
+    news: NewsSettings
+    telegram: TelegramSettings
+    explain: ExplainSettings
 
 
 class Config(_Strict):

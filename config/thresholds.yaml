@@ -30,3 +30,39 @@ thresholds:
       more varied than screenshots and flat graphics, so false matches on those are
       not bounded by this sample.'
     date: '2026-10-31'
+  escalation_min_authors_per_min:
+    value: 0.6
+    calibrated_on: 'scripts/calibrate_escalation.py capture --seconds 300 on the live
+      Bluesky stream, 2026-10-31: 1216 posts, 1205 clusters; 1205 have 1 distinct
+      author, 3 have 2 (a motivational quote, a templated greeting, a weather bot:
+      chatter, not spreading claims), none has 3 or more. Floor = 3 distinct authors
+      in the 300 s window, so general chatter escalates nothing. General chatter,
+      not a news event: recalibrate during one.'
+    date: '2026-10-31'
+  trufor_manipulation_score:
+    value: 0.7
+    calibrated_on: 'scripts/calibrate_trufor.py measure --images 30 on the live TruFor
+      service (RTX 4060), 2026-10-31: 30 random Wikimedia Commons photos (their thumbnails,
+      already JPEG), each untouched, shrunk to 70 percent plus JPEG q80 (''shared''),
+      with a 30 percent-side patch spliced in from another photo then shared, and
+      with a region copy-moved then shared. At 0.7: false alarms 0 of 30 untouched
+      and 1 of 30 shared; detected 63 percent of splices and 20 percent of copy-moves
+      (at 0.5, the authors'' usual cut: 3 percent and 10 percent false alarms, 73
+      and 33 percent detected). Chosen high because calling a genuine image EDITED
+      is the worse error. Limits: 30 images, one detector, large self-made edits (small
+      edits will be missed), no AI-generated images and no real-world deepfakes were
+      tested, Commons photos are not social-media photos. Recalibrate on labelled
+      social-media images.'
+    date: '2026-10-31'
+  smaug_ai_generated_score:
+    value: 0.5
+    calibrated_on: 'forensics/smaug_probe.py on 40 Wikimedia Commons files from Category:AI-generated
+      images (label = Commons category) and 40 random Commons files (2026-10-31), thumbnails
+      640 px wide. At 0.5, the model card default: 36 of 40 AI images caught (90 percent),
+      1 of 40 random files flagged (2.5 percent; it may itself be an undeclared AI image
+      or a drawing). At 0.9: 78 percent caught. Limits: 80 images, one source, Commons AI
+      images are mostly older public generators, the real set is not curated, no social-media
+      re-uploads or screenshots tested, newer or evasive generators may slip through, a real
+      photo with a small AI-edited region can read as real. The detector''s published accuracy
+      is the authors'' own figure and was not reproduced here.'
+    date: '2026-10-31'

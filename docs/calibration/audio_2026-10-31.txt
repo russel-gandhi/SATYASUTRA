@@ -1,0 +1,72 @@
+AUDIO AUTHENTICITY CHECK, W2V2-AASIST (ONNX, MIT), 2026-10-31. RESULT: DID NOT SEPARATE REAL FROM SYNTHETIC SPEECH, NO CUT SET, NO LABEL GIVEN.
+
+Method: scripts/fetch_audio_samples.py + scripts/audio_probe.py. Score = bona-fide logit (higher = more like a real voice); up to 6 windows of 4.04 s per clip,
+the lowest window per clip is compared with a cut.
+Real (20): Wikimedia Commons speech recordings, mostly OLD or noisy (1895 and 1940s radio, Nehru 1947 speech, Spoken Wikipedia readings, an interview, one real Hindi recording).
+  Speech-synthesizer demos and Morse code found by the search were removed by hand.
+Synthetic (19): 11 Gemini text-to-speech clips (gemini-2.5-flash-preview-tts, English and Hindi, 6 voices) and 8 Windows SAPI clips (David, Zira; older TTS).
+Outcome: at every cut that catches most Gemini clips, 18 to 20 of 20 real clips are also flagged. Gemini clips scored HIGHER (more real) than most real clips
+(medians -1.7 vs -4.7), SAPI clips scored about -6.2 (flagged, but so were several real recordings).
+Reasons it may fail here (not tested): trained on older English synthesis (ASVspoof 2019 LA), our real set is old and noisy and unlike phone voice notes,
+the lowest-window rule penalises windows with silence, no Indian-language clones were available.
+What this does NOT show: that the model is useless in general (its card reports 11 percent EER on In-the-Wild); only that on our data it gave no usable signal.
+Product decision: the check returns scores and no label; the UI says it did not pass our test.
+
+real real_002.wav                             min   -6.05 median   -5.76 windows 6
+real real_003.wav                             min   -5.93 median   -0.67 windows 6
+real real_005.wav                             min   -5.69 median   -3.92 windows 6
+real real_006.wav                             min   -5.41 median   -2.56 windows 6
+real real_007.wav                             min   -4.86 median    3.85 windows 6
+real real_008.wav                             min   -4.70 median    3.49 windows 6
+real real_009.wav                             min   -0.58 median    2.02 windows 6
+real real_010.wav                             min   -5.95 median   -2.64 windows 6
+real real_011.wav                             min   -5.92 median   -4.54 windows 6
+real real_013.wav                             min   -5.70 median   -5.61 windows 6
+real real_014.wav                             min   -4.00 median   -2.88 windows 6
+real real_015.wav                             min   -0.76 median    3.12 windows 6
+real real_016.wav                             min   -2.67 median   -0.53 windows 6
+real real_017.wav                             min   -3.39 median   -0.90 windows 6
+real real_018.wav                             min   -3.75 median   -1.72 windows 6
+real real_019.bin                             min   -4.53 median   -0.60 windows 6
+real real_020.wav                             min   -4.28 median   -0.60 windows 6
+real real_021.wav                             min   -4.15 median    0.65 windows 6
+real real_023.wav                             min   -5.61 median   -0.75 windows 6
+real real_hindi_dengue.ogg                    min   -4.70 median   -2.83 windows 6
+fake fake_gemini_en_000.wav                   min    1.54 median    1.54 windows 1
+fake fake_gemini_en_002.wav                   min    0.46 median    0.46 windows 1
+fake fake_gemini_en_005.wav                   min    0.69 median    0.69 windows 1
+fake fake_gemini_en_007.wav                   min   -1.73 median   -1.73 windows 1
+fake fake_gemini_en_009.wav                   min    0.51 median    0.51 windows 1
+fake fake_gemini_hi_001.wav                   min   -1.47 median   -1.47 windows 1
+fake fake_gemini_hi_003.wav                   min   -0.67 median   -0.67 windows 1
+fake fake_gemini_hi_004.wav                   min   -0.95 median   -0.95 windows 1
+fake fake_gemini_hi_006.wav                   min   -0.54 median   -0.54 windows 1
+fake fake_gemini_hi_008.wav                   min   -0.57 median   -0.57 windows 1
+fake fake_gemini_hi_010.wav                   min   -2.62 median   -2.62 windows 1
+fake fake_sapi_david_0.wav                    min   -6.22 median   -6.22 windows 1
+fake fake_sapi_david_1.wav                    min   -6.22 median   -6.19 windows 2
+fake fake_sapi_david_2.wav                    min   -6.15 median   -6.15 windows 1
+fake fake_sapi_david_3.wav                    min   -6.17 median   -6.17 windows 1
+fake fake_sapi_zira_0.wav                     min   -6.19 median   -6.19 windows 1
+fake fake_sapi_zira_1.wav                     min   -6.15 median   -6.15 windows 1
+fake fake_sapi_zira_2.wav                     min   -6.14 median   -6.14 windows 1
+fake fake_sapi_zira_3.wav                     min   -6.12 median   -6.12 windows 1
+real n 20 min-of-windows: lowest [-6.05, -5.95, -5.93] median -4.7 highest -0.58
+fake n 19 min-of-windows: lowest [-6.22, -6.22, -6.19] median -1.73 highest 1.54
+cut  -4.0: fakes caught 8/19  real flagged 14/20
+cut  -3.5: fakes caught 8/19  real flagged 16/20
+cut  -3.0: fakes caught 8/19  real flagged 17/20
+cut  -2.5: fakes caught 9/19  real flagged 18/20
+cut  -2.0: fakes caught 9/19  real flagged 18/20
+cut  -1.5: fakes caught 10/19  real flagged 18/20
+cut  -1.0: fakes caught 11/19  real flagged 18/20
+cut  -0.5: fakes caught 15/19  real flagged 20/20
+cut   0.0: fakes caught 15/19  real flagged 20/20
+cut   0.5: fakes caught 16/19  real flagged 20/20
+cut   1.0: fakes caught 18/19  real flagged 20/20
+cut   1.5: fakes caught 18/19  real flagged 20/20
+cut   2.0: fakes caught 19/19  real flagged 20/20
+cut   2.5: fakes caught 19/19  real flagged 20/20
+cut   3.0: fakes caught 19/19  real flagged 20/20
+cut   3.5: fakes caught 19/19  real flagged 20/20
+cut   4.0: fakes caught 19/19  real flagged 20/20

@@ -3,6 +3,7 @@ The server speaks the response shapes captured from the live services (see the o
 
 import json
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
@@ -15,10 +16,12 @@ from satyasutra.api.app import create_app
 from satyasutra.cache import TTLCache
 from satyasutra.claims import extract_claims
 from satyasutra.config import load_config
+from satyasutra.fastclock import FastClock
 from satyasutra.ledger import SQLiteLedgerStore
 from satyasutra.llm import GeminiClient
 from satyasutra.sources import FactCheckClient
 from satyasutra.sources.bluesky import fetch_post
+from satyasutra.verdict_cache import VerdictCache
 
 CONFIG = Path(__file__).resolve().parents[2] / "config"
 POST_TEXT = "The new bridge in the capital collapsed this morning killing forty people"
@@ -41,7 +44,7 @@ def review(claim, rating, publisher="Pub A"):
 
 @pytest.fixture
 def world(tmp_path):
-    state = {"gemini": gemini_reply([item(POST_TEXT)]), "gemini_code": 200, "factcheck": {}, "bsky": None, "calls": []}
+    state = {"delay": 0.0, "gemini": gemini_reply([item(POST_TEXT)]), "gemini_code": 200, "factcheck": {}, "bsky": None, "calls": []}
 
     class H(BaseHTTPRequestHandler):
         def respond(self, code, body):
@@ -54,6 +57,7 @@ def world(tmp_path):
         def do_POST(self):
             self.rfile.read(int(self.headers.get("Content-Length", 0)))
             state["calls"].append("gemini")
+            time.sleep(state["delay"])
             self.respond(state["gemini_code"], state["gemini"])
 
         def do_GET(self):
@@ -83,9 +87,13 @@ def world(tmp_path):
     })
     env = {"GEMINI_API_KEY": "g-key", "GOOGLE_FACTCHECK_API_KEY": "f-key"}
     gem = GeminiClient(cfg, env=env, sleep=lambda s: None)
-    fc = FactCheckClient(cfg, TTLCache(tmp_path / "c.sqlite3"), env=env, sleep=lambda s: None)
+    now = [time.time()]                                   # one controllable clock for every cache in the app
+    fc = FactCheckClient(cfg, TTLCache(tmp_path / "c.sqlite3", clock=lambda: now[0]), env=env, clock=lambda: now[0], sleep=lambda s: None)
     store = SQLiteLedgerStore(tmp_path / "l.sqlite3", code_version=__version__)
-    app = create_app(cfg, store, extract=lambda p: extract_claims(gem, cfg, p), lookup=fc.search, fetch=lambda u: fetch_post(u, cfg, "salt"))
+    state["now"], state["cfg"] = now, cfg
+    vcache = VerdictCache(TTLCache(tmp_path / "v.sqlite3", clock=lambda: now[0]), cfg, __version__, scope=str(store.path), clock=lambda: now[0])
+    state["fastclock"] = FastClock(cfg, TTLCache(tmp_path / "f.sqlite3"))
+    app = create_app(cfg, store, extract=lambda p: extract_claims(gem, cfg, p), lookup=fc.search, fetch=lambda u: fetch_post(u, cfg, "salt"), verdict_cache=vcache, fastclock=state["fastclock"])
     yield TestClient(app), store, state
     srv.shutdown()
 
@@ -151,17 +159,17 @@ def test_bad_requests_are_422_and_call_nothing(world, payload):
     assert client.post("/verify", json=payload).status_code == 422 and state["calls"] == []
 
 
-def test_a_model_outage_is_502_not_an_invented_verdict(world):
+def test_a_model_outage_is_503_try_again_not_an_invented_verdict(world):
     client, store, state = world
     state["gemini_code"], state["gemini"] = 500, {"error": {"message": "boom"}}
     response = client.post("/verify", json={"text": POST_TEXT})
-    assert response.status_code == 502 and store.head() is None and "g-key" not in response.text
+    assert response.status_code == 503 and "try again" in response.json()["detail"].lower() and store.head() is None and "g-key" not in response.text
 
 
 def test_a_missing_key_is_503_with_the_variable_name_not_a_crash(tmp_path):
     cfg = load_config(CONFIG)
     store = SQLiteLedgerStore(tmp_path / "l.sqlite3", code_version=__version__)
     gem = GeminiClient(cfg, env={})
-    app = create_app(cfg, store, extract=lambda p: extract_claims(gem, cfg, p), lookup=lambda t, l: None)
+    app = create_app(cfg, store, extract=lambda p: extract_claims(gem, cfg, p), lookup=lambda t, l: None, verdict_cache=VerdictCache(TTLCache(tmp_path / "v.sqlite3"), cfg, __version__))
     response = TestClient(app).post("/verify", json={"text": POST_TEXT})
     assert response.status_code == 503 and "GEMINI_API_KEY" in response.json()["detail"]

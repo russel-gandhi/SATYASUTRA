@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Callable
 
-from .claims import ExtractionResult
+from .claims import ExtractionResult, Judgements
 from .claims.rules import RuleOutcome, decide
 from .config import Config
 from .ledger import LedgerStore
@@ -39,15 +39,25 @@ def verify_post(
     ledger: LedgerStore,
     extract: Callable[[Post], ExtractionResult],
     lookup: Callable[[str, str | None], FactCheckResult],
+    judge: Callable[[str, list], Judgements] | None = None,
 ) -> VerifyOutcome:
     extraction = extract(post)
     out = VerifyOutcome(post, extraction)
     for claim in extraction.claims:
         found = lookup(claim.text_en, claim.lang)
-        outcome = decide(claim, found.evidence, config)
-        entry = ledger.append(config.runtime.verify.ledger_kind, _payload(claim, outcome, extraction), _idem_key(claim, outcome))
-        out.results.append(ClaimResult(claim, outcome, entry.seq, found.from_cache))
+        judgement = judge(claim.text_en, found.evidence) if judge else None
+        outcome = decide(claim, found.evidence, config, judged=judgement.relations if judgement else None)
+        if judgement and judgement.fallback:
+            outcome.reasons.append(f"same-claim judge: Gemini unavailable ({judgement.fallback}), the local NLI model judged instead (stricter: it needs both claims to entail each other)")
+        if judgement and judgement.error:
+            outcome.reasons.append(f"same-claim judge unavailable ({judgement.error}): strict word-overlap rule used")
+        out.results.append(ClaimResult(claim, outcome, record_verdict(config, ledger, claim, outcome, extraction, judgement), found.from_cache))
     return out
+
+
+def record_verdict(config: Config, ledger: LedgerStore, claim: Claim, outcome: RuleOutcome, extraction: ExtractionResult, judgement: Judgements | None = None) -> int:
+    """Write one verdict to the ledger and return its sequence number. The /verify path and the agent graph both end here."""
+    return ledger.append(config.runtime.verify.ledger_kind, _payload(claim, outcome, extraction, judgement), _idem_key(claim, outcome)).seq
 
 
 def _evidence_ids(outcome: RuleOutcome) -> list[str]:
@@ -59,7 +69,7 @@ def _idem_key(claim: Claim, outcome: RuleOutcome) -> str:
     return sha256_text("|".join([sha256_text(claim.text_en), outcome.verdict.label, *_evidence_ids(outcome)]))
 
 
-def _payload(claim: Claim, outcome: RuleOutcome, extraction: ExtractionResult) -> dict:
+def _payload(claim: Claim, outcome: RuleOutcome, extraction: ExtractionResult, judgement: Judgements | None = None) -> dict:
     v = outcome.verdict
     return {
         "verdict_id": v.id,
@@ -72,4 +82,5 @@ def _payload(claim: Claim, outcome: RuleOutcome, extraction: ExtractionResult) -
         "evidence": [{"passage_sha256": e.passage_sha256, "url": e.url, "role": e.role, "tier": e.tier, "publisher": e.publisher} for e in v.evidence],
         "reasons": outcome.reasons,
         "extraction": {"model": extraction.model, "prompt_sha256": extraction.prompt_sha256},
+        "judge": {"model": judgement.model, "prompt_sha256": judgement.prompt_sha256, "relations": len(judgement.relations), "error": judgement.error, "fallback": judgement.fallback} if judgement else None,
     }

@@ -17,6 +17,7 @@ from typing import Callable, Literal
 
 from ..config import Config
 from ..errors import ForgeError
+from ..explain import explain_claim
 from ..fastclock.normalise import normalise
 from ..schemas import Claim, Evidence, Verdict
 from ..schemas.core import TRUSTED_TIERS, sha256_text
@@ -68,9 +69,19 @@ class RuleOutcome:
     reasons: list[str] = field(default_factory=list)       # one line per decision, in the order the rules ran
     related: list[Assessment] = field(default_factory=list)  # reviews of other claims: shown to people, never used to decide
     unmapped_ratings: list[str] = field(default_factory=list)
+    explanation: dict = field(default_factory=dict)         # SHAP-style attribution of the evidence (satyasutra/explain.py); never used to decide
 
 
-def decide(claim: Claim, evidence: list[Evidence], config: Config, now: Callable[[], datetime] = lambda: datetime.now(timezone.utc)) -> RuleOutcome:
+def _decide(
+    claim: Claim,
+    evidence: list[Evidence],
+    config: Config,
+    now: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
+    judged: dict[str, str] | None = None,
+) -> RuleOutcome:
+    """`judged` maps a review's passage hash to the same-claim judge's relation (same, opposite or different).
+    A review the judge covered is decided by that relation; any other review keeps the strict word-overlap test."""
+    judged = judged or {}
     rules = config.policy.verdict_rules
     cut = config.thresholds.thresholds["factcheck_relevance"].value
     assessments: list[Assessment] = []
@@ -78,10 +89,21 @@ def decide(claim: Claim, evidence: list[Evidence], config: Config, now: Callable
     for ev in evidence:
         rel = relevance(claim.text_en, ev.reviewed_claim) if ev.reviewed_claim else 0.0
         stance = classify_rating(ev.rating, config) if ev.rating else "unmapped"
-        if ev.route != "factcheck":
+        if ev.route == "contrast":
+            ok = ev.tier in TRUSTED_TIERS and ev.role == "contradicts"
+            assessments.append(Assessment(ev, 1.0, "refutes" if ok else "unmapped", ok,
+                                          f"official text from {ev.publisher or ev.source_id} gives a different number: {ev.contrast_claim}" if ok
+                                          else f"contrast evidence from tier {ev.tier} cannot decide"))
+        elif ev.route != "factcheck":
             assessments.append(Assessment(ev, rel, stance, False, f"route {ev.route!r} is not handled by v0 rules"))
         elif ev.tier not in TRUSTED_TIERS:
             assessments.append(Assessment(ev, rel, stance, False, f"tier {ev.tier} cannot decide (only tier 1 or 2)"))
+        elif ev.passage_sha256 in judged:
+            relation = judged[ev.passage_sha256]
+            if relation == "same":
+                assessments.append(Assessment(ev, rel, stance, True, f"judged the same claim, rated {ev.rating!r} -> {stance}"))
+            else:
+                assessments.append(Assessment(ev, rel, stance, False, f"judged to review {'the opposite' if relation == 'opposite' else 'a different'} claim"))
         elif rel < cut:
             assessments.append(Assessment(ev, rel, stance, False, f"reviews a different claim (relevance {rel:.2f} below {cut})"))
         elif is_negated(claim.text_en, rules.negations) != is_negated(ev.reviewed_claim, rules.negations):
@@ -116,7 +138,7 @@ def decide(claim: Claim, evidence: list[Evidence], config: Config, now: Callable
     elif refutes:
         label, deciders = "REFUTED", refutes
         cited = [_role(a, "contradicts") for a in refutes]
-        reasons.append("trusted review of the same claim rates it false")
+        reasons.append("trusted source contradicts the claim")
     else:
         if used:
             cited = [_role(a, "context") for a in used]
@@ -145,3 +167,11 @@ def decide(claim: Claim, evidence: list[Evidence], config: Config, now: Callable
 
 def _role(a: Assessment, role: str) -> Evidence:
     return a.evidence.model_copy(update={"role": role})
+
+
+def decide(claim: Claim, evidence: list[Evidence], config: Config, now: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
+           judged: dict[str, str] | None = None) -> RuleOutcome:
+    """The verdict rules, plus an explanation of how much each evidence item mattered (computed by re-running the same rules on subsets)."""
+    outcome = _decide(claim, evidence, config, now, judged)
+    outcome.explanation = explain_claim(claim, evidence, outcome, config, lambda sub: _decide(claim, sub, config, now, judged).verdict.label)
+    return outcome

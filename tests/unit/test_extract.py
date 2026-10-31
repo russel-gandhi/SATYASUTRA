@@ -105,9 +105,9 @@ def test_a_429_is_absorbed_by_the_client_and_extraction_still_succeeds(server):
     assert result.status == "ok" and len(server["requests"]) == 2
 
 
-def test_transport_failures_are_reported_with_the_error_class_and_not_retried(server):
+def test_transport_failures_are_reported_with_the_error_class_after_one_client_retry(server):
     result, _, _ = run(server, [(500, {})])
-    assert result.status == "failed" and result.reason.startswith("Unreachable") and len(server["requests"]) == 1
+    assert result.status == "failed" and result.reason.startswith("Unreachable") and len(server["requests"]) == 2        # the first try plus the one transient retry
 
 
 def test_a_safety_block_is_reported_as_blocked(server):

@@ -2,6 +2,7 @@
 Run with `pytest -m contract`."""
 
 import asyncio
+import time
 from pathlib import Path
 
 import pytest
@@ -9,10 +10,12 @@ from fastapi.testclient import TestClient
 
 from satyasutra import __version__
 from satyasutra.api.app import create_app
+from satyasutra.cache import TTLCache
 from satyasutra.config import load_config
 from satyasutra.envfile import load_env_file
 from satyasutra.ingest import IngestStats, stream_posts
 from satyasutra.ledger import SQLiteLedgerStore
+from satyasutra.verdict_cache import VerdictCache
 
 pytestmark = pytest.mark.contract
 ROOT = Path(__file__).resolve().parents[2]
@@ -21,11 +24,16 @@ POSTS_TRIED = 3          # a post may hold no checkable claim; try a few before 
 CHECKABLE = "Smoking causes lung cancer"
 
 
+def fresh_cache(cfg, tmp_path):
+    """Each test gets its own verdict cache, so a result from an earlier run can never stand in for a live one."""
+    return VerdictCache(TTLCache(tmp_path / "v.sqlite3"), cfg, __version__)
+
+
 def test_a_live_post_goes_through_every_stage_and_the_ledger_stays_valid(tmp_path):
     load_env_file(ROOT / ".env")
     cfg = load_config()
     store = SQLiteLedgerStore(tmp_path / "l.sqlite3", code_version=__version__)
-    client = TestClient(create_app(cfg, store))
+    client = TestClient(create_app(cfg, store, verdict_cache=fresh_cache(cfg, tmp_path)))
 
     async def posts():
         found = []
@@ -55,7 +63,7 @@ def test_a_live_post_goes_through_every_stage_and_the_ledger_stays_valid(tmp_pat
 def test_a_checkable_statement_is_extracted_looked_up_and_decided_or_left_unverifiable(tmp_path):
     load_env_file(ROOT / ".env")
     cfg = load_config()
-    client = TestClient(create_app(cfg, SQLiteLedgerStore(tmp_path / "l.sqlite3", code_version=__version__)))
+    client = TestClient(create_app(cfg, SQLiteLedgerStore(tmp_path / "l.sqlite3", code_version=__version__), verdict_cache=fresh_cache(cfg, tmp_path)))
     response = client.post("/verify", json={"text": CHECKABLE})
     assert response.status_code == 200, response.text
     [claim] = response.json()["claims"]
@@ -66,7 +74,7 @@ def test_a_checkable_statement_is_extracted_looked_up_and_decided_or_left_unveri
 def test_a_live_post_uri_is_fetched_from_the_appview_and_checked(tmp_path):
     load_env_file(ROOT / ".env")
     cfg = load_config()
-    client = TestClient(create_app(cfg, SQLiteLedgerStore(tmp_path / "l.sqlite3", code_version=__version__)))
+    client = TestClient(create_app(cfg, SQLiteLedgerStore(tmp_path / "l.sqlite3", code_version=__version__), verdict_cache=fresh_cache(cfg, tmp_path)))
 
     async def first():
         async for post in stream_posts(cfg.runtime.ingest, IngestStats(), "contract-test-salt"):
@@ -79,3 +87,31 @@ def test_a_live_post_uri_is_fetched_from_the_appview_and_checked(tmp_path):
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["post"]["id"] == post.id and body["extraction"]["status"] in ("ok", "no_items")
+
+
+CACHE_REPEATS = 50
+CACHE_P95_TARGET_S = 1.0          # Bible Part 3.1: cache hit p95 under 1 s from request to verdict
+
+
+def test_the_same_statement_twice_is_answered_from_cache_with_the_same_ledger_row_and_fast(tmp_path):
+    load_env_file(ROOT / ".env")
+    cfg = load_config()
+    store = SQLiteLedgerStore(tmp_path / "l.sqlite3", code_version=__version__)
+    client = TestClient(create_app(cfg, store, verdict_cache=fresh_cache(cfg, tmp_path)))
+    first = client.post("/verify", json={"text": CHECKABLE})
+    assert first.status_code == 200, first.text
+    assert first.json()["from_cache"] is False
+    seq_after_first = store.head().seq
+
+    times = []
+    for _ in range(CACHE_REPEATS):
+        started = time.perf_counter()
+        again = client.post("/verify", json={"text": CHECKABLE})
+        times.append(time.perf_counter() - started)
+        assert again.status_code == 200 and again.json()["from_cache"] is True
+        assert again.json()["claims"] == first.json()["claims"]
+    assert store.head().seq == seq_after_first, "cache hits must not add ledger rows"
+    times.sort()
+    p95 = times[int(len(times) * 0.95) - 1]
+    print(f"cache hit over {CACHE_REPEATS} repeats: median {times[len(times) // 2] * 1000:.1f} ms, p95 {p95 * 1000:.1f} ms, max {times[-1] * 1000:.1f} ms")
+    assert p95 < CACHE_P95_TARGET_S

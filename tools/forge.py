@@ -30,12 +30,7 @@ HEADER = re.compile(r"\A---\n(.*?)\n---\n(.*)\Z", re.DOTALL)
 ID = re.compile(r"\AF(\d+)-(\d+)\Z")
 
 TEMPLATE = """---
-id: {id}
-phase: {phase}
-title: {title}
-status: todo
-depends: {depends}
-plan: {plan}
+{header}
 ---
 ## Goal
 
@@ -98,7 +93,31 @@ def validate(tickets: dict[str, Ticket]) -> list[str]:
                 problems.append(f"{t.id}: unknown dependency {dep}")
         if t.status == "done" and "## Closed" not in t.body:
             problems.append(f"{t.id}: done but has no Closed section")
+    problems.extend(_cycles(tickets))
     return problems
+
+
+def _cycles(tickets: dict[str, Ticket]) -> list[str]:
+    """A dependency cycle means none of its tickets can ever start."""
+    state: dict[str, str] = {}
+    found: list[str] = []
+
+    def visit(tid: str, path: list[str]) -> None:
+        state[tid] = "open"
+        for dep in tickets[tid].meta.get("depends") or []:
+            if dep not in tickets:
+                continue
+            if state.get(dep) == "open":
+                cycle = path[path.index(dep):] + [dep]
+                found.append(f"{dep}: dependency cycle {' -> '.join(cycle)}")
+            elif dep not in state:
+                visit(dep, path + [dep])
+        state[tid] = "closed"
+
+    for tid in tickets:
+        if tid not in state:
+            visit(tid, [tid])
+    return found
 
 
 def cmd_board(tickets):
@@ -155,14 +174,14 @@ def cmd_new(tickets, args):
     nums = [int(ID.match(i).group(2)) for i in tickets if ID.match(i) and int(ID.match(i).group(1)) == args.phase]
     new_id = f"F{args.phase}-{(max(nums) + 1 if nums else 1):02d}"
     path = TICKETS / f"{new_id}.md"
-    path.write_text(
-        TEMPLATE.format(
-            id=new_id, phase=args.phase, title=args.title,
-            depends=yaml.safe_dump(args.depends or [], default_flow_style=True).strip(),
-            plan=args.plan or "",
-        ),
-        encoding="utf-8",
-    )
+    unknown = [d for d in args.depends or [] if d not in tickets]
+    if unknown:
+        sys.exit(f"unknown dependency: {', '.join(unknown)}")
+    # Dumped, not formatted: a title like "Fix: x" would otherwise break the YAML header of every later command.
+    meta = {"id": new_id, "phase": args.phase, "title": args.title, "status": "todo",
+            "depends": args.depends or [], "plan": args.plan or ""}
+    header = yaml.safe_dump(meta, sort_keys=False, allow_unicode=True).rstrip()
+    path.write_text(TEMPLATE.format(header=header), encoding="utf-8")
     print(f"created tickets/{path.name}")
 
 

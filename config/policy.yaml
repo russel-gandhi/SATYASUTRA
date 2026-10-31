@@ -1,6 +1,8 @@
 # The gate: what the agent may touch and how much (Bible D16, D17). Plain data, enforced by plain code.
 allowed_domains:
   - pib.gov.in
+  - www.rbi.org.in
+  - www.sebi.gov.in
   - mausam.imd.gov.in
   - api.data.gov.in
   - factchecktools.googleapis.com
@@ -21,6 +23,8 @@ gemini:
   request_timeout_s: 30
   max_retries: 2
   max_retry_wait_s: 30
+  transient_retries: 1
+  transient_backoff_s: 2
   requests_per_minute: 15     # free tier, from the API's own 429 body (docs/gemini_limits.md)
   measured_on: "2026-10-30"
 verdict_rules:

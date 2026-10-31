@@ -34,7 +34,7 @@ class FastClock:
 
     def process(self, post: Post, resolve: Callable[[Post], dict] | None = None) -> Outcome:
         now = self._clock()
-        placed = self.clusterer.add(post.id, post.text, now, post.author_hash)     # every post counts toward velocity, cached or not
+        placed = self.clusterer.add(post.id, post.text, now, post.author_hash, post.posted_at.isoformat())     # every post counts toward velocity, cached or not
         if placed is None:
             return Outcome(None, False, None, False)
         cluster, created = placed

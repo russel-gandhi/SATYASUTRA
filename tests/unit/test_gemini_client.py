@@ -58,6 +58,7 @@ def server():
 
 def make(server, env=None, http=None, **policy):
     cfg = load_config(CONFIG)
+    policy.setdefault("models", cfg.policy.gemini.models[:1])          # one model unless a test is about the fallback
     gem = cfg.policy.gemini.model_copy(update={"api_base": server["base"], **policy})
     cfg = cfg.model_copy(update={"policy": cfg.policy.model_copy(update={"gemini": gem})})
     sleeps = []
@@ -174,3 +175,39 @@ def test_retry_delay_and_daily_quota_parsers():
     assert retry_delay_s(err) == 21.0 and not is_daily_quota(err)
     assert retry_delay_s({}) is None and retry_delay_s({"details": [{"@type": "x.RetryInfo", "retryDelay": "soon"}]}) is None
     assert is_daily_quota(too_many("1s", "PerDay-X")[1]["error"])
+
+
+def test_a_timeout_or_5xx_is_retried_once_after_a_backoff(server):
+    server["queue"] = [(503, {"error": {"message": "overloaded"}}), ok()]
+    client, sleeps, cfg = make(server, requests_per_minute=None)
+    assert client.generate_json("p", SCHEMA).data == {"x": "y"} and len(server["requests"]) == 2 and cfg.policy.gemini.transient_backoff_s in sleeps
+
+
+def test_when_the_first_model_keeps_failing_the_next_model_answers_and_is_named(server):
+    cfg = load_config(CONFIG)
+    first, second = cfg.policy.gemini.models[:2]
+    server["queue"] = [(503, {"error": {"message": "overloaded"}}), ok({"x": "from the second"})]
+    client, _, _ = make(server, requests_per_minute=None, models=[first, second], transient_retries=0)
+    reply = client.generate_json("p", SCHEMA)
+    assert reply.data == {"x": "from the second"} and reply.model == second and server["requests"][1]["path"].startswith(f"/v1beta/models/{second}:")
+
+
+def test_a_used_up_quota_on_one_model_falls_back_but_a_bad_key_never_does(server):
+    cfg = load_config(CONFIG)
+    models = cfg.policy.gemini.models[:2]
+    server["queue"] = [too_many("1s", quota_id="GenerateRequestsPerDayPerProjectPerModel-FreeTier"), ok()]
+    client, _, _ = make(server, requests_per_minute=None, models=models)
+    assert client.generate_json("p", SCHEMA).model == models[1]
+    server["requests"].clear(); server["queue"] = [(403, {"error": {"message": "no"}})]
+    with pytest.raises(AuthRefused):
+        client.generate_json("p", SCHEMA)
+    assert len(server["requests"]) == 1
+
+
+def test_when_every_model_fails_the_first_error_is_raised(server):
+    models = load_config(CONFIG).policy.gemini.models[:2]
+    server["queue"] = [too_many("1s", quota_id="GenerateRequestsPerDayPerProjectPerModel-FreeTier")]
+    client, _, _ = make(server, requests_per_minute=None, models=models)
+    with pytest.raises(QuotaExhausted):
+        client.generate_json("p", SCHEMA)
+    assert len(server["requests"]) == 2

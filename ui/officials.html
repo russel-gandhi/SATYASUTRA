@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SATYASUTRA for officials</title>
+<style>
+  :root { --bg: #0b0f17; --panel: #121826; --line: #232c3f; --text: #e8ecf5; --mute: #8b95ab; --accent: #7aa2ff; --ok: #3ecf8e; --bad: #ff6b6b; --warn: #f5b84b; --idle: #6b7690; }
+  @media (prefers-color-scheme: light) { :root { --bg: #f4f6fb; --panel: #fff; --line: #dde2ee; --text: #131a2a; --mute: #5d6885; --accent: #2f5bd8; --idle: #7b86a3; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header, main { max-width: 980px; margin: 0 auto; padding: 18px 16px; }
+  h1 { margin: 0; font-size: 22px; letter-spacing: .12em; }
+  .mute { color: var(--mute); font-size: 13px; }
+  .row { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+  .row.disaster { border-left: 4px solid var(--bad); }
+  .text { margin: 6px 0; overflow-wrap: anywhere; }
+  .meta { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--mute); font-size: 13px; }
+  .chip { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 6px; }
+  .chip.disaster { background: var(--bad); color: #0b0f17; } .chip.general { background: var(--line); color: var(--mute); }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; color: #0b0f17; }
+  .REFUTED { background: var(--bad); } .SUPPORTED { background: var(--ok); } .MISSING_CONTEXT { background: var(--warn); }
+  .UNVERIFIABLE_YET, .NOT_A_CLAIM { background: var(--idle); color: #fff; }
+  button { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 6px 12px; font: inherit; font-weight: 600; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: progress; }
+  a { color: var(--accent); }
+  .err { color: var(--bad); }
+</style>
+</head>
+<body>
+<header>
+  <h1>SATYASUTRA for officials</h1>
+  <div class="mute">What is spreading right now, disaster-related topics first, and what we already know about each. A triage list: it ranks and labels, it does not decide.
+  <a href="/">Back to the checker</a></div>
+  <div class="mute" id="note"></div>
+</header>
+<main id="rows"><div class="mute">Loading...</div></main>
+<script>
+const $ = (id) => document.getElementById(id);
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+async function api(path, opts) {
+  const r = await fetch(path, opts); let b = null; try { b = await r.json(); } catch (_) {}
+  if (!r.ok) throw new Error((b && b.detail) ? (typeof b.detail === "string" ? b.detail : JSON.stringify(b.detail)) : "HTTP " + r.status);
+  return b;
+}
+
+function stateBox(r, btnRefresh) {
+  const box = el("div");
+  if (r.state.checked) {
+    box.append(el("span", "badge " + r.state.label, r.state.label.replaceAll("_", " ")), " ", el("span", "mute", r.state.confidence_band + " confidence"));
+    if (r.state.ledger_seq != null) { const a = el("a", "", " ledger entry #" + r.state.ledger_seq); a.href = "/ledger/" + r.state.ledger_seq; a.target = "_blank"; a.rel = "noopener"; box.append(a); }
+  } else {
+    const b = el("button", "", "Check this now"); const msg = el("span", "mute", " not checked yet");
+    b.onclick = async () => {
+      b.disabled = true; msg.textContent = " checking...";
+      try { await api("/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: r.example_text }) }); btnRefresh(); }
+      catch (e) { msg.textContent = " " + e.message; msg.className = "err"; b.disabled = false; }
+    };
+    box.append(b, msg);
+  }
+  return box;
+}
+
+async function load() {
+  try {
+    const d = await api("/officials/data");
+    $("note").textContent = d.note;
+    const rows = $("rows"); rows.replaceChildren();
+    if (!d.rows.length) rows.append(el("div", "mute", "Nothing is clustering yet. Posts need to repeat before they show here."));
+    d.rows.forEach((r) => {
+      const row = el("div", "row " + r.topic);
+      row.append(el("span", "chip " + r.topic, r.topic === "disaster" ? "Disaster-related" : "General"));
+      row.append(el("div", "text", r.example_text));
+      const meta = el("div", "meta");
+      meta.append(el("span", "", r.size + " posts"), el("span", "", r.distinct_accounts + " accounts"), el("span", "", r.authors_per_minute + " authors/min"), el("span", "", "first seen " + r.first_seen.slice(11, 16) + " UTC"));
+      if (r.example_url) { const a = el("a", "", "open the first post"); a.href = r.example_url; a.target = "_blank"; a.rel = "noopener"; meta.append(a); }
+      row.append(meta, stateBox(r, load));
+      rows.append(row);
+    });
+  } catch (e) { $("rows").replaceChildren(el("div", "err", e.message)); }
+}
+load(); setInterval(load, 6000);
+</script>
+</body>
+</html>

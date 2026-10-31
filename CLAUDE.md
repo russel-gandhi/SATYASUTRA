@@ -20,7 +20,7 @@ Remote: `github.com/aadamaftabpersonal-boop/FORGEHackathon` (public).
   a **Done when** section and a **Closed** section written on completion. Tickets for a phase are written when it starts.
 - CLI: `python tools/forge.py board | list | show ID | start ID | done ID --evidence "..." | new | check`.
   `start` refuses if a dependency is not done. `done` requires the ticket to be started and records date, evidence and commit.
-  Do not put a colon in a ticket title (it breaks the YAML header).
+  `forge.py new` writes the header with a YAML dumper, so titles may contain colons; hand-written headers still need quoting.
 - **Evidence must be true.** Close a ticket only after its Done-when command passes, and say what was not verified.
   Do not pipe test output through `tail`/`head` when you need the exit code; it hides failures.
 - One commit per finished chunk, message starts `F<phase>-<nn>:`, branch per phase (`phase-1/walking-skeleton`). Commits end with
@@ -43,6 +43,101 @@ uvicorn satyasutra.api.app:create_app --factory      # the API (/health, /health
 
 The Bash tool is Git Bash; the user's own terminal is PowerShell (no `&&`, no `printf`). Heredocs containing apostrophes can break
 the Bash tool: use the file Write tool for multi-file edits.
+
+## Running the prototype (branch `phase-8/prototype-ui`, the demo path)
+
+Priority is a working, good-looking demo for the hackathon deadline (2 Nov 00:00), not benchmarks or ticket ceremony. The no-mock-data
+rule still applies. Three processes:
+
+```
+.\.venv\Scripts\python scripts\serve.py --port 8000                       # API + UI at http://127.0.0.1:8000/ with the live stream worker on
+forensics\venv311\Scripts\python forensics\service.py --port 8100          # TruFor on the GPU (Python 3.11 + CUDA torch, git-ignored)
+.\.venv\Scripts\python scripts\media_live.py --base http://127.0.0.1:8000  # smoke test of the media path on live Commons photos
+```
+
+- `ui/index.html` is one static page: claim box (streams `GET /agent/stream?text=` and shows each node and tool call live, then the
+  verdict card with Wikidata entities), image panel (`POST /media/check`, raw bytes, heatmap overlay), live top clusters, ledger check.
+- `agent/graph.py` is the real LangGraph claim agent: read_post, extract, then registry and ground in parallel, then judge, then
+  decide (rules + ledger). It stops early when there is no checkable claim. `tool_calls` needs an additive reducer because two nodes
+  run in parallel.
+- `claims/judge.py`: Gemini only says whether a fact-check review is the same, opposite or a different claim; the rules still map the
+  rating. Failure falls back to the strict word-overlap rule. First live REFUTED seen: "COVID-19 vaccines contain microchips" via a
+  FactCheck.org review. `claims/entities.py` + `sources/wikidata.py` ground named entities to Wikidata (context only, never evidence).
+- `media.py`: provenance matches (debunked-image index, 117 items) and TruFor are separate signals. Label EDITED at or above
+  `trufor_manipulation_score` (0.7, calibrated on 30 Commons photos with self-made splices: see `docs/calibration/trufor_2026-10-31.txt`
+  and the note in `config/thresholds.yaml`), otherwise INCONCLUSIVE, never "authentic". TruFor does not detect AI-generated images.
+- `forensics/service.py` is ours; `forensics/trufor/` (clone of grip-unina/TruFor), its weights and `venv311` are git-ignored.
+  TruFor licence: informational and nonprofit use only, credit the authors (GRIP-UNINA, University Federico II of Naples).
+  The checkpoint is loaded with `weights_only=True` plus a narrow allowlist after reading its pickle statically (only tensors and a numpy scalar).
+- Starting a second server on a port a stale one holds fails silently with exit 3 and the old code keeps answering: find the PID with
+  `ps -W | grep FORGE/.venv` and `kill` that one only. Never kill all python processes (a pip install or the TruFor service may be running).
+- Hindi works through the same agent (Gemini extracts, translates to English, keeps the Hindi quote; the Fact Check API finds nothing for
+  Hindi query text, 0 hits on 4 claims, so the English rendering is what is searched). `tests/contract/test_live_hindi.py`.
+- Video: `video.py` + `POST /video/check` sample 8 frames with ffmpeg (already on PATH, no extra install), score each with TruFor and
+  the debunked-image index. Measured weakness: a spliced frame scored 0.996 as a still and 0.27 after H.264 (`scripts/video_live.py`),
+  so a clean video result is weak evidence and the result text says so. Face-swap and AI-generated video are not detected.
+- Voice notes: `voice/transcribe.py` + `POST /voice/transcribe` (raw audio, max 120 s). ffmpeg decodes to 16 kHz mono; the GPU service
+  (`forensics/service.py` `/transcribe`, faster-whisper small from `models/whisper-small`, git-ignored, 486 MB) answers first, local CPU is
+  the fallback (about 1.7x slower than real time). The UI transcribes, shows the text and language, then runs the normal claim agent.
+  It reads words only; it does not detect cloned voices (B2 audio-deepfake model not approved or installed). Hindi transcripts have word errors.
+  `assets/fonts/NotoSansDevanagari.ttf` (OFL) is for the correction card, drawn in the browser because Pillow here lacks raqm.
+- Explanations (`explain.py`): SHAP-style. The verdict rules are plain code, so exact Shapley values are computed by re-running them on evidence subsets
+  (credit per review; 'removing it changes the verdict?'; word overlap; what new evidence would change the label). Media: per detector score, cut, margin
+  and Shapley value. Returned as `explanation` by `/verify`, `/agent/stream` and `/media/check`; UI 'Why this verdict' panels. Model steps (extraction, translation,
+  same-claim judge) are inputs and are NOT attributed; the output says so. Above `explain.max_players` evidence items only leave-one-out is shown.
+- Telegram bot: `scripts/telegram_bot.py` (long polling, calls the local API; `src/satyasutra/bot/`). Needs the API running.
+- News check (`sources/news.py`, `GET /news/check?text=`): RSS headlines of 8 outlets (The Hindu, Indian Express, NDTV, HT, TOI, BBC India, Mint, Al Jazeera,
+  all answered 200 to our honest User-Agent; News18 gave 403 and is not used) in their own index `data/news.sqlite3` (tier 3, refreshed when older than 600 s).
+  Words are weighted by rarity so a headline sharing only common words does not cover a claim whose rare word is missing (found by a test: 'Prime Minister
+  was assassinated' matched a bridge-opening headline before). Two readings only, reported (links, with the caution that outlets also report rumours) or
+  not found (with how far back we looked; a signal, not proof). It never changes a verdict. UI and the Telegram bot show it for UNVERIFIABLE_YET claims.
+  `min_coverage` 0.6 is a display rule, not calibrated; checked on 8 live headlines and paraphrases, not on a labelled set. Outlets' terms of use were not read; only headlines and links are shown.
+- Audio authenticity (`audio/spoof.py`, `POST /audio/check`): W2V2-AASIST ONNX (MIT, 1.26 GB, `models/w2v2-aasist/`, git-ignored, from Hugging Face
+  SpeechAntiSpoofingBenchmarks/W2V2-AASIST) runs on CPU, 6 windows of 4 s. **It failed our test** (`docs/calibration/audio_2026-10-31.txt`): real recordings
+  and modern TTS (Gemini TTS) were not separated, so there is no cut in thresholds.yaml and the route returns scores with label INCONCLUSIVE and says so.
+  The test set was weak (old radio recordings as 'real', no Indian-language clones). Do not present voice authenticity as working.
+- Correction cards (`card.py`, `config/cards.yaml`, `POST /card/spec`): text only (validated as CorrectionCard); the page draws a PNG on a canvas with the served
+  Noto Sans Devanagari (`/assets/fonts`, OFL) because Pillow here has no raqm. Only for REFUTED, SUPPORTED, MISSING_CONTEXT at medium or high confidence with an
+  https source; Hindi when the claim is Hindi (original quote shown). Never carries the original media. **The Hindi wording is ours and unreviewed by a native speaker.**
+- Video frames also get the AI-generated score; SYNTHETIC_SUSPECTED needs `forensics.video_ai_min_frames` (3) sampled frames over the cut (a policy choice, not calibrated).
+- Notice checker (`notice.py`, `POST /notice/check`, `config/prompts/notice.txt`): Gemini vision only copies the printed text, issuer, links, phone numbers and requests;
+  code checks link names, scam wording, and whether a notice claiming RBI/SEBI matches an item in our official index. Findings, not a verdict. A made-up scam notice
+  (Pillow-drawn, for testing) read correctly live; real photographed notices (skew, glare, Hindi) not tested.
+- Officials view (`officials.py`, `GET /officials`, `/officials/data`): spreading clusters, disaster word list (English and Hindi, tightened after 'attack' flagged a cricket chat) first,
+  state from the /verify cache only. Gemini client (`llm/gemini.py`) retries a timeout or 5xx once and falls back to the next model in `policy.gemini.models`;
+  a model at its limit surfaces as ModelBusy (503, 'try again in about a minute'), never a guess.
+- NLI fallback judge (`claims/nli.py`, GPU service `POST /nli`, mDeBERTa-v3 multilingual NLI, MIT, `models/mdeberta-nli/` git-ignored): when Gemini cannot judge whether a
+  fact-check review covers the same claim (quota, outage), the local model scores both directions; `same` needs mutual entailment at `nli.min_prob` (0.9, a policy choice,
+  not calibrated), any contradiction is `opposite`. Stricter than Gemini: live, the microchip claim stays UNVERIFIABLE_YET (Gemini said REFUTED), and 'Smoking doesn't cause cancer'
+  reviews are correctly `opposite`. Used only when Gemini fails; the reason line says which judge answered. Not measured on a labelled set.
+- Not done: (Telegram bot done, see above) (needs a fresh token), escalation never fired live, TruFor false-alarm rate on real social-media images
+  unknown, README with a real-vs-roadmap table. `tests/unit/test_trace_sse.py::test_leaving_mid_run...` failed once under full-suite load and
+  passes alone (timing).
+- Official text and contrast refutation (friend's map A1, A2): `sources/official.py` + `sources/index.py` fetch the RBI press-release and SEBI
+  RSS feeds (Tier 1, `runtime.official.feeds`, host gate `policy.allowed_domains`) into an SQLite FTS5 index (`data/official.sqlite3`, refreshed
+  when older than `refresh_s`). **PIB, MoHFW, PMIndia and cybercrime.gov.in answer 403 to our honest User-Agent (even robots.txt); we do not
+  disguise the client, so they are not used.** `claims/contrast.py`: Gemini only says same subject / same quantity and quotes the two number
+  spans; code requires both spans verbatim in their texts, both parse as one number, and the numbers differ beyond `contrast_rel_tol`; then
+  Evidence route `contrast` (role contradicts, tier of the passage) and `rules.decide` gives REFUTED, medium. A matching number never gives SUPPORTED.
+  Live check 2026-10-31: a claim with "50,000 Crore" against an RBI notice of "29,900 Crore" refuted; the correct number and an unrelated
+  number did not (one claim each, not a measured rate). Only the 10 latest RBI releases and 30 SEBI titles are indexed, so most claims retrieve nothing relevant.
+- Scam and next steps (friend's map S2, S1): `scam/links.py` + `config/official_domains.yaml` check link NAMES only (never opened) against 27 listed
+  official domains (DNS-resolved 2026-10-31): official, lookalike (embedded real domain, look-alike characters, near-miss, `@` trick),
+  similar_name, shortened, gov_style, unknown (never "safe"); `GET /links/check`. `act/plan.py` + `config/actions.yaml`: intent (money_lost,
+  scam_forward, false_claim) by plain word lists, routes (1930, cybercrime.gov.in, Chakshu on sancharsaathi.gov.in, tell your bank) with source
+  URLs and a plain-text evidence pack that cites ledger entries; `POST /act/plan`; UI "what to do next" card. **The routes come from secondary
+  sources (Vikaspedia, news); the official sites were not opened by us (cybercrime.gov.in answers 403), `confirmed_on_official_site: false`.** Nothing is filed.
+- `scripts/preflight.py` (keys by name, every source, TruFor+Smaug service, ffmpeg, indexes, ledger, API) and `scripts/start_demo.ps1` (starts both
+  services if down, then preflight) are the cold-start path.
+- Origin and spread: clusters keep their earliest `members_kept` posts (in memory, forgotten when a cluster goes idle, not persisted);
+  `fastclock/trace.py` builds first post, spread timeline, wording versions with word diffs; `GET /fastclock/cluster/{id}`,
+  `GET /fastclock/match?text=` (a pasted claim matches a live cluster of at least `match_min_posts` posts); UI trace panel. Accounts are
+  anonymous numbers, Bluesky only, "first we saw" is not the true origin. Real clusters on the quiet stream are small (mostly bot templates).
+- AI-generated images: `forensics/service.py` also loads the Smaug detector (Abacus.AI, Apache 2.0, weights in git-ignored
+  `forensics/models/smaug`, loaded through sentence-transformers with our own preprocessing; the repo's .py is not run) and returns `ai_score`.
+  `media.py` labels SYNTHETIC_SUSPECTED (not SYNTHETIC: one detector alone) at or above `smaug_ai_generated_score` (0.5). Measured on 40 Commons AI files vs 40 random files
+  (`docs/calibration/smaug_2026-10-31.txt`): 36/40 caught, 1/40 flagged (a satellite image); misses were logos and screenshots. Not tested:
+  social-media re-uploads, newer generators. Video frames are not scored by it yet. Plan to the deadline: `docs/PLAN_TO_DEADLINE.md`.
 
 ## Secrets (read this twice)
 
@@ -72,6 +167,9 @@ src/satyasutra/
   llm/         gemini.py (GeminiClient, structured JSON, 15 RPM spacing)
   claims/      extract.py (post to claims, quotes must appear verbatim), rules.py (verdict rules v0, no model)
   provenance/  fingerprint.py (SHA-256, pHash, PDQ, mirrored), index.py (SQLite of hashes and links), feeds.py, build.py
+  fastclock/escalate.py  Escalator: audits the fastest-spreading clusters above escalation_min_authors_per_min once each, within Gemini RPM minus a reserve; off by default (escalation.enabled); GET /fastclock/escalations
+  fastclock/worker.py  live task: Jetstream -> bounded queue (drops oldest, counted) -> fast clock; /fastclock/top and /fastclock/stats; off by default (fastclock.worker_enabled)
+  verdict_cache.py  /verify result cache: key = normalised text, miss on other config/code/ledger, shorter TTL when undecided, single-flight
   pipeline.py  verify_post: extract -> Fact Check -> rules -> one ledger row per verdict
   cache.py, ratelimit.py, envfile.py
   agent/       trace.py: LangGraph run -> typed trace events (the real agent graph is Phase 3)
@@ -90,12 +188,13 @@ only Tier 1 or 2 evidence can decide a claim, "cannot tell" is a valid result, a
 ## State at the time of writing
 
 - **Phases 0 and 1 done and merged to `main`** (tags `phase-0-complete`, `phase-1-complete`). Phase 1: 10 of 10 tickets, gate logged in
-  `docs/PHASES.md`, CI green. The branch `phase-1/walking-skeleton` is kept. **Next: Phase 2 (fast clock)**: write its tickets
-  (`forge.py new`), branch `phase-2/...`, then start.
+  `docs/PHASES.md`, CI green. The branch `phase-1/walking-skeleton` is kept. **Phase 2 (fast clock) tickets F2-01 to F2-07 are written** on branch
+  `phase-2/fast-clock` (images to fingerprints, media clusters, verdict cache, worker with counters, budgeted escalation, SLO benchmark,
+  gate run). F2-03 (verdict cache), F2-04 (worker) and F2-05 (escalation; a live window escalated nothing, so the audit path has only run via fakes) are done; the rest are not started.
 - The walking skeleton works: `POST /verify` takes text or a Bluesky post URI, extracts claims with Gemini, looks them up in the Fact
   Check API, applies the verdict rules and writes one ledger row per verdict. On 8 live stream posts only 1 held a claim; most posts
   are opinion or chatter. A live REFUTED or SUPPORTED end to end has not been seen.
-- Phase 2 to 9 tickets are not written yet; write them when each phase starts.
+- Phase 3 to 9 tickets are not written yet; write them when each phase starts.
 - Open: TruFor `LICENSE.txt` not read; organiser question Q15 unanswered in writing; Gemini per-day quota not measured; Telegram echo
   untested and the exposed token must be re-issued; MiniCheck needs the user's approval to install; CUDA torch for the RTX 4060
   undecided; `cluster_jaccard` should be recalibrated during a real news event; extraction quality on real news and Hindi claims

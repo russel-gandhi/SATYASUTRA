@@ -24,6 +24,8 @@ class Cluster:
     last_seen: float
     size: int = 1
     stamps: deque = field(default_factory=deque, repr=False)     # (arrival time, author) inside the velocity window
+    members: list = field(default_factory=list, repr=False)      # earliest posts, for the origin and spread trace (see trace.py)
+    accounts: dict = field(default_factory=dict, repr=False)     # author hash -> 1, 2, ... in order of first appearance; never leaves the server
 
     def _trim(self, now: float, window_s: float) -> None:
         while self.stamps and self.stamps[0][0] < now - window_s:
@@ -48,12 +50,31 @@ class Clusterer:
         self.clusters: dict[int, Cluster] = {}
         self._buckets: dict[tuple[int, tuple[int, ...]], set[int]] = {}
         self._next_id = 1
+        self.dropped_total = 0                 # clusters removed so far, idle or to make room
 
     def _band_keys(self, sig: tuple[int, ...]):
         for b in range(self.s.lsh_bands):
             yield b, sig[b * self.rows:(b + 1) * self.rows]
 
-    def add(self, post_id: str, text: str, now: float, author: str = "") -> tuple[Cluster, bool] | None:
+    def _remember(self, c: Cluster, post_id: str, text: str, now: float, author: str, posted_at: str | None) -> None:
+        account = c.accounts.setdefault(author, len(c.accounts) + 1)
+        if len(c.members) < self.s.members_kept:
+            c.members.append({"t": now, "post_id": post_id, "text": text[:self.s.member_text_chars], "account": account, "posted_at": posted_at})
+
+    def find(self, text: str) -> Cluster | None:
+        """The cluster this text would join, without adding anything. None when it resembles no cluster."""
+        grams = shingles(normalise(text), self.s.shingle_words)
+        if not grams:
+            return None
+        sig = self.hasher.signature(grams)
+        best, best_sim = None, 0.0
+        for cid in {cid for key in self._band_keys(sig) for cid in self._buckets.get(key, ())}:
+            sim = estimate_jaccard(sig, self.clusters[cid].signature)
+            if sim >= self.threshold and sim > best_sim:
+                best, best_sim = self.clusters[cid], sim
+        return best
+
+    def add(self, post_id: str, text: str, now: float, author: str = "", posted_at: str | None = None) -> tuple[Cluster, bool] | None:
         """Place one post. Returns (cluster, created) or None when the text has nothing left after normalising."""
         norm = normalise(text)
         grams = shingles(norm, self.s.shingle_words)
@@ -72,12 +93,14 @@ class Clusterer:
             best.size += 1
             best.last_seen = now
             best.stamps.append((now, author))
+            self._remember(best, post_id, text, now, author, posted_at)
             return best, False
 
         if len(self.clusters) >= self.s.max_clusters:
             self._drop(min(self.clusters.values(), key=lambda c: c.last_seen))
         cluster = Cluster(self._next_id, sig, post_id, text, now, now, stamps=deque([(now, author)]))
         self._next_id += 1
+        self._remember(cluster, post_id, text, now, author, posted_at)
         self.clusters[cluster.id] = cluster
         for key in self._band_keys(sig):
             self._buckets.setdefault(key, set()).add(cluster.id)
@@ -85,6 +108,7 @@ class Clusterer:
 
     def _drop(self, cluster: Cluster) -> None:
         self.clusters.pop(cluster.id, None)
+        self.dropped_total += 1
         for key in self._band_keys(cluster.signature):
             bucket = self._buckets.get(key)
             if bucket:
