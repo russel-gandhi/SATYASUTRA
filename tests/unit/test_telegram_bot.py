@@ -36,6 +36,8 @@ def bot(handler_local, handler_tg) -> TelegramBot:
 def local(request: httpx.Request) -> httpx.Response:
     if request.url.path == "/verify":
         return httpx.Response(200, json={"claims": [CLAIM]})
+    if request.url.path == "/news/check":
+        return httpx.Response(200, json={"status": "not_found", "outlets_checked": 8, "hits": []})
     if request.url.path == "/act/plan":
         return httpx.Response(200, json={"intent": "false_claim", "why": "the claim was checked and refuted", "notice": "We do not file anything.",
                                          "routes": [{"title": "Share the correction", "contact": ""}]})
@@ -72,3 +74,12 @@ def test_a_photo_is_checked_and_an_unreadable_one_gets_the_plain_message():
     b = bot(local, telegram)
     assert S.labels["INCONCLUSIVE"] in b.handle({"photo": [{"file_id": "a"}, {"file_id": "b"}]})
     assert b.handle({"photo": [{"file_id": "bad"}]}) == S.messages["image_failed"]          # the fake Telegram serves b"junk" for it -> 422
+
+
+def test_an_unchecked_claim_gets_the_news_line_and_a_checked_one_does_not():
+    unchecked = dict(CLAIM, label="UNVERIFIABLE_YET")
+    def verify_unchecked(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"claims": [unchecked]}) if request.url.path == "/verify" else local(request)
+    out = bot(verify_unchecked, telegram).handle({"text": "x"})
+    assert "Not in the latest headlines of 8 major outlets" in out and "not proof" in out
+    assert "headlines" not in bot(local, telegram).handle({"text": "x"})                    # the REFUTED claim is not looked up in the news

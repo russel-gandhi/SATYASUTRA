@@ -38,6 +38,14 @@ def format_media(body: dict, labels: dict[str, str]) -> str:
     return "\n".join(lines)
 
 
+def format_news(news: dict) -> str:
+    if news["status"] == "reported":
+        return "In the news (context, not proof): " + "; ".join(f"{h['publisher']}: {h['title']} {h['url']}" for h in news["hits"][:2])
+    if news["status"] == "not_found":
+        return f"Not in the latest headlines of {news['outlets_checked']} major outlets. That is a signal, not proof: feeds hold only recent items."
+    return ""
+
+
 class TelegramBot:
     def __init__(self, cfg: Config, token: str | None = None):
         self.s = cfg.runtime.telegram
@@ -64,6 +72,13 @@ class TelegramBot:
     def check_text(self, text: str) -> str:
         body = self.local.post("/verify", json={"text": text}).json()
         out = format_claims(body, self.s.labels, self.s.messages["none_found"])
+        for c in body.get("claims", []):
+            if c["label"] == "UNVERIFIABLE_YET":                       # no fact-checker has covered it: say whether the news has
+                try:
+                    line = format_news(self.local.get("/news/check", params={"text": c["text"]}).json())
+                except (httpx.HTTPError, ValueError, KeyError):
+                    line = ""
+                out += ("\n\n" + line) if line else ""
         labels = [c["label"] for c in body.get("claims", [])]
         plan = self.local.post("/act/plan", json={"text": text, "labels": labels,
                                                   "ledger_seqs": [c["ledger_seq"] for c in body.get("claims", []) if c.get("ledger_seq")]}).json()

@@ -86,6 +86,12 @@ forensics\venv311\Scripts\python forensics\service.py --port 8100          # Tru
   and Shapley value. Returned as `explanation` by `/verify`, `/agent/stream` and `/media/check`; UI 'Why this verdict' panels. Model steps (extraction, translation,
   same-claim judge) are inputs and are NOT attributed; the output says so. Above `explain.max_players` evidence items only leave-one-out is shown.
 - Telegram bot: `scripts/telegram_bot.py` (long polling, calls the local API; `src/satyasutra/bot/`). Needs the API running.
+- News check (`sources/news.py`, `GET /news/check?text=`): RSS headlines of 8 outlets (The Hindu, Indian Express, NDTV, HT, TOI, BBC India, Mint, Al Jazeera,
+  all answered 200 to our honest User-Agent; News18 gave 403 and is not used) in their own index `data/news.sqlite3` (tier 3, refreshed when older than 600 s).
+  Words are weighted by rarity so a headline sharing only common words does not cover a claim whose rare word is missing (found by a test: 'Prime Minister
+  was assassinated' matched a bridge-opening headline before). Two readings only, reported (links, with the caution that outlets also report rumours) or
+  not found (with how far back we looked; a signal, not proof). It never changes a verdict. UI and the Telegram bot show it for UNVERIFIABLE_YET claims.
+  `min_coverage` 0.6 is a display rule, not calibrated; checked on 8 live headlines and paraphrases, not on a labelled set. Outlets' terms of use were not read; only headlines and links are shown.
 - Not done: (Telegram bot done, see above) (needs a fresh token), escalation never fired live, TruFor false-alarm rate on real social-media images
   unknown, README with a real-vs-roadmap table. `tests/unit/test_trace_sse.py::test_leaving_mid_run...` failed once under full-suite load and
   passes alone (timing).

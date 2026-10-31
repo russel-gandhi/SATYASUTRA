@@ -43,6 +43,7 @@ from ..act import build_pack, build_plan, load_actions
 from ..scam import check_links, load_domains
 from ..voice import Transcriber, Transcript, VoiceError
 from ..sources.index import OfficialIndex
+from ..sources.news import check_news, refresh_news_if_stale
 from ..verdict_cache import VerdictCache, mark
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -237,6 +238,20 @@ def create_app(
         return {"text": t.text, "language": t.language, "language_prob": t.language_prob, "language_uncertain": t.language_uncertain,
                 "duration_s": t.duration_s, "seconds": t.seconds, "model": t.model,
                 "note": "This is a machine transcript and can contain errors in names and numbers. It reads the words only; it does not tell whether the voice is real or cloned."}
+
+    @app.get("/news/check")
+    async def news_check(text: str = Query(min_length=1, max_length=cfg.runtime.verify.max_text_chars)) -> dict:
+        """Do major outlets' recent headlines mention this claim? Context only: it never changes a verdict and is not Tier 1 or 2 evidence."""
+        def run() -> dict:
+            index = OfficialIndex(_path(cfg.runtime.news.db_path))
+            refreshed = refresh_news_if_stale(cfg, index)
+            r = check_news(cfg, index, text)
+            return {"status": r.status, "note": r.note, "outlets_checked": r.outlets_checked, "outlets_with_hits": r.outlets_with_hits,
+                    "items_checked": r.items_checked, "oldest": r.oldest, "newest": r.newest,
+                    "hits": [{"publisher": h.publisher, "title": h.title, "url": h.url, "coverage": h.coverage,
+                              "published_at": h.published_at.isoformat() if h.published_at else None} for h in r.hits],
+                    "refreshed": refreshed}
+        return await run_in_threadpool(run)
 
     @app.post("/act/plan")
     def act_plan(req: ActRequest) -> dict:

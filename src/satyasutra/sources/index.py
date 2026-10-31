@@ -65,6 +65,16 @@ class OfficialIndex:
         with closing(sqlite3.connect(self.path)) as db:
             return db.execute("SELECT count(*) FROM passages").fetchone()[0]
 
+    def texts(self) -> list[str]:
+        with closing(sqlite3.connect(self.path)) as db:
+            return [r[0] for r in db.execute("SELECT text FROM passages")]
+
+    def span(self) -> tuple[int, str, str]:
+        """How many passages are indexed and the oldest and newest publication times (ISO, UTC), for saying how far back a search looked."""
+        with closing(sqlite3.connect(self.path)) as db:
+            n, lo, hi = db.execute("SELECT count(*), min(NULLIF(published_at, '')), max(NULLIF(published_at, '')) FROM passages").fetchone()
+        return n, lo or "", hi or ""
+
     def refreshed_at(self) -> datetime | None:
         with closing(sqlite3.connect(self.path)) as db:
             row = db.execute("SELECT value FROM meta WHERE key = ?", (META_REFRESHED,)).fetchone()

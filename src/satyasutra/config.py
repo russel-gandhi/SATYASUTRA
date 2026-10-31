@@ -234,6 +234,29 @@ class OfficialSettings(_Strict):
     contrast_rel_tol: float = Field(ge=0)    # two numbers within this relative difference are the same (policy choice: rounding)
 
 
+class NewsFeed(_Strict):
+    id: str
+    publisher: str
+    url: str                                 # an RSS feed of a news outlet
+    hosts: list[str]                         # item links must be on one of these hosts, or the item is skipped
+
+
+class NewsSettings(_Strict):
+    db_path: str                             # separate SQLite index from the official one: news is context, never Tier 1 or 2 evidence
+    feeds: list[NewsFeed]
+    timeout_s: float = Field(gt=0)
+    refresh_s: float = Field(gt=0)
+    max_items_per_feed: int = Field(gt=0)
+    max_passage_chars: int = Field(gt=0)
+    max_candidates: int = Field(gt=0)        # headlines pulled from the index per claim before the coverage test
+    max_results: int = Field(gt=0)           # matching headlines shown
+    min_token_chars: int = Field(gt=0)
+    stem_chars: int = Field(gt=0)            # two words match when they share this many leading characters (assassinated ~ assassination)
+    min_coverage: float = Field(gt=0, le=1)  # share of the claim's content words a headline must contain (a display rule, not calibrated)
+    min_matched_words: int = Field(gt=0)
+    stopwords: list[str]
+
+
 class VoiceSettings(_Strict):
     service_url: str                         # the GPU service (forensics/service.py); when it is down the clip is transcribed on the CPU, slowly
     service_timeout_s: float = Field(gt=0)
@@ -316,6 +339,7 @@ class RuntimeFile(_Strict):
     knowledge_graph: KnowledgeGraphSettings
     official: OfficialSettings
     voice: VoiceSettings
+    news: NewsSettings
     telegram: TelegramSettings
     explain: ExplainSettings
 

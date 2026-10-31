@@ -250,11 +250,22 @@ function explainMedia(x) {
   return d;
 }
 
+async function newsLine(text, box) {
+  try {
+    const n = await api("/news/check?text=" + encodeURIComponent(text));
+    if (n.status === "reported") {
+      box.append("In the news (context, not proof that it is true): ");
+      n.hits.forEach((h) => { const a = el("a", "", h.publisher + ": " + h.title); a.href = h.url; a.target = "_blank"; a.rel = "noopener"; box.append(a, " | "); });
+    } else box.textContent = n.note;
+  } catch (_) { box.textContent = ""; }
+}
+
 function renderClaim(c) {
   const box = el("div", "claim");
   const head = el("div"); head.append(el("span", "badge " + c.label, c.label.replaceAll("_", " ")), " ", el("span", "small", "confidence: " + c.confidence_band));
   box.append(head, el("div", "q", c.text));
   const spread = el("div", "small"); box.append(spread); spreadLine(c.text, spread);
+  if (c.label === "UNVERIFIABLE_YET") { const news = el("div", "small"); box.append(news); newsLine(c.text, news); }
   if (c.quote && c.quote !== c.text) box.append(el("div", "small", "original: " + c.quote));
   if (c.entities && c.entities.length) {
     const chips = el("div", "chips");

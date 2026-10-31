@@ -170,3 +170,27 @@ telegram:
 explain:
   max_players: 8
   words_shown: 12
+
+news:
+  db_path: data/news.sqlite3
+  timeout_s: 20
+  refresh_s: 600
+  max_items_per_feed: 60
+  max_passage_chars: 600
+  max_candidates: 60
+  max_results: 4
+  min_token_chars: 3
+  stem_chars: 6
+  min_coverage: 0.6
+  min_matched_words: 2
+  stopwords: [the, and, was, were, has, have, had, are, for, with, that, this, from, will, would, been, being, but, not, you, your, they, their,
+              his, her, its, who, what, when, where, which, said, says, new, after, before, into, over, than, then, there, these, those, about, also]
+  feeds:
+    - {id: news_the_hindu, publisher: The Hindu, url: "https://www.thehindu.com/news/national/feeder/default.rss", hosts: [thehindu.com]}
+    - {id: news_indian_express, publisher: The Indian Express, url: "https://indianexpress.com/section/india/feed/", hosts: [indianexpress.com]}
+    - {id: news_ndtv, publisher: NDTV, url: "https://feeds.feedburner.com/ndtvnews-top-stories", hosts: [ndtv.com]}
+    - {id: news_hindustan_times, publisher: Hindustan Times, url: "https://www.hindustantimes.com/feeds/rss/india-news/rssfeed.xml", hosts: [hindustantimes.com]}
+    - {id: news_toi, publisher: The Times of India, url: "https://timesofindia.indiatimes.com/rssfeeds/-2128936835.cms", hosts: [indiatimes.com]}
+    - {id: news_bbc_india, publisher: BBC News (India), url: "https://feeds.bbci.co.uk/news/world/asia/india/rss.xml", hosts: [bbc.com, bbc.co.uk]}
+    - {id: news_mint, publisher: Mint, url: "https://www.livemint.com/rss/news", hosts: [livemint.com]}
+    - {id: news_al_jazeera, publisher: Al Jazeera, url: "https://www.aljazeera.com/xml/rss/all.xml", hosts: [aljazeera.com]}
