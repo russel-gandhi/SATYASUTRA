@@ -21,6 +21,8 @@ from .errors import ConfigError
 from .provenance import BadImage, ImageIndex, fingerprint
 
 SCOPE_NOTE = "TruFor finds edited images (splicing, copy-move, retouching). It does not detect fully AI-generated images."
+AI_NOTE = ("The AI-generated score comes from a separate model (Smaug). It can miss new or evasive generators, and a real photo with a small AI-edited "
+           "region can read as real; its cut was measured on 80 Commons images only.")
 
 
 @dataclass
@@ -80,7 +82,17 @@ def check_media(cfg: Config, data: bytes, index: ImageIndex, analyse=forensic_sc
             reasons.append(f"TruFor manipulation score {score:.2f} is at or above the cut {entry.value}; the heatmap marks where")
         else:
             reasons.append(f"TruFor manipulation score {score:.2f} is below the cut {entry.value}: no editing found, which does not prove the image is genuine")
-        reasons.append(SCOPE_NOTE)
+        ai_score = forensics.get("ai_score")
+        ai_entry = cfg.thresholds.thresholds.get(cfg.runtime.forensics.ai_threshold)
+        if ai_score is None:
+            reasons.append(SCOPE_NOTE + (f" (AI-image detector unavailable: {forensics['ai_error']})" if forensics.get("ai_error") else ""))
+        elif ai_entry is None:
+            reasons.append(f"AI-generated score {ai_score:.2f}; no calibrated cut, so no label is given from it. " + AI_NOTE)
+        elif ai_score >= ai_entry.value:
+            label = "SYNTHETIC"
+            reasons.append(f"AI-generated score {ai_score:.2f} is at or above the cut {ai_entry.value}: the image looks AI-generated. " + AI_NOTE)
+        else:
+            reasons.append(f"AI-generated score {ai_score:.2f} is below the cut {ai_entry.value}: no sign of AI generation found, which does not prove it is a real photo. " + AI_NOTE)
     if matches:
         reasons.append(f"appeared in {len(matches)} fact-checker article(s): a lead about its history, not a verdict on any claim")
     else:

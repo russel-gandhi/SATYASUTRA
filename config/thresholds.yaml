@@ -54,3 +54,15 @@ thresholds:
       tested, Commons photos are not social-media photos. Recalibrate on labelled
       social-media images.'
     date: '2026-10-31'
+  smaug_ai_generated_score:
+    value: 0.5
+    calibrated_on: 'forensics/smaug_probe.py on 40 Wikimedia Commons files from Category:AI-generated
+      images (label = Commons category) and 40 random Commons files (2026-10-31), thumbnails
+      640 px wide. At 0.5, the model card default: 36 of 40 AI images caught (90 percent),
+      1 of 40 random files flagged (2.5 percent; it may itself be an undeclared AI image
+      or a drawing). At 0.9: 78 percent caught. Limits: 80 images, one source, Commons AI
+      images are mostly older public generators, the real set is not curated, no social-media
+      re-uploads or screenshots tested, newer or evasive generators may slip through, a real
+      photo with a small AI-edited region can read as real. The detector''s published accuracy
+      is the authors'' own figure and was not reproduced here.'
+    date: '2026-10-31'

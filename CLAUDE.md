@@ -77,7 +77,13 @@ forensics\venv311\Scripts\python forensics\service.py --port 8100          # Tru
   the debunked-image index. Measured weakness: a spliced frame scored 0.996 as a still and 0.27 after H.264 (`scripts/video_live.py`),
   so a clean video result is weak evidence and the result text says so. Face-swap and AI-generated video are not detected.
 - Not done: Telegram bot (needs a fresh token), escalation never fired live, TruFor false-alarm rate on real social-media images
-  unknown, AI-generated-image detector not chosen, README with a real-vs-roadmap table.
+  unknown, README with a real-vs-roadmap table. `tests/unit/test_trace_sse.py::test_leaving_mid_run...` failed once under full-suite load and
+  passes alone (timing).
+- AI-generated images: `forensics/service.py` also loads the Smaug detector (Abacus.AI, Apache 2.0, weights in git-ignored
+  `forensics/models/smaug`, loaded through sentence-transformers with our own preprocessing; the repo's .py is not run) and returns `ai_score`.
+  `media.py` labels SYNTHETIC at or above `smaug_ai_generated_score` (0.5). Measured on 40 Commons AI files vs 40 random files
+  (`docs/calibration/smaug_2026-10-31.txt`): 36/40 caught, 1/40 flagged (a satellite image); misses were logos and screenshots. Not tested:
+  social-media re-uploads, newer generators. Video frames are not scored by it yet. Plan to the deadline: `docs/PLAN_TO_DEADLINE.md`.
 
 ## Secrets (read this twice)
 

@@ -111,3 +111,25 @@ def test_route_takes_raw_bytes_returns_the_heatmap_separately_and_rejects_bad_bo
     assert client.post("/media/check", content=b"garbage").status_code == 422
     too_big = cfg().runtime.forensics.max_upload_bytes + 1
     assert client.post("/media/check", content=b"0" * too_big).status_code == 422
+
+
+def scores_ai(ai, edit=0.1):
+    return lambda c, d: {"available": True, "score": edit, "ai_score": ai, "ai_error": None, "heatmap_png_b64": "AAAA"}
+
+
+def test_ai_score_at_or_above_its_cut_is_synthetic_and_below_is_inconclusive_with_the_limits_stated(tmp_path):
+    c = cfg()
+    cut = c.thresholds.thresholds[c.runtime.forensics.ai_threshold].value
+    high = check_media(c, png(), index(tmp_path), scores_ai(min(cut + 0.4, 1.0)))
+    low = check_media(c, png(), index(tmp_path), scores_ai(max(cut - 0.4, 0.0)))
+    assert high.label == "SYNTHETIC" and "looks AI-generated" in " ".join(high.reasons)
+    assert low.label == "INCONCLUSIVE" and "does not prove it is a real photo" in " ".join(low.reasons) and "evasive generators" in " ".join(low.reasons)
+
+
+def test_edited_and_synthetic_are_both_reported_and_a_missing_detector_is_named(tmp_path):
+    both = check_media(cfg(), png(), index(tmp_path), scores_ai(0.99, edit=0.9))
+    text = " ".join(both.reasons)
+    assert both.label == "SYNTHETIC" and "manipulation score" in text and "AI-generated score" in text
+    gone = lambda c, d: {"available": True, "score": 0.1, "ai_score": None, "ai_error": "Smaug weights are not installed", "heatmap_png_b64": "AAAA"}
+    out = check_media(cfg(), png(), index(tmp_path), gone)
+    assert out.label == "INCONCLUSIVE" and "AI-image detector unavailable: Smaug weights are not installed" in " ".join(out.reasons)

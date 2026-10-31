@@ -1,0 +1,15 @@
+Smaug AI-image detector, measured 2026-10-31 (forensics/smaug_probe.py on scripts/fetch_ai_images.py output)
+AI = files in Commons Category:AI-generated images (n=40); real = random Commons files (n=40). Thumbnails 640 px.
+
+cut 0.1: AI caught 38/40, real flagged 2/40
+cut 0.3: AI caught 38/40, real flagged 1/40
+cut 0.5: AI caught 36/40, real flagged 1/40
+cut 0.7: AI caught 35/40, real flagged 1/40
+cut 0.9: AI caught 31/40, real flagged 1/40
+
+Misses (AI below 0.5) and false alarms (real at or above 0.5):
+  ai   0.478 File:Banniere Archeologie Estrablin Historique.png
+  ai   0.356 File:Civitai home page 2026-07-24.png
+  ai   0.000 File:Double Rainbow sheep.jpg
+  ai   0.023 File:Kurdish Wikipedia Animation Portal Logo.png
+  real 0.960 File:20253001030 GOES18-ABI-FL-06-EP182025-2000x2000.jpg

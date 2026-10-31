@@ -86,6 +86,7 @@ forensics:
   timeout_s: 120
   max_upload_bytes: 15000000
   threshold: trufor_manipulation_score
+  ai_threshold: smaug_ai_generated_score
   video_frames: 8
   max_video_bytes: 60000000
   max_video_s: 120

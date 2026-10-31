@@ -223,6 +223,7 @@ class ForensicsSettings(_Strict):
     timeout_s: float = Field(gt=0)
     max_upload_bytes: int = Field(gt=0)      # an uploaded image larger than this is refused
     threshold: str                           # name of the calibrated cut in thresholds.yaml for the manipulation score
+    ai_threshold: str                        # name of the calibrated cut for the AI-generated probability from the same service
     video_frames: int = Field(gt=0)          # frames sampled evenly across a video
     max_video_bytes: int = Field(gt=0)
     max_video_s: float = Field(gt=0)         # longer videos are refused: every sampled frame costs a model run
