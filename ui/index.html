@@ -495,7 +495,12 @@ async function checkVoice() {
     box.replaceChildren(el("div", "", "Transcript (" + t.language + ", " + Math.round(t.language_prob * 100) + "% sure of the language, " + t.seconds + " s): " + t.text));
     if (t.language_uncertain) box.append(el("div", "", "The language is uncertain, so the words may be wrong. Check the text before verifying."));
     box.append(el("div", "", t.note));
-    box.append(el("div", "", "Real or cloned voice: not checked. The pretrained detector we tried did not pass our own test, so we give no verdict on the voice."));
+    try {
+      const a = await api("/audio/check", { method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: await f.arrayBuffer() });
+      const suspect = a.label === "SYNTHETIC_SUSPECTED";
+      const v = el("div", suspect ? "err" : "", (suspect ? "Voice: possibly synthetic or cloned. " : "Voice: no sign of synthetic speech found (this does not prove it is a real voice). ") + a.reasons.join(" "));
+      box.append(v, el("div", "small", a.note));
+    } catch (e) { box.append(el("div", "small", "Voice check not run: " + e.message)); }
     $("text").value = t.text; $("uri").value = "";
     if (t.text.trim()) verify();
   } catch (e) { box.textContent = "Could not read the voice note: " + e.message; }

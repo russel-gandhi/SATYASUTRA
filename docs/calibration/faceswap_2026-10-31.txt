@@ -1,0 +1,20 @@
+FACE-SWAP VIDEO CHECK, 2026-10-31. RESULT: NEITHER PRETRAINED DETECTOR WE TRIED SEPARATED SWAPPED FROM REAL FACES. NOTHING SHIPPED, NO LABEL, NO SCORE SHOWN.
+
+Data: FaceForensics++ (C23 compression) as hosted publicly at Hugging Face bitmind/FaceForensicsC23, read by HTTP range requests (scripts/faceswap_fetch.py).
+18 real videos and 36 manipulated videos, 6 from each of Deepfakes, FaceSwap, Face2Face, FaceShifter, NeuralTextures and DeepFakeDetection. Research benchmark data;
+used here only to measure, not shipped or committed.
+Method (scripts/faceswap_probe.py): 8 frames per video, each scored, median of the 8 per video. Two variants: the whole frame, and a face crop (OpenCV Haar detector, 25 percent margin).
+Models (both Apache 2.0): dima806/deepfake_vs_real_image_detection (ViT) and prithivMLmods/Deep-Fake-Detector-v2-Model (ViT).
+
+Whole frame:
+  dima806      every video scored about 0.0 for fake, real and manipulated alike: fakes caught 0/36 at every cut.
+  prithivMLmods  real median 0.66, manipulated 0.68 to 0.82; at cut 0.7: 22/36 manipulated caught but 8/18 real flagged; at 0.9 nothing flagged.
+Face crop:
+  dima806      medians by method: real 0.13; Deepfakes 0.87, FaceSwap 0.97, NeuralTextures 0.89, DeepFakeDetection 0.69, FaceShifter 0.41, Face2Face 0.05.
+               cut 0.9: 14/36 manipulated caught, 6/18 REAL flagged (a third of real videos). cut 0.5: 21/36 caught, 6/18 real flagged.
+  prithivMLmods  real median 0.56 vs 0.38 to 0.75 for the manipulated; cut 0.7: 10/36 caught, 3/18 real flagged; cut 0.5: 23/36 caught, 12/18 real flagged.
+
+Reading: the better of the two (dima806 on face crops) flags a third of real videos at any cut that catches a useful share of fakes, and misses most Face2Face and
+FaceShifter. A tool that accuses one real video in three is worse than no tool for a fact-checking product, so no face-swap result is shown.
+Limits: 54 videos, one dataset (studio-like clips, C23 compression), Haar crops are crude, two models only. A better face detector or a detector trained
+on swaps (not on GAN faces) might do better; that was not tried. The UI and README keep saying face-swap video is not detected.

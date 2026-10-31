@@ -35,3 +35,6 @@ Notes
 | Noto Sans Devanagari (correction card) | SIL Open Font License 1.1 (OFL.txt sits beside the font) | Google Fonts | served from `assets/fonts` |
 | News RSS feeds (headlines and links only) | publishers' terms not read | The Hindu, Indian Express, NDTV, HT, TOI, BBC News, Mint, Al Jazeera | only headlines and links are shown; stored locally for a day or two |
 
+| wav2vec2 deepfake voice detector (synthetic speech) | Apache 2.0 per its model card (fine-tune of Gustking/wav2vec2-large-xlsr-deepfake-audio-classification, base facebook XLS-R) | Hugging Face garystafford/wav2vec2-deepfake-voice-detector | local only in `models/`; its training data (garystafford/deepfake-audio-detection) licence not read |
+| FaceForensics++ C23 videos (test data only) | research dataset, its terms not read; hosted publicly at Hugging Face bitmind/FaceForensicsC23 | scripts/faceswap_fetch.py | used only to measure two face-forgery classifiers; not stored in the repo or shipped |
+| dima806/deepfake_vs_real_image_detection, prithivMLmods/Deep-Fake-Detector-v2-Model | Apache 2.0 per their cards | Hugging Face | tested and rejected (docs/calibration/faceswap_2026-10-31.txt); not used in the product |

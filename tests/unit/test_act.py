@@ -59,3 +59,12 @@ def test_the_route_returns_the_plan_and_a_pack_and_rejects_empty_text(tmp_path):
     assert body["intent"] == "scam_forward" and body["routes"][0]["id"] == "do_not" and f"ledger entry #{seq}" in body["pack"]
     assert client.post("/act/plan", json={"text": "  "}).status_code == 422
     assert client.post("/act/plan", json={"text": "hello there", "ledger_seqs": [10 ** 6]}).json()["intent"] == "none"
+
+
+def test_a_message_about_private_images_gets_support_steps_first_and_never_asks_for_the_images():
+    p = plan("someone leaked my private photos and is threatening to share my pictures if I do not pay")
+    assert p.intent == "intimate_images"                                    # wins over money_lost and scam wording
+    ids = [r["id"] for r in p.routes]
+    assert ids[:2] == ["keep_evidence", "do_not_pay"] and {"stopncii", "take_it_down", "emergency_112"} <= set(ids)
+    assert "not uploaded" in next(r for r in p.routes if r["id"] == "stopncii")["detail"]
+    assert plan("what a lovely sunny day").intent == "none" and plan("मेरी निजी तस्वीरें लीक हो गईं, ब्लैकमेल कर रहा है").intent == "intimate_images"
