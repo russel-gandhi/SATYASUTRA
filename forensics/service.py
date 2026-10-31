@@ -3,6 +3,8 @@
     forensics/venv311/Scripts/python forensics/service.py --port 8100
 
 POST /analyze   body: raw image bytes  ->  JSON {score, ai_score, map_mean, map_p95, width, height, device, seconds, heatmap_png_b64}
+POST /transcribe body: 16 kHz mono float32 PCM bytes (the API decodes with ffmpeg)  ->  JSON {text, language, language_probability, duration_s, seconds}
+                speech to text with faster-whisper on the GPU (MIT; model folder models/whisper-small, loaded on first use)
 GET  /health    ->  {"status": "ok", "device": ...}
 
 `score` is TruFor's image-level manipulation score in 0..1 (higher means more likely manipulated); `heatmap_png_b64` is an RGBA
@@ -133,7 +135,31 @@ class Engine:
         }
 
 
-def handler(engine: Engine):
+WHISPER_DIR = os.path.join(HERE, "..", "models", "whisper-small")
+SAMPLE_RATE = 16000
+
+
+class Speech:
+    """faster-whisper on the same GPU, loaded on first use so the image service starts fast and works without the model."""
+
+    def __init__(self, device: str):
+        self.device, self.model, self.error, self.lock = device, None, None, Lock()
+
+    def transcribe(self, pcm: bytes) -> dict:
+        started = time.time()
+        with self.lock:
+            if self.model is None:
+                from faster_whisper import WhisperModel
+                kind = "cuda" if self.device.startswith("cuda") else "cpu"
+                self.model = WhisperModel(os.path.normpath(WHISPER_DIR), device=kind, compute_type="float16" if kind == "cuda" else "int8")
+            audio = np.frombuffer(pcm[: len(pcm) // 4 * 4], dtype=np.float32)
+            segments, info = self.model.transcribe(audio, beam_size=5, vad_filter=True)
+            text = " ".join(s.text.strip() for s in segments).strip()
+        return {"text": text, "language": info.language, "language_probability": float(info.language_probability),
+                "duration_s": round(len(audio) / SAMPLE_RATE, 2), "seconds": round(time.time() - started, 2)}
+
+
+def handler(engine: Engine, speech: Speech):
     class H(BaseHTTPRequestHandler):
         def _send(self, code: int, body: dict):
             raw = json.dumps(body).encode()
@@ -150,15 +176,16 @@ def handler(engine: Engine):
                 self._send(404, {"detail": "not found"})
 
         def do_POST(self):
-            if self.path != "/analyze":
+            if self.path not in ("/analyze", "/transcribe"):
                 return self._send(404, {"detail": "not found"})
             size = int(self.headers.get("Content-Length") or 0)
             if not 0 < size <= MAX_BODY:
-                return self._send(413, {"detail": f"send 1 to {MAX_BODY} bytes of image"})
+                return self._send(413, {"detail": f"send 1 to {MAX_BODY} bytes"})
             try:
-                self._send(200, engine.analyze(self.rfile.read(size)))
+                body = self.rfile.read(size)
+                self._send(200, speech.transcribe(body) if self.path == "/transcribe" else engine.analyze(body))
             except Exception as exc:                       # the class only: never echo text that could carry paths or content
-                self._send(422, {"detail": f"could not analyse the image ({type(exc).__name__})"})
+                self._send(422, {"detail": f"could not process the input ({type(exc).__name__})"})
 
         def log_message(self, fmt, *a):
             sys.stderr.write("%s %s\n" % (self.command, self.path))
@@ -174,7 +201,7 @@ def main() -> None:
     args = ap.parse_args()
     engine = Engine(args.max_side, args.cpu)
     print(f"TruFor loaded on {engine.device}; AI detector: {engine.smaug_error or 'loaded'}; listening on 127.0.0.1:{args.port}", flush=True)
-    ThreadingHTTPServer(("127.0.0.1", args.port), handler(engine)).serve_forever()
+    ThreadingHTTPServer(("127.0.0.1", args.port), handler(engine, Speech(engine.device))).serve_forever()
 
 
 if __name__ == "__main__":

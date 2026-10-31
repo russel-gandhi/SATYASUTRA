@@ -17,3 +17,4 @@ forensics/
 serve.log
 serve.err.log
 forensics/service.err.log
+models/

@@ -124,3 +124,16 @@ official:
       publisher: Securities and Exchange Board of India
       url: https://www.sebi.gov.in/sebirss.xml
       tier: 1
+
+voice:
+  service_url: http://127.0.0.1:8100
+  service_timeout_s: 120
+  model_dir: models/whisper-small
+  device: cpu
+  compute_type: int8
+  beam_size: 5
+  vad_filter: true
+  max_bytes: 10000000
+  max_seconds: 120
+  decode_timeout_s: 30
+  low_language_prob: 0.6

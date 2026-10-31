@@ -41,6 +41,7 @@ from ..sources import WikidataClient
 from ..sources.bluesky import PostNotFound, fetch_post
 from ..act import build_pack, build_plan, load_actions
 from ..scam import check_links, load_domains
+from ..voice import Transcriber, Transcript, VoiceError
 from ..sources.index import OfficialIndex
 from ..verdict_cache import VerdictCache, mark
 
@@ -80,6 +81,7 @@ def create_app(
     judge: Callable[[str, list], Judgements] | None = None,
     ground: Callable[[str], Grounded] | None = None,
     official: Callable[[str], OfficialResult] | None = None,
+    transcribe: Callable[[bytes], Transcript] | None = None,
     analyse_image: Callable[[Config, bytes], dict] = forensic_scores,
     image_index: ImageIndex | None = None,
 ) -> FastAPI:
@@ -219,6 +221,22 @@ def create_app(
         return {"links": [{"link": f.link, "host": f.host, "status": f.status, "reason": f.reason, "real_domain": f.real_domain, "owner": f.owner} for f in found],
                 "checked_on": link_domains().checked_on,
                 "note": "Only the name is checked; the link is never opened. A link that is not in our list is not thereby safe."}
+
+    @cache
+    def speech() -> Transcriber:
+        return Transcriber(cfg, ROOT)
+
+    @app.post("/voice/transcribe")
+    async def voice_transcribe(request: Request) -> dict:
+        """Raw audio bytes in, the transcript and detected language out. The caller then checks the text like any typed claim."""
+        data = await request.body()
+        try:
+            t = await run_in_threadpool((transcribe or speech().transcribe), data)
+        except VoiceError as exc:
+            raise HTTPException(status_code=422, detail=str(exc))
+        return {"text": t.text, "language": t.language, "language_prob": t.language_prob, "language_uncertain": t.language_uncertain,
+                "duration_s": t.duration_s, "seconds": t.seconds, "model": t.model,
+                "note": "This is a machine transcript and can contain errors in names and numbers. It reads the words only; it does not tell whether the voice is real or cloned."}
 
     @app.post("/act/plan")
     def act_plan(req: ActRequest) -> dict:

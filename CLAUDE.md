@@ -76,6 +76,11 @@ forensics\venv311\Scripts\python forensics\service.py --port 8100          # Tru
 - Video: `video.py` + `POST /video/check` sample 8 frames with ffmpeg (already on PATH, no extra install), score each with TruFor and
   the debunked-image index. Measured weakness: a spliced frame scored 0.996 as a still and 0.27 after H.264 (`scripts/video_live.py`),
   so a clean video result is weak evidence and the result text says so. Face-swap and AI-generated video are not detected.
+- Voice notes: `voice/transcribe.py` + `POST /voice/transcribe` (raw audio, max 120 s). ffmpeg decodes to 16 kHz mono; the GPU service
+  (`forensics/service.py` `/transcribe`, faster-whisper small from `models/whisper-small`, git-ignored, 486 MB) answers first, local CPU is
+  the fallback (about 1.7x slower than real time). The UI transcribes, shows the text and language, then runs the normal claim agent.
+  It reads words only; it does not detect cloned voices (B2 audio-deepfake model not approved or installed). Hindi transcripts have word errors.
+  `assets/fonts/NotoSansDevanagari.ttf` (OFL) is for the correction card, drawn in the browser because Pillow here lacks raqm.
 - Not done: Telegram bot (needs a fresh token), escalation never fired live, TruFor false-alarm rate on real social-media images
   unknown, README with a real-vs-roadmap table. `tests/unit/test_trace_sse.py::test_leaving_mid_run...` failed once under full-suite load and
   passes alone (timing).

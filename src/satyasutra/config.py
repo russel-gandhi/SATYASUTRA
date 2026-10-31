@@ -234,6 +234,20 @@ class OfficialSettings(_Strict):
     contrast_rel_tol: float = Field(ge=0)    # two numbers within this relative difference are the same (policy choice: rounding)
 
 
+class VoiceSettings(_Strict):
+    service_url: str                         # the GPU service (forensics/service.py); when it is down the clip is transcribed on the CPU, slowly
+    service_timeout_s: float = Field(gt=0)
+    model_dir: str                           # a faster-whisper model folder (git-ignored; see CLAUDE.md for the download)
+    device: str                              # "cpu" or "cuda"
+    compute_type: str
+    beam_size: int = Field(gt=0)
+    vad_filter: bool                         # skip silence before transcribing
+    max_bytes: int = Field(gt=0)
+    max_seconds: float = Field(gt=0)         # longer audio is refused
+    decode_timeout_s: float = Field(gt=0)    # ffmpeg is given this long to decode a clip
+    low_language_prob: float = Field(ge=0, le=1)   # below this the detected language is shown as uncertain (a display rule, not a calibrated cut)
+
+
 class KnowledgeGraphSettings(_Strict):
     endpoint: str                            # Wikidata's MediaWiki API
     entity_url_template: str                 # a human page for an entity id, with {id}
@@ -283,6 +297,7 @@ class RuntimeFile(_Strict):
     forensics: ForensicsSettings
     knowledge_graph: KnowledgeGraphSettings
     official: OfficialSettings
+    voice: VoiceSettings
 
 
 class Config(_Strict):

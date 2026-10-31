@@ -85,6 +85,8 @@
         <button class="ghost" id="chain">Check ledger integrity</button>
         <span class="spin" id="spin">working...</span>
       </div>
+      <div class="row"><label class="small">or a voice note: <input type="file" id="audio" accept="audio/*,.ogg,.opus,.m4a,.mp3,.wav"></label></div>
+      <div id="voiceOut" class="small"></div>
       <div id="trace" class="trace" style="display:none"></div>
       <div id="links"></div>
       <div id="act"></div>
@@ -381,6 +383,21 @@ async function checkImage() {
   } catch (e) { out.replaceChildren(el("div", "err", "Could not check the image: " + e.message)); }
 }
 
+async function checkVoice() {
+  const f = $("audio").files[0], box = $("voiceOut"); box.replaceChildren();
+  if (!f) return;
+  box.textContent = "Reading the voice note...";
+  try {
+    const t = await api("/voice/transcribe", { method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: await f.arrayBuffer() });
+    box.replaceChildren(el("div", "", "Transcript (" + t.language + ", " + Math.round(t.language_prob * 100) + "% sure of the language, " + t.seconds + " s): " + t.text));
+    if (t.language_uncertain) box.append(el("div", "", "The language is uncertain, so the words may be wrong. Check the text before verifying."));
+    box.append(el("div", "", t.note));
+    $("text").value = t.text; $("uri").value = "";
+    if (t.text.trim()) verify();
+  } catch (e) { box.textContent = "Could not read the voice note: " + e.message; }
+}
+
+$("audio").onchange = checkVoice;
 $("file").onchange = checkImage;
 $("go").onclick = verify; $("chain").onclick = chain;
 refreshPills(); refreshClusters(); setInterval(refreshPills, 5000); setInterval(refreshClusters, 5000);
