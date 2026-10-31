@@ -122,14 +122,14 @@ def test_ai_score_at_or_above_its_cut_is_synthetic_and_below_is_inconclusive_wit
     cut = c.thresholds.thresholds[c.runtime.forensics.ai_threshold].value
     high = check_media(c, png(), index(tmp_path), scores_ai(min(cut + 0.4, 1.0)))
     low = check_media(c, png(), index(tmp_path), scores_ai(max(cut - 0.4, 0.0)))
-    assert high.label == "SYNTHETIC" and "looks AI-generated" in " ".join(high.reasons)
+    assert high.label == "SYNTHETIC_SUSPECTED" and "a suspicion, not a finding" in " ".join(high.reasons)
     assert low.label == "INCONCLUSIVE" and "does not prove it is a real photo" in " ".join(low.reasons) and "evasive generators" in " ".join(low.reasons)
 
 
 def test_edited_and_synthetic_are_both_reported_and_a_missing_detector_is_named(tmp_path):
     both = check_media(cfg(), png(), index(tmp_path), scores_ai(0.99, edit=0.9))
     text = " ".join(both.reasons)
-    assert both.label == "SYNTHETIC" and "manipulation score" in text and "AI-generated score" in text
+    assert both.label == "SYNTHETIC_SUSPECTED" and "manipulation score" in text and "AI-generated score" in text
     gone = lambda c, d: {"available": True, "score": 0.1, "ai_score": None, "ai_error": "Smaug weights are not installed", "heatmap_png_b64": "AAAA"}
     out = check_media(cfg(), png(), index(tmp_path), gone)
     assert out.label == "INCONCLUSIVE" and "AI-image detector unavailable: Smaug weights are not installed" in " ".join(out.reasons)

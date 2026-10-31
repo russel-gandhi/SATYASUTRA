@@ -89,8 +89,8 @@ def check_media(cfg: Config, data: bytes, index: ImageIndex, analyse=forensic_sc
         elif ai_entry is None:
             reasons.append(f"AI-generated score {ai_score:.2f}; no calibrated cut, so no label is given from it. " + AI_NOTE)
         elif ai_score >= ai_entry.value:
-            label = "SYNTHETIC"
-            reasons.append(f"AI-generated score {ai_score:.2f} is at or above the cut {ai_entry.value}: the image looks AI-generated. " + AI_NOTE)
+            label = "SYNTHETIC_SUSPECTED"       # one detector alone is a suspicion, not the SYNTHETIC finding; no second detector corroborates it
+            reasons.append(f"AI-generated score {ai_score:.2f} is at or above the cut {ai_entry.value}: the image looks AI-generated, but one detector alone gives a suspicion, not a finding. " + AI_NOTE)
         else:
             reasons.append(f"AI-generated score {ai_score:.2f} is below the cut {ai_entry.value}: no sign of AI generation found, which does not prove it is a real photo. " + AI_NOTE)
     if matches:

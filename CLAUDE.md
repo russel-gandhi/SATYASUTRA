@@ -93,7 +93,7 @@ forensics\venv311\Scripts\python forensics\service.py --port 8100          # Tru
   anonymous numbers, Bluesky only, "first we saw" is not the true origin. Real clusters on the quiet stream are small (mostly bot templates).
 - AI-generated images: `forensics/service.py` also loads the Smaug detector (Abacus.AI, Apache 2.0, weights in git-ignored
   `forensics/models/smaug`, loaded through sentence-transformers with our own preprocessing; the repo's .py is not run) and returns `ai_score`.
-  `media.py` labels SYNTHETIC at or above `smaug_ai_generated_score` (0.5). Measured on 40 Commons AI files vs 40 random files
+  `media.py` labels SYNTHETIC_SUSPECTED (not SYNTHETIC: one detector alone) at or above `smaug_ai_generated_score` (0.5). Measured on 40 Commons AI files vs 40 random files
   (`docs/calibration/smaug_2026-10-31.txt`): 36/40 caught, 1/40 flagged (a satellite image); misses were logos and screenshots. Not tested:
   social-media re-uploads, newer generators. Video frames are not scored by it yet. Plan to the deadline: `docs/PLAN_TO_DEADLINE.md`.
 

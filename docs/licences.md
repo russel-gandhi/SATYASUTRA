@@ -16,3 +16,11 @@ Notes
 - `pdqhash` also bundles `CImg.h`, which is dual-licensed CeCILL / CeCILL-C. It is part of Meta's C++ tools, not of the hash computation
   called from Python. Its terms were not studied here; read them before redistributing a built wheel.
 - Pillow and numpy are widely used permissive-licence libraries, but that is general knowledge, not something this ticket verified.
+
+## Media detectors (added 2026-10-31)
+
+| Component | Used for | Licence and what was read | Checked |
+|---|---|---|---|
+| Smaug AI-Image-Detector (Abacus.AI), weights `abacusai/Smaug-AI-Image-Detector` on Hugging Face, loaded through `sentence-transformers` | probability that an image is AI-generated | Apache License 2.0: the `LICENSE` file in the downloaded model folder (first lines read; header says Apache License Version 2.0). Credit Abacus.AI in the README. The training data's own terms were not read | 2026-10-31 |
+| TruFor (GRIP-UNINA, University Federico II of Naples) | edit detection with a heatmap | informational and nonprofit use only, credit the authors. `LICENSE.txt` of the repository was **not read in full** (open item in CLAUDE.md) | not fully checked |
+| RBI and SEBI RSS feeds | official text (Tier 1) | public feeds fetched with a descriptive User-Agent and a host gate; their terms of use were **not read**. PIB, MoHFW, PMIndia and cybercrime.gov.in refused our client (HTTP 403) and are not used | feeds reachable 2026-10-31, terms not read |
