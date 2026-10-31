@@ -296,3 +296,17 @@ inputs:
   max_text_chars: 6000
   html_skip_tags: [script, style, noscript, nav, header, footer, aside, form, svg]
   editor_terms: [photoshop, gimp, lightroom, canva, snapseed, picsart, pixlr, affinity, paint.net, facetune, remini, midjourney, stable diffusion, dall-e, firefly]
+
+# Command centre views. Everything is computed from records this instance stored; nothing is live nationwide data and the pages say so.
+intel:
+  max_records: 500
+  same_claim_jaccard: 0.6          # word overlap of two English claim texts above which they count as the same underlying claim (policy choice, not calibrated)
+  recent_n: 8
+  registry_items: 12
+  not_available:
+    - {name: Press Information Bureau (PIB), reason: "answers 403 to our honest User-Agent, so it is not read"}
+    - {name: Ministry of Health (MoHFW), reason: "answers 403 to our honest User-Agent, so it is not read"}
+    - {name: Prime Minister's Office (PMIndia), reason: "answers 403 to our honest User-Agent, so it is not read"}
+    - {name: Indian Cybercrime Coordination Centre, reason: "answers 403 to our honest User-Agent; it is only linked as a place to report"}
+    - {name: IMD weather and NDMA disaster alerts, reason: "no machine-readable public feed was found, so nothing is connected"}
+    - {name: State government portals, reason: "not connected in this build"}

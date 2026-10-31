@@ -275,6 +275,14 @@ class WebSettings(_Strict):
     fact_checkers: list[str]
 
 
+class IntelSettings(_Strict):
+    max_records: int = Field(gt=0)
+    same_claim_jaccard: float = Field(gt=0, le=1)
+    recent_n: int = Field(gt=0)
+    registry_items: int = Field(gt=0)
+    not_available: list[dict[str, str]]      # sources we looked at and do not use, with the reason shown on the registry page
+
+
 class InputSettings(_Strict):
     timeout_s: float = Field(gt=0)
     max_bytes: int = Field(gt=0)             # page or PDF download cap
@@ -419,6 +427,7 @@ class RuntimeFile(_Strict):
     web: WebSettings
     report: ReportSettings
     inputs: InputSettings
+    intel: IntelSettings
     news: NewsSettings
     telegram: TelegramSettings
     explain: ExplainSettings

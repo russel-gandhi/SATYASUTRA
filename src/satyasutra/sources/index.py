@@ -65,6 +65,16 @@ class OfficialIndex:
         with closing(sqlite3.connect(self.path)) as db:
             return db.execute("SELECT count(*) FROM passages").fetchone()[0]
 
+    def recent(self, limit: int) -> list[Passage]:
+        with closing(sqlite3.connect(self.path)) as db:
+            rows = db.execute("SELECT title, text, sha, source_id, publisher, tier, url, published_at, fetched_at FROM passages "
+                              "ORDER BY NULLIF(published_at, '') DESC LIMIT ?", (limit,)).fetchall()
+        return [Passage(r[3], r[4], int(r[5]), r[6], r[0], r[1], r[2], datetime.fromisoformat(r[7]) if r[7] else None, datetime.fromisoformat(r[8])) for r in rows]
+
+    def publishers(self) -> dict[str, int]:
+        with closing(sqlite3.connect(self.path)) as db:
+            return dict(db.execute("SELECT publisher, count(*) FROM passages GROUP BY publisher").fetchall())
+
     def texts(self) -> list[str]:
         with closing(sqlite3.connect(self.path)) as db:
             return [r[0] for r in db.execute("SELECT text FROM passages")]

@@ -131,6 +131,10 @@ forensics\venv311\Scripts\python forensics\service.py --port 8100          # Tru
 - Kannada: Whisper-small mislabelled a TTS Kannada sentence as Tamil (language prob 0.36) and a garbled transcript still produced a REFUTED/high verdict. Now `voice.second_opinion` (Gemini hears the
   audio, `config/prompts/listen.txt`) replaces an unsure reading and keeps Whisper's as `alternate`; the Kannada claim then goes through extraction and translation fine. `scripts/kannada_live.py`.
   One machine voice tested. A garbled transcript can still yield a confident verdict: the UI shows the transcript first.
+- JANVERIFY pages (2026-10-31): `ui/static/nav.js` is the shared nav; `/my-investigations` (record ids in browser localStorage `jv_history`, `POST /history`, `DELETE /records/{id}`), `/about`,
+  `/command` (tabs: `/intel/overview`, `/intel/graph`, `/intel/media`, `/intel/claims`, `/registry`, `/cases*` workspace), all computed by `intel.py` from `RecordStore`. Cases only point at record ids.
+  `runtime.intel.not_available` lists sources we looked at and do not use (PIB, MoHFW, PMIndia, cybercrime 403; IMD/NDMA no feed). No auth: the command centre shows every stored record. Pydantic request
+  models for routes must be module-level in `api/app.py` (a class defined inside `create_app` is read as a query parameter because of `from __future__ import annotations`).
 - Not done: (Telegram bot done, see above) (needs a fresh token), escalation never fired live, TruFor false-alarm rate on real social-media images
   unknown, README with a real-vs-roadmap table. `tests/unit/test_trace_sse.py::test_leaving_mid_run...` failed once under full-suite load and
   passes alone (timing).

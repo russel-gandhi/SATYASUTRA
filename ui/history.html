@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My investigations</title>
+<style>
+  :root { --bg: #0b0f17; --panel: #121826; --line: #232c3f; --text: #e8ecf5; --mute: #8b95ab; --accent: #7aa2ff; --ok: #3ecf8e; --bad: #ff6b6b; --warn: #f5b84b; --idle: #6b7690; }
+  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --bg: #f4f6fb; --panel: #fff; --line: #dde2ee; --text: #131a2a; --mute: #5d6885; --accent: #2f5bd8; --idle: #7b86a3; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", "Noto Sans Devanagari", "Noto Sans Kannada", sans-serif; }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 18px 16px 50px; }
+  h1 { font-size: 20px; margin: 4px 0 4px; } .small { color: var(--mute); font-size: 13px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+  input, select { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font: inherit; }
+  input { flex: 1; min-width: 180px; }
+  button { background: transparent; color: var(--accent); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; font: inherit; cursor: pointer; }
+  button.del { color: var(--bad); }
+  .item { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-top: 10px; display: grid; gap: 4px; }
+  .badge { display: inline-block; padding: 1px 9px; border-radius: 6px; font-size: 12px; font-weight: 700; color: #0b0f17; margin-right: 4px; }
+  .bad { background: var(--bad); } .ok { background: var(--ok); } .warn { background: var(--warn); } .idle { background: var(--idle); color: #fff; }
+  .title { overflow-wrap: anywhere; font-weight: 600; } .acts { display: flex; gap: 8px; margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>My investigations</h1>
+  <div class="small">Everything you checked in this browser. There are no accounts: the list lives in this browser and nobody else can see it. Deleting removes the record from the server too.</div>
+  <div class="row"><input id="q" placeholder="Search your investigations"><select id="kind"><option value="">All types</option></select><select id="verdict"><option value="">All verdicts</option></select></div>
+  <div id="list"><div class="small">Loading...</div></div>
+</div>
+<script src="/static/nav.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const el = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; };
+const NAME = { SUPPORTED: ["SUPPORTED", "ok"], REFUTED: ["FALSE", "bad"], MISSING_CONTEXT: ["MISLEADING", "warn"], UNVERIFIABLE_YET: ["UNVERIFIED", "idle"], NOT_A_CLAIM: ["NOT A CLAIM", "idle"],
+  EDITED: ["EDITED", "bad"], SYNTHETIC_SUSPECTED: ["AI-GENERATED?", "warn"], SYNTHETIC: ["AI-GENERATED", "bad"], OUT_OF_CONTEXT: ["OUT OF CONTEXT", "warn"], INCONCLUSIVE: ["NO SIGN FOUND", "idle"] };
+let items = [];
+const ids = () => { try { return JSON.parse(localStorage.getItem("jv_history") || "[]"); } catch (_) { return []; } };
+async function load() {
+  const r = await fetch("/history", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids: ids() }) });
+  items = (await r.json()).items || [];
+  const kinds = [...new Set(items.map((i) => i.kind))], verds = [...new Set(items.flatMap((i) => i.verdicts))];
+  kinds.forEach((k) => $("kind").append(Object.assign(el("option"), { value: k, textContent: k })));
+  verds.forEach((v) => $("verdict").append(Object.assign(el("option"), { value: v, textContent: (NAME[v] || [v])[0] })));
+  draw();
+}
+function draw() {
+  const q = $("q").value.toLowerCase(), k = $("kind").value, v = $("verdict").value, box = $("list"); box.replaceChildren();
+  const shown = items.filter((i) => (!q || i.title.toLowerCase().includes(q)) && (!k || i.kind === k) && (!v || i.verdicts.includes(v)));
+  if (!shown.length) box.append(el("div", "small", items.length ? "Nothing matches." : "Nothing here yet. Check a claim, a link or a file and it will appear."));
+  shown.forEach((i) => {
+    const c = el("div", "item"), head = el("div");
+    i.verdicts.forEach((x) => { const n = NAME[x] || [x, "idle"]; head.append(el("span", "badge " + n[1], n[0])); });
+    head.append(el("span", "small", " " + i.kind + (i.language ? " · " + i.language : "") + " · " + i.created_at.slice(0, 16).replace("T", " ") + " UTC"));
+    const acts = el("div", "acts"), rep = el("button", "", "Open report"), del = el("button", "del", "Delete");
+    rep.onclick = async () => { const b = await (await fetch("/report/build", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ record_ids: [i.id], lang: "en" }) })).json(); if (b.url) window.open(b.url, "_blank"); };
+    del.onclick = async () => { if (!confirm("Delete this investigation from this browser and the server?")) return; await fetch("/records/" + i.id, { method: "DELETE" }); localStorage.setItem("jv_history", JSON.stringify(ids().filter((x) => x !== i.id))); items = items.filter((x) => x.id !== i.id); draw(); };
+    acts.append(rep, del); c.append(head, el("div", "title", i.title), acts); box.append(c);
+  });
+}
+$("q").oninput = $("kind").onchange = $("verdict").onchange = draw;
+load();
+</script>
+</body>
+</html>
