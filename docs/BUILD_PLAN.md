@@ -169,6 +169,38 @@ IN4, IN3. Never cut IN5: it is the guardrail that makes the demo safe on the top
 - WhatsApp: do not claim it. Offer the Telegram bot, and show a "share to the bot" route; WhatsApp business onboarding is on the roadmap slide.
 - Elders and low literacy: replies stay short, one action first. A spoken Hindi reply and Call Guard are stretch items.
 
+## Throughput and the funnel (31 Oct, 17:10)
+
+Problem statement 4 asks for a "high-throughput verification platform". Today the repo measures the input rate (49.7 events a second from the live stream, about 11
+posts a second after filters, one 60-second run) and the worker reports per-post timings, but **there is no benchmark and no published number, and escalation to
+the claim agent has never fired on a real item.** The deep path is capped by Gemini at 15 requests a minute, so throughput is claimed for the **funnel**, not for
+the language-model stage. This package makes the claim measurable.
+
+**Pitch framing (replaces "a deepfake detector").** Three layers, one platform:
+1. **Radar** takes the live stream and, with no model calls, groups near-identical posts and ranks what is spreading (fast clock).
+2. **Verifier** spends language-model and forensic budget only on what spreads: claim agent, official text, detectors.
+3. **Responder** gives a citizen a card and a next step, and gives officials a ranked view with the verdict beside it.
+Detectors are one tool inside the verifier, not the product.
+
+| ID | Package | Hours | Owner | Files | Done when |
+|---|---|---|---|---|---|
+| TH1a | **Sustained live run.** Run the worker on the real stream for 10 minutes with escalation on and the threshold lowered in config (not code), then save `GET /fastclock/stats` and the escalation list | 0.7 (mostly waiting) | integrator machine | `scripts/bench_pipeline.py`, `docs/throughput.md` | Posts per second in, per-post median and 95th percentile, queue peak, drops, clusters formed and dropped, all from the real stream; **at least one escalation has fired live and its audit result is recorded** |
+| TH1b | **Record and replay.** Record 10 minutes of the live stream to a file (recorded data lives in `tests/` only), then replay it through `FastClock.process` at 1x, 10x and 50x speed with no network, and report where the clock falls behind | 1.5 | any session | `scripts/record_stream.py`, `tests/bench/`, `scripts/bench_pipeline.py` | A table of replay speed against posts per second handled, queue growth and drops; the saturation point is stated or "not reached at 50x" |
+| TH1c | **Media numbers.** Images fingerprinted per second (perceptual hash and PDQ), TruFor and Smaug seconds per image on the RTX 4060, Whisper real-time factor on GPU and CPU, frames per second for the 8-frame video check | 1 | lane B | `scripts/bench_pipeline.py` | One row per component with the hardware named; nothing estimated |
+| TH1d | **The funnel table and the five slide numbers.** Posts in, clusters, escalated, decided verdicts, cache hits; plus Gemini calls per verdict by purpose | 0.5 | integrator | `docs/throughput.md`, `docs/claim-sheet.md` | The slide numbers exist in the doc with the command that produced each |
+
+**The five numbers for the slide** (all measured, each with machine, network and date): (1) posts per second sustained through the radar and the median and 95th
+percentile milliseconds per post; (2) the replay speed at which it saturates; (3) the share of posts that never touch a language model; (4) verdicts per minute
+the verifier sustains within the Gemini limit, and what a paid tier would change; (5) images, voice notes and video frames per second.
+
+**Say and do not say.** Say "on one laptop the radar handled X posts a second and fewer than Z in a thousand reached a language model; the verifier is limited by the
+model quota, and here is the design that scales it". Do not say "real-time at scale" or give a throughput number that is not in `docs/throughput.md`; state the
+single machine, the single network and that the stream is Bluesky only. The scale story (queue, several workers, a paid model tier, a database instead of SQLite) is
+described as the next step, not as built.
+
+**Order and cuts.** TH1a first (it also settles the "escalation never fired" caveat), then TH1b, then TH1c and TH1d. Finish by CP3 (Sun 14:00). If short, cut TH1c;
+never cut TH1a or TH1d.
+
 ## Status log
 
 Update at each checkpoint: time, who ran it, pass or fail, what was cut.
