@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Sequence
 
 from ..config import Config, config_dir
 from ..errors import ContentBlocked, SourceError
@@ -65,6 +65,7 @@ class ExtractionResult:
     model: str = ""
     prompt_sha256: str = ""
     tokens: int | None = None
+    promoted: list[str] = field(default_factory=list)      # quotes kept as claims by the high-stakes safety net
 
 
 class Invalid(Exception):
@@ -80,7 +81,25 @@ def build_prompt(template: str, post_text: str) -> str:
     return template.replace("{post_text}", cleaned)
 
 
-def validate_items(post: Post, data: dict, max_items: int, model: str) -> tuple[list[Claim], list[NonClaim]]:
+def _mentions(text: str, terms: Sequence[str]) -> bool:
+    """True when `text` contains one of the terms: whole words for Latin-script terms, plain substrings for other scripts."""
+    low = text.casefold()
+    for term in terms:
+        term = term.casefold()
+        if term.isascii():
+            if re.search(rf"(?<!\w){re.escape(term)}(?!\w)", low):
+                return True
+        elif term in low:
+            return True
+    return False
+
+
+def validate_items(post: Post, data: dict, max_items: int, model: str, promote_terms: Sequence[str] = (), promote_kinds: Sequence[str] = (),
+                   promoted: list[str] | None = None) -> tuple[list[Claim], list[NonClaim]]:
+    """Check every item the model returned. `promote_terms` and `promote_kinds` are a safety net: a short statement the model filed as a question,
+    "other" or "not worth checking" is kept as a claim when its own words (or the model's restatement) contain a high-stakes term such as dead or
+    arrested. Opinions and personal experiences are never promoted. The model's restatement is used as it is; the quotes of promoted items go
+    into `promoted` so the result can say so."""
     items = data.get("items")
     if not isinstance(items, list):
         raise Invalid("'items' is not a list")
@@ -105,9 +124,15 @@ def validate_items(post: Post, data: dict, max_items: int, model: str) -> tuple[
         if start < 0:
             raise Invalid(f"item {i}: the quote does not appear verbatim in the post")
         cursor = start + len(quote)
-        if kind != "factual_claim":
+        promotable = (kind == "factual_claim" and not worth) or kind in promote_kinds
+        keep = kind == "factual_claim" and worth
+        if promotable and (_mentions(quote, promote_terms) or _mentions(claim_en, promote_terms)):
+            keep = True
+            if promoted is not None:
+                promoted.append(quote)
+        if not keep and kind != "factual_claim":
             others.append(NonClaim(quote, claim_en, kind, lang))
-        elif not worth:
+        elif not keep:
             others.append(NonClaim(quote, claim_en, "not_checkworthy", lang))
         else:
             span = (start, start + len(quote))
@@ -146,7 +171,9 @@ def extract_claims(client: GeminiClient, config: Config, post: Post, template: s
             return result
         result.tokens = reply.tokens
         try:
-            result.claims, result.non_claims = validate_items(post, reply.data, max_items, reply.model)
+            result.promoted = []
+            ex = config.runtime.extract
+            result.claims, result.non_claims = validate_items(post, reply.data, max_items, reply.model, ex.promote_terms, ex.promote_kinds, result.promoted)
         except Invalid as exc:
             last = str(exc)
             continue

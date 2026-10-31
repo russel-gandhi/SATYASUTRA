@@ -12,6 +12,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Install ffmpeg (the voice and video tests decode real audio and video; without it they fail or silently skip)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+          ffmpeg -version | head -n 1
+          ffprobe -version | head -n 1
       - name: Install
         run: pip install -e ".[dev]"
       - name: Tests (contract tests that hit the live internet are excluded)

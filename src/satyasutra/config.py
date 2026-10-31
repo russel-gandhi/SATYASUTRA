@@ -178,6 +178,11 @@ class FastClockSettings(_Strict):
 
 class ExtractSettings(_Strict):
     max_claims_per_post: int = Field(gt=0)
+    # Safety net for rumours that spread fastest (a named person dead, arrested, attacked ...). When the model files a short statement as
+    # "other", a question or "not worth checking" but its own words contain one of these terms, the model's restatement is kept as a claim.
+    # The model's wording is used, nothing is invented; opinions and personal experiences are never promoted.
+    promote_terms: list[str] = Field(default_factory=list)
+    promote_kinds: list[str] = Field(default_factory=list)
 
 
 class EscalationSettings(_Strict):

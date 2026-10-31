@@ -43,6 +43,10 @@ fastclock:
   match_min_posts: 2
 extract:
   max_claims_per_post: 5
+  promote_kinds: [question, other]           # plus a factual claim the model called not worth checking
+  promote_terms: [dead, died, dies, death, "passed away", killed, murdered, assassinated, shot, arrested, jailed, resigned, injured, hospitalised, hospitalized,
+                  "critical condition", missing, banned, "shut down",
+                  "मर गया", "मर गए", "मर गई", "मृत्यु", "निधन", "मृत", "हत्या", "गिरफ्तार", "इस्तीफा", "इस्तीफ़ा"]
 
 verify:
   posts_endpoint: https://public.api.bsky.app/xrpc/app.bsky.feed.getPosts
@@ -164,6 +168,13 @@ telegram:
   messages:
     start: "Send me a claim, a forwarded message, a voice note or a photo and I'll check it. If nobody reliable has checked it, I'll say so instead of guessing. I never report or forward anything for you."
     none_found: "I didn't find a claim I can check in that. Opinions and chatter aren't claims."
+    none_found_read: "I read your message as {kind}: \"{quote}\". I can only check statements of fact. If you meant to ask whether something happened, send it as a statement, for example \"<name> has died\", and I will check it."
+    could_not_read: "I couldn't read that reliably, so I checked nothing and guessed nothing. Please send it again, or write it as a plain statement."
+    kind_opinion: "an opinion"
+    kind_question: "a question"
+    kind_personal_experience: "something about you"
+    kind_other: "a remark"
+    kind_not_checkworthy: "a small detail not worth checking"
     source_line: "Read it here: {url}"
     more_line: "{n} other review(s) say the same."
     conflict: "Fact-checkers disagree on this one, so I won't call it either way."
