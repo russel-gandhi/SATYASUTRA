@@ -265,7 +265,7 @@ async function newsLine(text, box) {
     const n = await api("/news/check?text=" + encodeURIComponent(text));
     if (n.status === "reported") {
       box.append("In the news (context, not proof that it is true): ");
-      n.hits.forEach((h) => { const a = el("a", "", h.publisher + ": " + h.title); a.href = h.url; a.target = "_blank"; a.rel = "noopener"; box.append(a, " | "); });
+      n.hits.forEach((h, i) => { const a = el("a", "", h.publisher + ": " + h.title); a.href = h.url; a.target = "_blank"; a.rel = "noopener"; if (i) box.append(" | "); box.append(a); });
     } else box.textContent = n.note;
   } catch (_) { box.textContent = ""; }
 }
@@ -340,6 +340,7 @@ function renderClaim(c) {
     c.citations.filter((e) => e.route !== "web").forEach((e) => { const k = (e.publisher || "") + "|" + (e.rating || ""); if (!groups.has(k)) groups.set(k, { e, n: 0 }); groups.get(k).n++; });
     groups.forEach(({ e, n }) => { const li = el("li"); const a = el("a", "", e.publisher || "A fact-checker"); a.href = e.url; a.target = "_blank"; a.rel = "noopener"; li.append(a, " rated this claim " + (e.rating ? "“" + e.rating + "”" : "(see the link)") + (n > 1 ? " (" + n + " reviews)" : "") + "."); found.append(li); });
   } else found.append(el("li", "", "No fact-checker we search has covered this claim."));
+  (c.reasons || []).filter((r) => r.startsWith("web news search unavailable") || r.startsWith("official-text check unavailable")).forEach((r) => found.append(el("li", "err", "One of our live checks could not run just now (" + r.slice(r.indexOf("(") + 1, r.indexOf(")")) + "), so \"nothing found\" may not be the real answer. Press Verify again in a minute.")));
   const news = el("li"); found.append(news); if (c.label === "UNVERIFIABLE_YET" || c.label === "NOT_A_CLAIM") newsLine(c.text, news); else news.remove();
   const spread = el("li"); found.append(spread); spreadLine(c.text, spread);
   if (c.entities && c.entities.length) {
