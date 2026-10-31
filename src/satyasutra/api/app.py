@@ -46,6 +46,7 @@ from ..scam import check_links, load_domains
 from ..voice import Transcriber, Transcript, VoiceError, second_opinion
 from ..audio import SpoofDetector
 from ..card import build_card, load_cards
+from ..intel import case_view, global_graph, group_claims, media_lab, overview, registry, summarise
 from ..inputs import InputError, fetch_page, image_metadata, image_thumb, pdf_text
 from ..notice import NoticeError, analyse_text, check_notice
 from ..officials import build_view
@@ -73,6 +74,22 @@ class ActRequest(BaseModel):
 class ReportRequest(BaseModel):
     record_ids: list[str] = Field(min_length=1)
     lang: str = "en"
+
+
+class HistoryRequest(BaseModel):
+    ids: list[str] = Field(max_length=200)
+
+
+class CaseCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=160)
+
+
+class CaseRecords(BaseModel):
+    record_ids: list[str] = Field(min_length=1, max_length=50)
+
+
+class CaseNote(BaseModel):
+    text: str = Field(min_length=1, max_length=2000)
 
 
 class UrlRequest(BaseModel):
@@ -199,6 +216,10 @@ def create_app(
     fonts = ROOT / "assets" / "fonts"
     if fonts.is_dir():                                                 # the Devanagari font for the correction card (OFL licence file sits beside it)
         app.mount("/assets/fonts", StaticFiles(directory=fonts), name="fonts")
+
+    shared = ROOT / "ui" / "static"
+    if shared.is_dir():                                                # nav.js: the one navigation bar every page loads
+        app.mount("/static", StaticFiles(directory=shared), name="static")
 
     @app.get("/", include_in_schema=False)
     def home() -> FileResponse:
@@ -352,6 +373,94 @@ def create_app(
     @app.get("/report/{rid}", include_in_schema=False)
     def report_page(rid: str = Path_(pattern="^[0-9a-f]{16}$")) -> FileResponse:
         return FileResponse(ROOT / "ui" / "report.html", media_type="text/html")
+
+    def all_records() -> list[dict]:
+        return store().list_records(cfg.runtime.intel.max_records)
+
+    @app.post("/history")
+    def history(req: HistoryRequest) -> dict:
+        """A citizen's own history: the browser keeps its record ids and asks for their summaries. There are no accounts, so nobody else's records are listed."""
+        found = store().list_records(len(req.ids) or 1, ids=req.ids) if req.ids else []
+        return {"items": [summarise(r) for r in found]}
+
+    @app.delete("/records/{rid}")
+    def delete_record(rid: str = Path_(pattern="^[0-9a-f]{16}$")) -> dict:
+        if not store().delete_record(rid):
+            raise HTTPException(status_code=404, detail="no such record")
+        return {"deleted": rid, "note": "Reports already built from this record keep their copy; their links stay valid."}
+
+    @app.get("/intel/records")
+    def intel_records() -> dict:
+        return {"items": [summarise(r) for r in all_records()]}
+
+    @app.get("/intel/overview")
+    def intel_overview() -> dict:
+        return overview(all_records(), cfg)
+
+    @app.get("/intel/claims")
+    def intel_claims() -> dict:
+        return {"groups": group_claims(all_records(), cfg), "note": "Same underlying claim = English claim texts that overlap above a policy threshold (not calibrated). Claims in other languages are translated first."}
+
+    @app.get("/intel/media")
+    def intel_media() -> dict:
+        return {"items": media_lab(all_records())}
+
+    @app.get("/intel/graph")
+    def intel_graph() -> dict:
+        return global_graph(all_records())
+
+    @app.get("/registry")
+    def registry_view() -> dict:
+        refresh_if_stale(cfg, official_index())
+        return registry(cfg, official_index())
+
+    @app.post("/cases")
+    def case_create(req: CaseCreate) -> dict:
+        cid = store().save_case({"title": req.title, "record_ids": [], "notes": [], "created_at": datetime.now(timezone.utc).isoformat()})
+        return {"id": cid}
+
+    @app.get("/cases")
+    def case_list() -> dict:
+        return {"cases": [{"id": c["id"], "title": c["title"], "created_at": c["created_at"], "records": len(c["record_ids"]), "notes": len(c["notes"])} for c in store().list_cases()]}
+
+    def load_case(cid: str) -> dict:
+        case = store().get_case(cid)
+        if case is None:
+            raise HTTPException(status_code=404, detail="no such case")
+        return case
+
+    @app.get("/cases/{cid}")
+    def case_get(cid: str = Path_(pattern="^[0-9a-f]{12}$")) -> dict:
+        return case_view(load_case(cid), all_records(), cfg)
+
+    @app.post("/cases/{cid}/records")
+    def case_add(req: CaseRecords, cid: str = Path_(pattern="^[0-9a-f]{12}$")) -> dict:
+        case = load_case(cid)
+        unknown = [i for i in req.record_ids if store().get_record(i) is None]
+        if unknown:
+            raise HTTPException(status_code=404, detail="a record was not found")
+        case["record_ids"] = list(dict.fromkeys([*case["record_ids"], *req.record_ids]))
+        store().save_case(case)
+        return {"records": len(case["record_ids"])}
+
+    @app.post("/cases/{cid}/notes")
+    def case_note(req: CaseNote, cid: str = Path_(pattern="^[0-9a-f]{12}$")) -> dict:
+        case = load_case(cid)
+        case["notes"].append({"at": datetime.now(timezone.utc).isoformat(), "text": req.text})
+        store().save_case(case)
+        return {"notes": len(case["notes"])}
+
+    @app.get("/my-investigations", include_in_schema=False)
+    def history_page() -> FileResponse:
+        return FileResponse(ROOT / "ui" / "history.html", media_type="text/html")
+
+    @app.get("/command", include_in_schema=False)
+    def command_page() -> FileResponse:
+        return FileResponse(ROOT / "ui" / "command.html", media_type="text/html")
+
+    @app.get("/about", include_in_schema=False)
+    def about_page() -> FileResponse:
+        return FileResponse(ROOT / "ui" / "about.html", media_type="text/html")
 
     @app.get("/news/check")
     async def news_check(text: str = Query(min_length=1, max_length=cfg.runtime.verify.max_text_chars)) -> dict:

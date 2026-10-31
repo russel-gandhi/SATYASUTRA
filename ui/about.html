@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How it works</title>
+<style>
+  :root { --bg: #0b0f17; --panel: #121826; --line: #232c3f; --text: #e8ecf5; --mute: #8b95ab; --accent: #7aa2ff; --ok: #3ecf8e; --bad: #ff6b6b; --warn: #f5b84b; }
+  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --bg: #f4f6fb; --panel: #fff; --line: #dde2ee; --text: #131a2a; --mute: #5d6885; --accent: #2f5bd8; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .wrap { max-width: 820px; margin: 0 auto; padding: 18px 16px 50px; }
+  h1 { font-size: 26px; margin: 8px 0; } h2 { font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--mute); margin: 26px 0 8px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin-top: 10px; }
+  .flow { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); } .flow div { border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: var(--panel); } .flow b { display: block; color: var(--accent); }
+  li { margin: 4px 0; } .ok { color: var(--ok); } .no { color: var(--bad); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>How it works</h1>
+  <p>You send something you doubt. We go and look, then tell you what we found and how sure we are. We would rather say "we cannot tell" than guess.</p>
+  <h2>The path of one check</h2>
+  <div class="flow">
+    <div><b>1. You send</b>text, a link, a photo, a video, a voice note or a PDF, in English, Hindi or Kannada</div>
+    <div><b>2. We read</b>claims are pulled out and translated to English; voice is transcribed; pages and PDFs are read as text</div>
+    <div><b>3. We look</b>fact-check archives, official RBI and SEBI releases, and news from outlets we list</div>
+    <div><b>4. Rules decide</b>plain code, not a model, turns the evidence into a verdict</div>
+    <div><b>5. You get a report</b>verdict, sources, graph and limits, with a link you can share</div>
+  </div>
+  <h2>What the verdicts mean</h2>
+  <div class="card"><ul>
+    <li><b>SUPPORTED</b>: at least two reputable outlets report it as fact, or a fact-checker rated it true.</li>
+    <li><b>FALSE</b>: a fact-checker or reputable outlets say it is false, or an official number contradicts it.</li>
+    <li><b>MISLEADING</b>: true in part but missing context.</li>
+    <li><b>UNVERIFIED</b>: we found evidence but not enough to decide.</li>
+    <li><b>INSUFFICIENT EVIDENCE</b>: we found nothing. That is not proof it is false.</li>
+  </ul></div>
+  <h2>What we will not do</h2>
+  <div class="card"><ul>
+    <li>Say "genuine" about a picture or voice. A clean result only means our detectors saw nothing.</li>
+    <li>Show a source we did not actually retrieve, or call a claim false because we found nothing.</li>
+    <li>File anything with a government portal for you, get past a login or a CAPTCHA, or pretend to be a browser to get around a block.</li>
+    <li>Pretend to watch the whole country. Dashboards on the investigator side use only what was checked on this server.</li>
+  </ul></div>
+  <h2>Known limits (measured or observed)</h2>
+  <div class="card"><ul>
+    <li>The edit detector missed about 4 in 10 spliced photos after sharing; the AI-image detector missed about 1 in 10. Neither finds face swaps.</li>
+    <li>The voice detector was tested on a small set of machine voices, not on cloned real people.</li>
+    <li>Voice notes in Indian languages can be mis-heard; we show the transcript so you can check it.</li>
+    <li>News outlets copy each other, so news-only support is capped at medium confidence.</li>
+    <li>The Hindi wording on reports and cards has not been reviewed by a native speaker.</li>
+    <li>PIB, the health ministry and the cybercrime portal refuse our automated requests, so they are not used.</li>
+  </ul></div>
+</div>
+<script src="/static/nav.js"></script>
+</body>
+</html>

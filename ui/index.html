@@ -72,7 +72,8 @@
 <header>
   <div>
     <h1>SATYASUTRA</h1>
-    <div class="tag">Live claim verification with an auditable ledger. It says "cannot tell" instead of guessing. <a href="/officials">For officials: what is spreading</a></div>
+    <div class="tag">Paste a claim, a link, a photo, a video, a voice note or a PDF. We search the net, check the evidence and tell you if it is true, false or if we cannot tell. It says "cannot tell" instead of guessing.</div>
+    <div class="chips"><span class="chip">English</span><span class="chip">हिन्दी</span><span class="chip">ಕನ್ನಡ</span><span class="chip">Text</span><span class="chip">Link</span><span class="chip">Image</span><span class="chip">Video</span><span class="chip">Voice</span><span class="chip">PDF</span></div>
   </div>
   <div class="pills" id="pills"></div>
 </header>
@@ -380,8 +381,12 @@ function showResult(body, out) {
 
 const RECS = {};
 const safeName = (f) => f.name.replace(/[^\x20-\x7e]/g, "_").slice(0, 100);
+function remember(kind, id) {
+  try { const h = JSON.parse(localStorage.getItem("jv_history") || "[]"); if (!h.includes(id)) { h.unshift(id); localStorage.setItem("jv_history", JSON.stringify(h.slice(0, 200))); } } catch (_) {}
+}
 function offerReport(kind, id) {
   if (!id) return;
+  remember(kind, id);
   RECS[kind] = id;
   const box = $("rep"); box.replaceChildren();
   const n = Object.keys(RECS).length;
@@ -605,5 +610,6 @@ $("file").onchange = checkImage;
 $("go").onclick = verify; $("chain").onclick = chain;
 refreshPills(); refreshClusters(); setInterval(refreshPills, 5000); setInterval(refreshClusters, 5000);
 </script>
+<script src="/static/nav.js"></script>
 </body>
 </html>

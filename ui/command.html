@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Command centre</title>
+<style>
+  :root { --bg: #0b0f17; --panel: #121826; --line: #232c3f; --text: #e8ecf5; --mute: #8b95ab; --accent: #7aa2ff; --ok: #3ecf8e; --bad: #ff6b6b; --warn: #f5b84b; --idle: #6b7690; --purple: #b07aff; }
+  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --bg: #f4f6fb; --panel: #fff; --line: #dde2ee; --text: #131a2a; --mute: #5d6885; --accent: #2f5bd8; --idle: #7b86a3; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", "Noto Sans Devanagari", "Noto Sans Kannada", sans-serif; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 14px 16px 50px; }
+  h1 { font-size: 20px; margin: 4px 0; } h2 { margin: 0 0 8px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--mute); }
+  .small { color: var(--mute); font-size: 12px; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 14px; }
+  .tabs button { background: var(--panel); color: var(--mute); border: 1px solid var(--line); border-radius: 8px; padding: 7px 14px; font: inherit; cursor: pointer; }
+  .tabs button.on { color: var(--text); border-color: var(--accent); }
+  button.b { background: transparent; color: var(--accent); border: 1px solid var(--line); border-radius: 8px; padding: 5px 11px; font: inherit; cursor: pointer; }
+  button.p { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 6px 14px; font: inherit; font-weight: 600; cursor: pointer; }
+  .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+  .tiles { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); margin-bottom: 12px; }
+  .tile { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; } .tile b { display: block; font-size: 26px; }
+  .brow { display: grid; grid-template-columns: 130px 1fr 34px; gap: 8px; align-items: center; margin: 3px 0; font-size: 13px; }
+  .bar { height: 9px; border-radius: 5px; background: var(--accent); } .bar.bad { background: var(--bad); } .bar.ok { background: var(--ok); } .bar.warn { background: var(--warn); } .bar.idle { background: var(--idle); }
+  .badge { display: inline-block; padding: 1px 9px; border-radius: 6px; font-size: 12px; font-weight: 700; color: #0b0f17; margin-right: 4px; }
+  .badge.bad { background: var(--bad); } .badge.ok { background: var(--ok); } .badge.warn { background: var(--warn); } .badge.idle { background: var(--idle); color: #fff; }
+  input, select, textarea { background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; font: inherit; }
+  textarea { width: 100%; min-height: 64px; } .row { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; align-items: center; }
+  .it { border-top: 1px solid var(--line); padding: 8px 0; } .it:first-child { border-top: 0; } .title { overflow-wrap: anywhere; font-weight: 600; }
+  a { color: var(--accent); } img.th { max-width: 150px; border-radius: 8px; border: 1px solid var(--line); }
+  .gwrap { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr) 300px; } @media (max-width: 860px) { .gwrap { grid-template-columns: 1fr; } }
+  svg.g { width: 100%; height: 560px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+  svg text { fill: var(--text); font: 11px system-ui, "Noto Sans Devanagari", sans-serif; pointer-events: none; }
+  .legend span { margin-right: 10px; white-space: nowrap; } .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; }
+  .chip { display: inline-block; border: 1px solid var(--line); border-radius: 999px; padding: 1px 9px; font-size: 12px; margin: 2px 4px 2px 0; color: var(--mute); }
+  .t1, .t2 { color: var(--ok); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Command centre</h1>
+  <div class="small">For journalists, fact-checkers and officials. Every number comes from the investigations stored on this server. It is not live or nationwide data. No sign-in in this build, so anyone who can open this page sees all stored investigations.</div>
+  <div class="tabs" id="tabs"></div>
+  <div id="view"></div>
+</div>
+<script src="/static/nav.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const el = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; };
+const jget = async (u) => { const r = await fetch(u); if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || "HTTP " + r.status); return r.json(); };
+const jpost = async (u, b) => { const r = await fetch(u, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) }); if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || "HTTP " + r.status); return r.json(); };
+const NAME = { SUPPORTED: ["SUPPORTED", "ok"], REFUTED: ["FALSE", "bad"], MISSING_CONTEXT: ["MISLEADING", "warn"], UNVERIFIABLE_YET: ["UNVERIFIED", "idle"], NOT_A_CLAIM: ["NOT A CLAIM", "idle"],
+  EDITED: ["EDITED", "bad"], SYNTHETIC_SUSPECTED: ["AI-GENERATED?", "warn"], SYNTHETIC: ["AI-GENERATED", "bad"], OUT_OF_CONTEXT: ["OUT OF CONTEXT", "warn"], INCONCLUSIVE: ["NO SIGN FOUND", "idle"] };
+const badge = (v) => { const n = NAME[v] || [v, "idle"]; return el("span", "badge " + n[1], n[0]); };
+const when = (s) => s.slice(0, 16).replace("T", " ") + " UTC";
+
+function bars(counts, cls) {
+  const box = el("div"), max = Math.max(1, ...Object.values(counts));
+  Object.entries(counts).sort((a, b) => b[1] - a[1]).forEach(([k, n]) => { const r = el("div", "brow"); r.append(el("span", "", (NAME[k] || [k])[0]), Object.assign(el("div", "bar " + ((NAME[k] || [])[1] || cls || "")), { style: `width:${(100 * n) / max}%` }), el("span", "small", String(n))); box.append(r); });
+  if (!Object.keys(counts).length) box.append(el("div", "small", "Nothing yet."));
+  return box;
+}
+const card = (title, ...kids) => { const c = el("div", "card"); c.append(el("h2", "", title), ...kids); return c; };
+function recentList(items) {
+  const box = el("div"); items.forEach((i) => { const d = el("div", "it"); i.verdicts.forEach((v) => d.append(badge(v))); d.append(el("span", "small", i.kind + " · " + when(i.created_at)), el("div", "title", i.title)); box.append(d); });
+  if (!items.length) box.append(el("div", "small", "Nothing yet."));
+  return box;
+}
+
+const VIEWS = {
+  async overview(v) {
+    const o = await jget("/intel/overview"), t = o.totals;
+    const tiles = el("div", "tiles");
+    [["Investigations", t.investigations], ["Claims", t.claims], ["Distinct claims", t.claim_groups], ["Media checked", t.media], ["Media to review", o.media_needing_review.length]].forEach(([k, n]) => { const d = el("div", "tile"); d.append(Object.assign(el("b"), { textContent: n }), el("span", "small", k)); tiles.append(d); });
+    v.append(tiles, el("div", "small", o.note));
+    const g = el("div", "grid"); g.style.marginTop = "12px";
+    g.append(card("Verdicts", bars(o.verdicts)), card("Languages", bars(o.languages, "")), card("Evidence sources used", bars(Object.fromEntries(o.sources.map((s) => [s.publisher + " (tier " + s.tier + ")", s.count])))));
+    const day = card("Investigations per day", bars(o.per_day));
+    g.append(day, card("Media needing a closer look", recentList(o.media_needing_review)), card("Recent investigations", recentList(o.recent)), card("Geography", el("div", "small", o.geography)));
+    v.append(g);
+  },
+
+  async graph(v) {
+    const g = await jget("/intel/graph");
+    if (!g.nodes.length) { v.append(card("Evidence graph", el("div", "small", "No investigations yet. Check a claim and it appears here."))); return; }
+    v.append(el("div", "small", g.note + " Drag a node, click it for details."));
+    const kinds = [...new Set(g.nodes.map((n) => n.kind))], on = new Set(kinds), side = el("div", "card");
+    const wrap = el("div", "gwrap"), left = el("div"), filt = el("div", "row"), host = el("div");
+    kinds.forEach((k) => { const l = el("label", "chip"), c = Object.assign(el("input"), { type: "checkbox", checked: true }); c.onchange = () => { c.checked ? on.add(k) : on.delete(k); host.replaceChildren(forceGraph(g, on, (n) => showNode(side, n, g))); }; l.append(c, " " + k); filt.append(l); });
+    host.append(forceGraph(g, on, (n) => showNode(side, n, g)));
+    side.append(el("div", "small", "Click a node to see its source, metadata and relationships."));
+    left.append(filt, host, legend()); wrap.append(left, side); v.append(wrap);
+  },
+
+  async media(v) {
+    const m = (await jget("/intel/media")).items;
+    if (!m.length) { v.append(card("Media forensics lab", el("div", "small", "No images, videos or voice notes checked yet. Upload one on the Check page."))); return; }
+    const g = el("div", "grid");
+    m.forEach((x) => {
+      const c = el("div", "card"); if (x.thumb) { const i = el("img", "th"); i.src = "data:image/jpeg;base64," + x.thumb; c.append(i); }
+      c.append(el("div", "title", (x.name || x.kind)), badge(x.label), el("span", "small", x.kind + " · " + when(x.created_at)));
+      const f = x.forensics; if (f && f.available) c.append(el("div", "small", "edit score " + f.score.toFixed(2) + (f.ai_score != null ? ", AI score " + f.ai_score.toFixed(2) : "")));
+      if (x.frames) { const row = el("div"); x.frames.forEach((fr) => { const b = el("div", "bar " + (fr.flagged ? "bad" : "ok")); b.style.cssText = `display:inline-block;width:14px;height:${6 + 30 * (fr.score || 0)}px;margin-right:3px;vertical-align:bottom`; b.title = fr.at_s.toFixed(1) + " s, edit score " + (fr.score == null ? "n/a" : fr.score.toFixed(2)); row.append(b); }); c.append(el("div", "small", "Per-frame edit score"), row); }
+      const ul = el("ul"); x.reasons.forEach((r) => ul.append(el("li", "", r))); c.append(ul);
+      (x.metadata || []).forEach((r) => c.append(el("div", "small", r.text)));
+      x.matches.forEach((h) => { const a = el("a", "", h.publisher + ": " + h.title); a.href = h.article_url; a.target = "_blank"; c.append(a, el("br")); });
+      if (x.note) c.append(el("div", "small", x.note));
+      g.append(c);
+    });
+    v.append(g);
+  },
+
+  async claims(v) {
+    const d = await jget("/intel/claims"); v.append(el("div", "small", d.note));
+    const q = Object.assign(el("input"), { placeholder: "Search claims" }), list = el("div"); q.style.margin = "8px 0"; v.append(q, list);
+    const draw = () => { list.replaceChildren(); d.groups.filter((g) => !q.value || g.text.toLowerCase().includes(q.value.toLowerCase())).forEach((g) => {
+      const c = el("div", "card"); c.style.marginTop = "10px"; c.append(badge(g.verdict), el("span", "small", g.investigations + " investigation" + (g.investigations > 1 ? "s" : "") + " · first seen " + when(g.first_seen) + " · " + Object.entries(g.languages).map(([k, n]) => k + " x" + n).join(", ")), el("div", "title", g.text));
+      [["Supporting", g.supporting], ["Contradicting", g.contradicting], ["Context", g.context]].forEach(([k, arr]) => { if (!arr.length) return; const u = el("div", "small", k + ":"); arr.slice(0, 6).forEach((s) => { const a = el("a", "chip", s.publisher); a.href = s.url; a.target = "_blank"; a.title = s.title; u.append(" ", a); }); c.append(u); });
+      list.append(c); }); if (!list.children.length) list.append(el("div", "small", "No claims yet.")); };
+    q.oninput = draw; draw();
+  },
+
+  async registry(v) {
+    const r = await jget("/registry"); v.append(el("div", "small", r.note));
+    const g = el("div", "grid"); g.style.marginTop = "12px";
+    g.append(card("Official feeds read (Tier 1)", ...r.official_feeds.map((f) => el("div", "it", f.publisher + ": " + f.items_held + " items held"))));
+    g.append(card("Latest official items", ...r.latest_items.map((i) => { const d = el("div", "it"), a = el("a", "", i.title); a.href = i.url; a.target = "_blank"; d.append(a, el("div", "small", i.publisher + " · " + (i.published_at || "undated").slice(0, 10) + " · sha " + i.sha256.slice(0, 10))); return d; })));
+    g.append(card("Fact-checkers we trust", ...r.fact_checkers.map((n) => el("span", "chip", n))), card("Reputable outlets (Tier 2)", ...r.reputable_outlets.map((n) => el("span", "chip", n))));
+    const byCat = {}; r.official_domains.forEach((d) => (byCat[d.category] = byCat[d.category] || []).push(d));
+    g.append(card("Official domains (link names only)", ...Object.entries(byCat).map(([k, arr]) => { const d = el("div", "it"); d.append(el("b", "", k + " (" + arr.length + ")"), el("div", "small", arr.map((x) => x.domain).join(", "))); return d; })));
+    g.append(card("Looked at and not used", ...r.not_available.map((n) => { const d = el("div", "it"); d.append(el("b", "", n.name), el("div", "small", n.reason)); return d; })));
+    v.append(g);
+  },
+
+  async workspace(v) {
+    const top = el("div", "row"), name = Object.assign(el("input"), { placeholder: "New case title" }), make = el("button", "p", "Open case");
+    top.append(name, make); v.append(top);
+    const list = el("div"), body = el("div"); v.append(list, body);
+    make.onclick = async () => { if (!name.value.trim()) return; const r = await jpost("/cases", { title: name.value.trim() }); name.value = ""; open(r.id); };
+    async function refresh() { const d = await jget("/cases"); list.replaceChildren(); d.cases.forEach((c) => { const b = el("button", "b", c.title + " (" + c.records + " records, " + c.notes + " notes)"); b.style.margin = "0 6px 6px 0"; b.onclick = () => open(c.id); list.append(b); }); if (!d.cases.length) list.append(el("div", "small", "No cases yet. A case collects investigations, notes and a graph in one place.")); }
+    async function open(id) {
+      const c = await jget("/cases/" + id); body.replaceChildren(); await refresh();
+      const head = card("Case: " + c.title, el("div", "small", "Created " + when(c.created_at) + (c.missing.length ? " · " + c.missing.length + " deleted record(s)" : "")));
+      const add = el("div", "row"), sel = el("select"), addb = el("button", "b", "Add investigation"), rep = el("button", "p", "Build report");
+      (await jget("/intel/records")).items.forEach((i) => sel.append(Object.assign(el("option"), { value: i.id, textContent: i.kind + ": " + i.title.slice(0, 70) })));
+      addb.onclick = async () => { if (sel.value) { await jpost("/cases/" + id + "/records", { record_ids: [sel.value] }); open(id); } };
+      rep.onclick = async () => { const ids = c.timeline.map((t) => t.id).slice(0, 12); if (!ids.length) return; const b = await jpost("/report/build", { record_ids: ids, lang: "en" }); window.open(b.url, "_blank"); };
+      add.append(sel, addb, rep); head.append(add); body.append(head);
+      body.append(card("Timeline", ...(c.timeline.length ? c.timeline.map((t) => { const d = el("div", "it"); t.verdicts.forEach((x) => d.append(badge(x))); d.append(el("span", "small", t.kind + " · " + when(t.created_at)), el("div", "title", t.title)); return d; }) : [el("div", "small", "No investigations in this case yet.")])));
+      if (c.claims.length) body.append(card("Claims in this case", ...c.claims.map((g) => { const d = el("div", "it"); d.append(badge(g.verdict), el("span", "small", g.investigations + " investigation(s)"), el("div", "title", g.text)); return d; })));
+      if (c.graph.nodes.length) { const gc = card("Evidence graph of this case"); gc.append(forceGraph(c.graph, new Set(c.graph.nodes.map((n) => n.kind)), () => {}), legend()); body.append(gc); }
+      const notes = card("Investigator notes", ...c.notes.map((n) => { const d = el("div", "it"); d.append(el("div", "small", when(n.at)), el("div", "", n.text)); return d; }));
+      const ta = el("textarea"), nb = el("button", "b", "Add note"); nb.onclick = async () => { if (ta.value.trim()) { await jpost("/cases/" + id + "/notes", { text: ta.value.trim() }); open(id); } };
+      notes.append(ta, nb); body.append(notes);
+    }
+    refresh();
+  },
+};
+
+const KIND_COLOR = { claim: "#7aa2ff", entity: "#8b95ab", factcheck: "#3ecf8e", news: "#3ecf8e", official: "#3ecf8e", media: "#f5b84b", cluster: "#b07aff", registry: "#8b95ab", source: "#8b95ab", provenance: "#f5b84b" };
+const EDGE_COLOR = { supports: "#3ecf8e", contradicts: "#ff6b6b", context: "#8b95ab", mentions: "#8b95ab", same_image_as: "#f5b84b", spreading_as: "#b07aff", related_not_used: "#8b95ab", records: "#8b95ab", submitted_with: "#7aa2ff" };
+function legend() { const d = el("div", "small legend"); Object.entries(KIND_COLOR).slice(0, 7).forEach(([k, c]) => { const s = el("span"); s.append(Object.assign(el("span", "dot"), { style: "background:" + c }), k); d.append(s); }); Object.entries({ supports: 1, contradicts: 1, context: 1 }).forEach(([k]) => { const s = el("span"); s.append(Object.assign(el("span", "dot"), { style: "background:" + EDGE_COLOR[k] }), "edge: " + k); d.append(s); }); return d; }
+
+function showNode(side, n, g) {
+  side.replaceChildren(el("h2", "", n.kind), el("div", "title", n.label));
+  if (n.tier) side.append(el("div", "small", "Tier " + n.tier + (n.date ? " · " + n.date : "")));
+  if (n.description) side.append(el("div", "small", n.description));
+  if (n.verdict) side.append(badge(n.verdict));
+  if (n.url) { const a = el("a", "", n.url); a.href = n.url; a.target = "_blank"; a.rel = "noopener"; side.append(el("div"), a); }
+  const byId = Object.fromEntries(g.nodes.map((x) => [x.id, x])), rel = g.edges.filter((e) => e.from === n.id || e.to === n.id);
+  side.append(el("h2", "", "Relationships (" + rel.length + ")")); rel.forEach((e) => { const o = byId[e.from === n.id ? e.to : e.from]; if (o) side.append(el("div", "it", (e.from === n.id ? e.relation + " → " : "← " + e.relation + " ") + o.label.slice(0, 70))); });
+}
+
+function forceGraph(g, on, pick) {
+  const W = 760, H = 560, ns = "http://www.w3.org/2000/svg", svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("class", "g");
+  const nodes = g.nodes.filter((n) => on.has(n.kind)).map((n, i) => ({ ...n, x: W / 2 + 200 * Math.cos(i), y: H / 2 + 200 * Math.sin(i), vx: 0, vy: 0 }));
+  const idx = Object.fromEntries(nodes.map((n, i) => [n.id, i])), edges = g.edges.filter((e) => e.from in idx && e.to in idx);
+  for (let it = 0; it < 300; it++) {
+    for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) { const a = nodes[i], b = nodes[j]; let dx = a.x - b.x, dy = a.y - b.y, d2 = dx * dx + dy * dy + 0.01, f = 2600 / d2, d = Math.sqrt(d2); a.vx += (dx / d) * f; a.vy += (dy / d) * f; b.vx -= (dx / d) * f; b.vy -= (dy / d) * f; }
+    edges.forEach((e) => { const a = nodes[idx[e.from]], b = nodes[idx[e.to]]; const dx = b.x - a.x, dy = b.y - a.y, d = Math.sqrt(dx * dx + dy * dy) + 0.01, f = (d - 90) * 0.02; a.vx += (dx / d) * f; a.vy += (dy / d) * f; b.vx -= (dx / d) * f; b.vy -= (dy / d) * f; });
+    nodes.forEach((n) => { n.vx += (W / 2 - n.x) * 0.004; n.vy += (H / 2 - n.y) * 0.004; n.x = Math.max(30, Math.min(W - 30, n.x + n.vx * 0.5)); n.y = Math.max(20, Math.min(H - 20, n.y + n.vy * 0.5)); n.vx *= 0.6; n.vy *= 0.6; });
+  }
+  const mk = (t, a, x) => { const e = document.createElementNS(ns, t); Object.entries(a || {}).forEach(([k, v]) => e.setAttribute(k, v)); if (x != null) e.textContent = x; return e; };
+  const lines = edges.map((e) => { const l = mk("line", { stroke: EDGE_COLOR[e.relation] || "#8b95ab", "stroke-width": e.relation === "supports" || e.relation === "contradicts" ? 2 : 1, opacity: 0.8 }); svg.append(l); return [l, e]; });
+  const gs = nodes.map((n) => { const gr = mk("g", { style: "cursor:pointer" }); gr.append(mk("circle", { r: n.kind === "claim" ? 12 : 8, fill: KIND_COLOR[n.kind] || "#8b95ab", stroke: "#0b0f17", "stroke-width": 1.5 }), mk("text", { x: 12, y: 4 }, n.label.slice(0, 26))); gr.append(mk("title", {}, n.label)); gr.onclick = () => pick(n);
+    gr.onmousedown = (ev) => { ev.preventDefault(); const move = (m) => { const r = svg.getBoundingClientRect(); n.x = ((m.clientX - r.left) / r.width) * W; n.y = ((m.clientY - r.top) / r.height) * H; place(); }; const up = () => { window.removeEventListener("mousemove", move); window.removeEventListener("mouseup", up); }; window.addEventListener("mousemove", move); window.addEventListener("mouseup", up); };
+    svg.append(gr); return gr; });
+  function place() { lines.forEach(([l, e]) => { const a = nodes[idx[e.from]], b = nodes[idx[e.to]]; l.setAttribute("x1", a.x); l.setAttribute("y1", a.y); l.setAttribute("x2", b.x); l.setAttribute("y2", b.y); }); gs.forEach((gr, i) => gr.setAttribute("transform", `translate(${nodes[i].x},${nodes[i].y})`)); }
+  place(); return svg;
+}
+
+const TABS = [["overview", "Intelligence overview"], ["graph", "Evidence graph explorer"], ["media", "Media forensics lab"], ["claims", "Claim intelligence"], ["registry", "Bharat registry"], ["workspace", "Investigation workspace"]];
+async function show(k) {
+  [...$("tabs").children].forEach((b) => b.classList.toggle("on", b.dataset.k === k));
+  const v = $("view"); v.replaceChildren(el("div", "small", "Loading...")); location.hash = k;
+  const fresh = el("div");
+  try { await VIEWS[k](fresh); } catch (e) { fresh.replaceChildren(el("div", "small", "Could not load: " + e.message)); }
+  v.replaceChildren(fresh);
+}
+TABS.forEach(([k, t]) => { const b = el("button", "", t); b.dataset.k = k; b.onclick = () => show(k); $("tabs").append(b); });
+show(TABS.some(([k]) => "#" + k === location.hash) ? location.hash.slice(1) : "overview");
+</script>
+</body>
+</html>
