@@ -155,6 +155,8 @@ telegram:
   local_timeout_s: 120
   retry_s: 5
   max_reply_chars: 3800            # Telegram refuses messages over 4096
+  private_header: x-private
+  help_mode_s: 3600
   labels:                          # one sentence per verdict, spoken plainly; {publisher} and {rating} come from the first source
     REFUTED: "This is false. {publisher} checked this very claim and rated it \"{rating}\"."
     SUPPORTED: "This checks out. {publisher} looked at this claim and rated it \"{rating}\"."
@@ -178,6 +180,7 @@ telegram:
     source_line: "Read it here: {url}"
     more_line: "{n} other review(s) say the same."
     conflict: "Fact-checkers disagree on this one, so I won't call it either way."
+    human_review: "This touches religion, caste or elections, so I won't call it true or false on my own. Please read the sources and check with a trusted fact-checker."
     news_reported: "It is being talked about in the news: {publisher} ran \"{title}\" ({url}). That means it's in the news, not that it's true."
     news_not_found: "I also went through the latest stories from {n} major news outlets ({names}) and none of them is reporting this. That doesn't prove it's false, since I only see recent stories from the big outlets, but if it were a major event you'd expect to find it there. Don't forward it until a source you trust confirms it."
     media_match: "This image has appeared in a fact-check before: {url}"
@@ -188,6 +191,11 @@ telegram:
     voice_failed: "I couldn't read that voice note: {reason}"
     image_failed: "I couldn't read that image."
     unsupported: "I can check text, voice notes and photos."
+    help_intro: "I'm sorry this is happening. It is not your fault, and you do not have to deal with it alone. I will not check this message or keep it. Here is what you can do:"
+    guided_offer: "For step-by-step help in English send /help_me. हिंदी में /madad भेजिए।"
+    help_no_images: "Please do not send me any photo, video or file about this. I will not open, keep or check them. Use the official services above: they are made for this. Send /forget to leave this mode and clear it."
+    help_images_refused: "I am in help mode, so I did not download that file and did not look at it. Please do not send private images to anyone but the official services above. Send /forget to leave help mode."
+    forgot: "Done. I am out of help mode and I keep nothing from this chat. Telegram itself still keeps the chat on its servers: you can delete it from your side."
     error: "Something went wrong while checking that. Nothing was recorded, please try again."
 
 explain:
@@ -262,6 +270,7 @@ web:
   title_chars: 220
   min_outlets_support: 2
   min_outlets_debunk: 2
+  forecast_terms: ["will be", "will have", "will rise", "will fall", "will happen", "next year", "next month", "next week", "next season", "in 2027", "in 2028", "in 2030", "is expected to", "is forecast", "is predicted", "going to be"]   # a policy list from reading dev row u24, not calibrated
   reputable_outlets: ["Reuters", "Associated Press", "AP News", "AFP", "BBC", "BBC News", "Al Jazeera", "The Hindu", "The Indian Express", "Hindustan Times", "The Times of India", "NDTV",
                       "India Today", "The Economic Times", "Business Standard", "Mint", "Livemint", "The Wire", "Scroll.in", "ETV Bharat", "Press Trust of India", "PTI",
                       "The Telegraph", "Deccan Herald", "The New Indian Express", "Firstpost", "CNN", "The Guardian", "The New York Times", "The Washington Post",

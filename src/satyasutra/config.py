@@ -97,6 +97,7 @@ class RatingMap(_Strict):
 class VerdictRules(_Strict):
     rating_map: RatingMap
     negations: list[str]                          # a review and a claim that differ in negation may be opposites
+    sensitive_topics: dict[str, list[str]] = Field(default_factory=dict)   # topic -> phrases; a match ends any decided label in 'cannot tell'
     min_publishers_for_high: int = Field(gt=0)
     stale_after_days: int = Field(gt=0)           # policy choice, not a measurement
     related_limit: int = Field(ge=0)
@@ -275,6 +276,7 @@ class WebSettings(_Strict):
     max_cited: int = Field(gt=0)             # headlines shown as context when they do not decide
     title_chars: int = Field(gt=0)
     min_outlets_support: int = Field(gt=0)   # distinct reputable outlets that must report it as fact before it counts as support
+    forecast_terms: list[str]                # a claim worded as a forecast cannot be confirmed by outlets reporting the forecast
     min_outlets_debunk: int = Field(gt=0)    # distinct reputable outlets that must debunk it when none of them is a fact-checker
     reputable_outlets: list[str]
     fact_checkers: list[str]
@@ -394,6 +396,8 @@ class TelegramSettings(_Strict):
     local_timeout_s: float = Field(gt=0)     # a full claim check can take a while
     retry_s: float = Field(gt=0)
     max_reply_chars: int = Field(gt=0)
+    private_header: str                      # sent on every call to our API: the server keeps no record of such a request
+    help_mode_s: float = Field(gt=0)         # how long a chat stays in help mode (memory only, never written down)
     labels: dict[str, str]                   # verdict label -> plain words for a chat
     messages: dict[str, str]
 

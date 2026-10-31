@@ -214,3 +214,14 @@ def test_the_agent_runs_the_official_step_in_parallel_and_the_contradiction_deci
     res = graph_run.outcome.results[0]
     assert res.outcome.verdict.label == "REFUTED" and ledger.verify().ok
     assert any(x["summary"].startswith("1 passage") for x in [e.data for e in events if e.kind == "tool_call" and e.data["name"].startswith("official")])
+
+
+def test_a_true_figure_in_another_cell_of_a_table_is_not_refuted_by_a_neighbouring_number():
+    """Dev run: 'services exports were 39,305' was refuted because the model quoted another cell of the same RBI table."""
+    table = "International Trade in Services (US$ million) Month Receipts (Exports) Payments (Imports) Aug 2026 38,100 19,800 Sep 2026 39,305 20,097"
+    out = contrast_check(FakeGemini([item(claim_value="US$ 39,305 million", official_value="38,100")]), cfg(),
+                         "India's services exports were US$ 39,305 million in September 2026.", [passage(table)])
+    assert out.contrast == [] and "also in the passage" in out.checked[0]["why"]
+    changed = contrast_check(FakeGemini([item(claim_value="US$ 58,958 million", official_value="39,305")]), cfg(),
+                             "India's services exports were US$ 58,958 million in September 2026.", [passage(table)])
+    assert len(changed.contrast) == 1

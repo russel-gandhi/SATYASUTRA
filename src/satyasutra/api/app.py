@@ -6,6 +6,7 @@ Start it with:  uvicorn satyasutra.api.app:create_app --factory
 from __future__ import annotations
 
 import json
+from contextvars import ContextVar
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -13,7 +14,7 @@ from functools import cache
 from pathlib import Path
 from typing import Any, Callable
 
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, Header, HTTPException, Query, Request
 from fastapi import Path as Path_
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, StreamingResponse
@@ -41,8 +42,10 @@ from ..schemas.core import sha256_text
 from ..sources import FactCheckClient, FactCheckResult, ProbeResult, probe_all
 from ..sources import WikidataClient
 from ..sources.bluesky import PostNotFound, fetch_post
-from ..act import build_pack, build_plan, load_actions
+from ..act import build_pack, build_plan, is_intimate, load_actions
 from ..scam import check_links, load_domains
+from ..scam.script import load_script
+from ..scam.session import SessionFull, Sessions
 from ..voice import Transcriber, Transcript, VoiceError, second_opinion
 from ..audio import SpoofDetector
 from ..card import build_card, load_cards
@@ -60,6 +63,7 @@ from ..report import build_report
 
 ROOT = Path(__file__).resolve().parents[3]
 JOB_ID = r"^[A-Za-z0-9_-]+$"
+PRIVATE: ContextVar[bool] = ContextVar("private", default=False)
 MAX_NON_CLAIMS_SHOWN = 3        # what the model made of a message that held no claim, so the reply can say how it was read
 
 
@@ -96,6 +100,11 @@ class CaseNote(BaseModel):
 
 class UrlRequest(BaseModel):
     url: str = Field(min_length=1, max_length=2000)
+
+
+class GuardText(BaseModel):
+    session: str = Field(min_length=8, max_length=64, pattern="^[A-Za-z0-9_-]+$")
+    text: str = Field(min_length=1)
 
 
 class VerifyRequest(BaseModel):
@@ -175,6 +184,25 @@ def create_app(
             await self.inner(scope, receive, send_with_header if scope["type"] == "http" else send)
 
     app.add_middleware(RevalidatePages)
+
+    private_header = cfg.runtime.telegram.private_header.encode()
+
+    class PrivateMode:
+        """A request carrying the private header (the Telegram bot sends it on every call) is marked for the whole request, so `keep` writes nothing for it."""
+        def __init__(self, inner):
+            self.inner = inner
+
+        async def __call__(self, scope, receive, send):
+            if scope["type"] != "http":
+                return await self.inner(scope, receive, send)
+            flagged = any(k == private_header and v == b"1" for k, v in scope.get("headers", []))
+            token = PRIVATE.set(flagged)
+            try:
+                await self.inner(scope, receive, send)
+            finally:
+                PRIVATE.reset(token)
+
+    app.add_middleware(PrivateMode)
     app.state.config = cfg
     app.state.ledger = ledger
     app.state.worker = worker
@@ -356,6 +384,47 @@ def create_app(
         return {"rows": rows, "stats": worker.stats(),
                 "note": "Only the Bluesky stream we watch is covered, in memory since the server started. A row says what we have already found; it is not a verdict, and topics are matched by word lists."}
 
+    guard_rules = load_script()
+    guard_calls = Sessions(guard_rules)
+
+    def guard_reply(call, text: str, session_id: str) -> dict:
+        v = call.add(text)
+        return {"state": v.state, "signals": v.signals, "scam_type": v.scam_type, "message": guard_rules.states[v.state].model_dump(), "family_alert": guard_rules.family_alert.model_dump() if v.state == "scam" else None, "advice": guard_rules.advice[v.scam_type].model_dump() if v.state == "scam" and v.scam_type in guard_rules.advice else None,
+                "heard": call.tail, "note": "Script words only; it cannot know who is calling. It never says a call is safe. Nothing is recorded or stored."}
+
+    @app.post("/guard/chunk")
+    async def guard_chunk(request: Request, x_session: str = Header(min_length=8, max_length=64, pattern="^[A-Za-z0-9_-]+$")) -> dict:
+        """A few seconds of call audio in, the call's state out. The audio is transcribed and dropped; nothing is written to disk or to any record."""
+        data = await request.body()
+        if not data or len(data) > guard_rules.settings.max_chunk_bytes:
+            raise HTTPException(status_code=422, detail=f"send 1 to {guard_rules.settings.max_chunk_bytes} bytes of audio")
+        try:
+            t = await run_in_threadpool((transcribe or speech().transcribe), data)
+            call = guard_calls.get(x_session)
+        except VoiceError as exc:
+            raise HTTPException(status_code=422, detail=str(exc))
+        except SessionFull:
+            raise HTTPException(status_code=503, detail="Too many calls are being listened to right now. Try again in a minute.")
+        return guard_reply(call, t.text[: guard_rules.settings.max_text_chars], x_session)
+
+    @app.post("/guard/text")
+    def guard_text(req: GuardText) -> dict:
+        """The same rules on typed words (for a quick try without a microphone). Also in memory only."""
+        try:
+            call = guard_calls.get(req.session)
+        except SessionFull:
+            raise HTTPException(status_code=503, detail="Too many calls are being listened to right now. Try again in a minute.")
+        return guard_reply(call, req.text[: guard_rules.settings.max_text_chars], req.session)
+
+    @app.delete("/guard/{session_id}")
+    def guard_end(session_id: str = Path_(pattern="^[A-Za-z0-9_-]{8,64}$")) -> dict:
+        guard_calls.end(session_id)
+        return {"ended": True}
+
+    @app.get("/guard", include_in_schema=False)
+    def guard_page() -> FileResponse:
+        return FileResponse(ROOT / "ui" / "guard.html", media_type="text/html")
+
     @app.get("/officials", include_in_schema=False)
     def officials_page() -> FileResponse:
         return FileResponse(ROOT / "ui" / "officials.html", media_type="text/html")
@@ -493,6 +562,11 @@ def create_app(
     def command_page() -> FileResponse:
         return FileResponse(ROOT / "ui" / "command.html", media_type="text/html")
 
+    @app.get("/help", include_in_schema=False)
+    def help_page() -> FileResponse:
+        """Quiet page for someone whose private pictures are being shared: steps only, no history, no upload, one-tap exit."""
+        return FileResponse(ROOT / "ui" / "help.html", media_type="text/html", headers={"Cache-Control": "no-store"})
+
     @app.get("/about", include_in_schema=False)
     def about_page() -> FileResponse:
         return FileResponse(ROOT / "ui" / "about.html", media_type="text/html")
@@ -574,7 +648,15 @@ def create_app(
     def store() -> RecordStore:
         return RecordStore(_path(cfg.runtime.report.db_path))
 
+    def refuse_private_topic(text: str) -> None:
+        """Text about private images is not fact-checked: a verdict would put it in the ledger, which cannot be edited. It gets guidance only (/act/plan)."""
+        if is_intimate(text, load_actions(config_dir() / "actions.yaml")):
+            raise HTTPException(status_code=409, detail="this looks like a private-images situation: nothing was checked or stored. Use /act/plan for the next steps")
+
     def keep(kind: str, body: dict) -> str | None:
+        """Save an investigation record. Never for a private request, and never for anything that reads as the private-images topic, whatever the caller says."""
+        if PRIVATE.get() or is_intimate(json.dumps(body, default=str, ensure_ascii=False), load_actions(config_dir() / "actions.yaml")):
+            return None
         try:
             return store().add_record(kind, body, cfg.runtime.report.max_record_bytes)
         except (ValueError, OSError):
@@ -631,6 +713,7 @@ def create_app(
         clean = text.strip()
         if not clean:
             raise HTTPException(status_code=422, detail="text must not be blank")
+        refuse_private_topic(clean)
         job, run = uuid.uuid4().hex[:16], AgentRun()
         graph = build_claim_agent(cfg, ledger, text_post, do_extract, do_lookup, do_judge, do_ground, run, do_official, do_web)
 
@@ -678,6 +761,7 @@ def create_app(
                 if not text or len(text) > settings.max_text_chars:
                     raise HTTPException(status_code=422, detail=f"text must be 1 to {settings.max_text_chars} characters")
                 post = text_post(text)
+            refuse_private_topic(post.text)
             if fastclock is not None:
                 fastclock.process(post)            # a repeat is still a post that spread: it counts toward the cluster's velocity
             cached = verdicts().get_or_compute(post.text, lambda: _run(post))
@@ -690,9 +774,9 @@ def create_app(
         return mark(cached)
 
     def _run(post: Post) -> dict:
-        done = verify_post(post, cfg, ledger, do_extract, do_lookup, do_judge, do_web)
+        done = verify_post(post, cfg, ledger, do_extract, do_lookup, do_judge, do_web, do_official)
         if done.extraction.status == "failed" and done.extraction.reason.startswith(BUSY_REASONS):
-            raise HTTPException(status_code=503, detail="The language model is at its rate limit or unreachable right now, so nothing was checked and nothing was guessed. Please try again in about a minute.")
+            raise HTTPException(status_code=503, detail="The language model is at its rate limit or unreachable right now, so nothing was checked and nothing was guessed. If it is the per-minute limit, try again shortly; if it is the daily allowance, it resets later and waiting a minute will not help.")
         if done.extraction.status in ("blocked", "failed"):
             raise HTTPException(status_code=502, detail=f"claim extraction {done.extraction.status}: {done.extraction.reason}")
         return verdict_body(post, done)

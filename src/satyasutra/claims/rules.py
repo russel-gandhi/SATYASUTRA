@@ -151,6 +151,16 @@ def _decide(
         else:
             reasons.append("no trusted review of this claim")
 
+    topic = sensitive_topic(claim, rules.sensitive_topics)
+    if topic and label in ("SUPPORTED", "REFUTED", "MISSING_CONTEXT"):
+        reasons.append(f"{topic} topic: the system does not call this true or false on its own; the evidence is shown for a human to weigh")
+        cited = [e.model_copy(update={"role": "context"}) for e in cited]
+        label, deciders = "UNVERIFIABLE_YET", []
+        flags = [f for f in flags if f != "CONFLICT"]
+        flags.append("HUMAN_REVIEW")
+    elif topic and "CONFLICT" in flags:
+        flags.append("HUMAN_REVIEW")
+
     if unmapped:
         reasons.append(f"unmapped ratings stay visible and decide nothing: {unmapped}")
     if claim.translated_by:
@@ -170,6 +180,15 @@ def _decide(
     if verdict.label != label or "COERCED" in verdict.flags:
         raise ForgeError(f"rules chose {label} but the schema had to coerce it: the rules and the contract disagree")
     return RuleOutcome(verdict, reasons, related, unmapped)
+
+
+def sensitive_topic(claim: Claim, topics: dict[str, list[str]]) -> str:
+    """The first sensitive topic whose phrase appears as whole words in the claim or its original wording; empty when none does."""
+    text = " ".join(f"{claim.text_en} {claim.text_orig}".casefold().split())
+    for name, phrases in topics.items():
+        if any(re.search(rf"(?<!\w){re.escape(p.casefold())}(?!\w)", text) for p in phrases):
+            return name
+    return ""
 
 
 def _role(a: Assessment, role: str) -> Evidence:

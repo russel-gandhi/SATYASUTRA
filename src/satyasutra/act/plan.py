@@ -67,10 +67,15 @@ def _has(text: str, phrase: str) -> bool:
     return re.search(r"(?<!\w)" + re.escape(phrase.casefold()) + r"(?!\w)", text.casefold()) is not None
 
 
+def is_intimate(text: str, a: Actions) -> bool:
+    """True when the text is about private images being shared or used as a threat. Such text is never checked, stored or logged by us (Raksha: guidance only)."""
+    return any(_has(text, p) for p in a.intimate_phrases)
+
+
 def build_plan(text: str, links: list[LinkFinding], labels: list[str], a: Actions) -> ActionPlan:
     scam_hits = [w for w in a.scam_words if _has(text, w)]
     suspect = [link for link in links if link.status in SUSPECT_LINKS]
-    if any(_has(text, p) for p in a.intimate_phrases):
+    if is_intimate(text, a):
         intent, why = "intimate_images", "the message is about private images being shared or used to threaten someone"
     elif any(_has(text, p) for p in a.loss_phrases):
         intent, why = "money_lost", "the message says money has already been paid or lost"

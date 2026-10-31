@@ -1,0 +1,101 @@
+# Raksha guided flow (package RK3, RK4): short questions, one at a time, English and Hindi. It never asks for or accepts an image and files nothing.
+# The Hindi sentences are OUR drafts and have NOT been reviewed by a native speaker (package RK5/SG7): reviewed_by stays empty until someone does.
+# The routes come from actions.yaml, which says its routes were not confirmed on the official sites. Routes are shown in English only.
+reviewed_by: ""
+reviewed_on: ""
+settings:
+  max_field_chars: 300      # each typed detail is cut to this length in the summary
+  session_s: 3600           # a chat leaves the flow after this many seconds (memory only)
+start: safety
+messages:
+  intro:
+    en: "I will ask a few short questions. It is not your fault. I will not ask for any picture, and I am not saving this chat. Reply with the number of your answer."
+    hi: "मैं कुछ छोटे सवाल पूछूँगा। इसमें आपकी कोई गलती नहीं है। मैं कोई तस्वीर नहीं माँगूँगा और यह चैट सेव नहीं करता। अपने जवाब का नंबर भेजिए।"
+  retry:
+    en: "Please reply with one of the numbers above."
+    hi: "कृपया ऊपर दिए नंबरों में से एक भेजिए।"
+  skip:
+    en: "Type - to skip this one."
+    hi: "इसे छोड़ने के लिए - लिखिए।"
+  routes_title:
+    en: "What you can do next:"
+    hi: "आगे आप ये कर सकते हैं:"
+  routes_language:
+    en: "(The route details are in English.)"
+    hi: "(रास्तों का ब्योरा अंग्रेज़ी में है।)"
+  summary_title:
+    en: "Summary you can copy into a report (made from what you typed, nothing else):"
+    hi: "रिपोर्ट में कॉपी करने के लिए सारांश (सिर्फ़ आपके लिखे से बना):"
+  summary_note:
+    en: "This is not legal advice. Ask a lawyer or a legal-aid service to check the wording before you file."
+    hi: "यह कानूनी सलाह नहीं है। दर्ज करने से पहले किसी वकील या कानूनी सहायता सेवा से शब्द जँचवा लीजिए।"
+  close:
+    en: "I am not storing this chat. You can clear it on your side in Telegram. Please do not send any picture here."
+    hi: "मैं यह चैट सेव नहीं करता। आप इसे टेलीग्राम में अपनी तरफ़ से मिटा सकते हैं। कृपया यहाँ कोई तस्वीर न भेजें।"
+  danger:
+    en: "Please call 112 now, or go to a person you trust. Nothing else matters before your safety."
+    hi: "कृपया अभी 112 पर कॉल करें या किसी भरोसेमंद व्यक्ति के पास जाइए। आपकी सुरक्षा सबसे पहले है।"
+steps:
+  safety:
+    ask: {en: "Are you in danger right now?", hi: "क्या आप अभी खतरे में हैं?"}
+    options:
+      - {label: {en: "Yes", hi: "हाँ"}, next: danger}
+      - {label: {en: "No", hi: "नहीं"}, next: whom}
+  danger:
+    final: true
+    say: danger
+    routes: [emergency_112]
+  whom:
+    ask: {en: "Is this happening to you, or are you helping someone?", hi: "क्या यह आपके साथ हो रहा है, या आप किसी की मदद कर रहे हैं?"}
+    options:
+      - {label: {en: "To me", hi: "मेरे साथ"}, set: {whom: me}, next: age}
+      - {label: {en: "I am helping someone", hi: "मैं किसी की मदद कर रहा/रही हूँ"}, set: {whom: other}, next: age}
+  age:
+    ask: {en: "Was the person in the pictures under 18? If you are not sure, choose 3.", hi: "क्या तस्वीरों में मौजूद व्यक्ति 18 साल से कम उम्र का था/थी? पक्का न हो तो 3 चुनिए।"}
+    options:
+      - {label: {en: "Yes, under 18", hi: "हाँ, 18 से कम"}, set: {age: minor}, next: what}
+      - {label: {en: "No, 18 or older", hi: "नहीं, 18 या ज़्यादा"}, set: {age: adult}, next: what}
+      - {label: {en: "I am not sure", hi: "पक्का नहीं पता"}, set: {age: unsure}, next: what}
+  what:
+    ask: {en: "What is happening?", hi: "क्या हो रहा है?"}
+    options:
+      - {label: {en: "Someone is threatening to share pictures", hi: "कोई तस्वीरें फैलाने की धमकी दे रहा है"}, set: {what: threatened}, next: where}
+      - {label: {en: "Pictures have already been shared", hi: "तस्वीरें पहले ही फैल चुकी हैं"}, set: {what: shared}, next: where}
+      - {label: {en: "Pictures were changed or faked", hi: "तस्वीरों को बदला या नकली बनाया गया है"}, set: {what: faked}, next: where}
+  where:
+    ask: {en: "Where is it happening?", hi: "यह कहाँ हो रहा है?"}
+    options:
+      - {label: {en: "Instagram", hi: "Instagram"}, set: {platform: Instagram}, next: details}
+      - {label: {en: "WhatsApp", hi: "WhatsApp"}, set: {platform: WhatsApp}, next: details}
+      - {label: {en: "Facebook", hi: "Facebook"}, set: {platform: Facebook}, next: details}
+      - {label: {en: "X", hi: "X"}, set: {platform: X}, next: details}
+      - {label: {en: "Telegram", hi: "Telegram"}, set: {platform: Telegram}, next: details}
+      - {label: {en: "A website", hi: "कोई वेबसाइट"}, set: {platform: a website}, next: details}
+      - {label: {en: "I do not know", hi: "पता नहीं"}, set: {platform: not known}, next: details}
+  details:
+    ask: {en: "Keep a record first: do not delete the chat, and take screenshots that show the name or number, the date and any link. Now type a few details for your report summary, one at a time. Do not send any picture.", hi: "पहले रिकॉर्ड रखिए: चैट मत मिटाइए, और ऐसे स्क्रीनशॉट लीजिए जिनमें नाम या नंबर, तारीख और लिंक दिखें। अब रिपोर्ट के सारांश के लिए कुछ जानकारी एक-एक करके लिखिए। कोई तस्वीर मत भेजिए।"}
+    fields:
+      - {key: account, prompt: {en: "Name, username or phone number of the person doing this:", hi: "यह करने वाले का नाम, यूज़रनेम या फ़ोन नंबर:"}}
+      - {key: links, prompt: {en: "Links where the pictures appear (text only):", hi: "जहाँ तस्वीरें दिख रही हैं उनके लिंक (सिर्फ़ टेक्स्ट):"}}
+      - {key: dates, prompt: {en: "Dates and times it happened:", hi: "यह कब-कब हुआ (तारीख और समय):"}}
+      - {key: demand, prompt: {en: "What they are demanding or threatening, in your words:", hi: "वे क्या माँग रहे हैं या क्या धमकी दे रहे हैं, अपने शब्दों में:"}}
+    next: result
+  result:
+    final: true
+    summary: true
+    say: close
+    routes_by_age:
+      adult: [keep_evidence, do_not_pay, stopncii, cybercrime_portal, report_platform, emergency_112]
+      minor: [keep_evidence, do_not_pay, take_it_down, cybercrime_portal, emergency_112]
+      unsure: [keep_evidence, do_not_pay, take_it_down, cybercrime_portal, emergency_112]    # unsure is treated as under 18
+summary_template:
+  title: {en: "Report summary", hi: "रिपोर्ट सारांश"}
+  made_on: {en: "Made on", hi: "बनाया गया"}
+  lines:
+    - {key: whom, label: {en: "Who this happened to", hi: "यह किसके साथ हुआ"}, values: {me: {en: "the person writing", hi: "लिखने वाला/वाली"}, other: {en: "someone I am helping", hi: "जिसकी मैं मदद कर रहा/रही हूँ"}}}
+    - {key: what, label: {en: "What happened", hi: "क्या हुआ"}, values: {threatened: {en: "threat to share private pictures", hi: "निजी तस्वीरें फैलाने की धमकी"}, shared: {en: "private pictures were shared", hi: "निजी तस्वीरें फैलाई गईं"}, faked: {en: "pictures were changed or faked", hi: "तस्वीरें बदली या नकली बनाई गईं"}}}
+    - {key: platform, label: {en: "Where", hi: "कहाँ"}}
+    - {key: account, label: {en: "Account or number", hi: "अकाउंट या नंबर"}}
+    - {key: links, label: {en: "Links", hi: "लिंक"}}
+    - {key: dates, label: {en: "Dates and times", hi: "तारीख और समय"}}
+    - {key: demand, label: {en: "Demand or threat", hi: "माँग या धमकी"}}

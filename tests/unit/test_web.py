@@ -74,3 +74,31 @@ def test_a_failed_search_or_a_busy_model_is_reported_not_raised():
         raise ValueError("bad feed")
     client = SimpleNamespace(model="m", generate_json=lambda p, s: None)
     assert check_web(client, CFG, "x", now=NOW, search=boom).error == "ValueError"
+
+
+def run_text(text, published):
+    stances = ["reports_as_fact"] * 2
+    client = SimpleNamespace(model="m", generate_json=lambda prompt, schema: SimpleNamespace(data={"items": [{"headline": i + 1, "stance": s} for i, s in enumerate(stances)]}))
+    found = [WebHit(o, f"headline {i}", f"https://news.example/{i}", published) for i, o in enumerate(["NDTV", "The Hindu"])]
+    return check_web(client, CFG, text, now=NOW, search=lambda cfg, q, http: found)
+
+
+def test_old_coverage_cannot_support_a_claim_worded_as_happening_tonight():
+    old = datetime(2016, 11, 8, tzinfo=timezone.utc)
+    r = run_text("The RBI announced tonight that 500 and 1000 rupee notes stop being legal tender", old)
+    assert r.supporting == [] and r.stale and {e.role for e in r.evidence} == {"context"}
+
+
+def test_fresh_coverage_still_supports_a_claim_worded_as_happening_now():
+    r = run_text("The RBI announced tonight a new policy rate", NOW)
+    assert sorted(r.supporting) == ["NDTV", "The Hindu"] and r.stale == ""
+
+
+def test_old_coverage_of_a_claim_not_worded_as_now_still_supports_it():
+    r = run_text("The Chandrayaan-3 lander touched down near the lunar south pole", datetime(2023, 8, 23, tzinfo=timezone.utc))
+    assert sorted(r.supporting) == ["NDTV", "The Hindu"] and r.stale == ""
+
+
+def test_outlets_reporting_a_forecast_do_not_make_the_forecast_supported():
+    r = run_text("The monsoon will be weaker than normal next year.", NOW)
+    assert r.supporting == [] and "forecast" in r.stale and {e.role for e in r.evidence} == {"context"}

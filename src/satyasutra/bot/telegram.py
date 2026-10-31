@@ -13,7 +13,12 @@ import time
 
 import httpx
 
+from datetime import date
+
+from ..act.plan import load_actions
 from ..config import Config
+from ..raksha import load_flow
+from ..raksha.flow import Session, advance, begin
 
 log = logging.getLogger("satyasutra.bot")
 NO_CLAIM_QUOTE_CHARS = 120      # how much of the user's own words is echoed back when nothing was checkable
@@ -41,7 +46,9 @@ def format_claims(body: dict, labels: dict[str, str], messages: dict[str, str]) 
         cites = [x for x in c.get("citations", []) if x.get("url")]
         first = cites[0] if cites else {}
         lines = [c["text"]]
-        if "CONFLICT" in c.get("flags", []):
+        if "HUMAN_REVIEW" in c.get("flags", []):
+            lines.append(messages["human_review"])
+        elif "CONFLICT" in c.get("flags", []):
             lines.append(messages["conflict"])
         else:
             lines.append(labels.get(c["label"], c["label"]).format(publisher=first.get("publisher") or "A fact-checker", rating=first.get("rating") or ""))
@@ -77,7 +84,10 @@ class TelegramBot:
         if not self.token:
             raise ValueError(f"set {self.s.token_env} in .env")
         self.api = httpx.Client(base_url=self.s.api_base, timeout=self.s.poll_timeout_s + self.s.request_margin_s)
-        self.local = httpx.Client(base_url=self.s.local_api, timeout=self.s.local_timeout_s)
+        self.local = httpx.Client(base_url=self.s.local_api, timeout=self.s.local_timeout_s, headers={self.s.private_header: "1"})
+        self.help_until: dict[int, float] = {}                     # chat id -> deadline; memory only, gone when the bot stops
+        self.flow, self.actions = load_flow(), load_actions()
+        self.raksha: dict[int, Session] = {}                       # the guided flow's state per chat; memory only
 
     def _call(self, method: str, **params) -> dict:
         r = self.api.post(f"/bot{self.token}/{method}", json=params)
@@ -92,7 +102,34 @@ class TelegramBot:
     def reply(self, chat: int, text: str) -> None:
         self._call("sendMessage", chat_id=chat, text=text[: self.s.max_reply_chars], disable_web_page_preview=True)
 
-    def check_text(self, text: str) -> str:
+    def in_help(self, chat: int | None) -> bool:
+        until = self.help_until.get(chat, 0.0) if chat is not None else 0.0
+        if until and until < time.monotonic():
+            self.help_until.pop(chat, None)
+        return bool(until) and until >= time.monotonic()
+
+    def enter_help(self, chat: int | None) -> None:
+        if chat is not None:
+            self.help_until[chat] = time.monotonic() + self.s.help_mode_s
+
+    def help_reply(self, plan: dict) -> str:
+        """Guidance only: the routes the plan lists, then a request not to send images. Nothing is checked, stored or filed."""
+        lines = [f"- {r['title']}" + (f" ({r['contact']})" if r.get("contact") else "") for r in plan.get("routes", [])]
+        return "\n\n".join([self.s.messages["help_intro"], "\n".join(lines), self.s.messages["act_notice"], self.s.messages["help_no_images"]])
+
+    def private_plan(self, text: str) -> dict | None:
+        """The private-images topic is found before anything else runs: such a message is never fact-checked (a verdict would go into a ledger that cannot be edited)."""
+        try:
+            plan = self.local.post("/act/plan", json={"text": text, "labels": [], "ledger_seqs": []}).json()
+        except (httpx.HTTPError, ValueError):
+            return None
+        return plan if plan.get("intent") == "intimate_images" else None
+
+    def check_text(self, text: str, chat: int | None = None) -> str:
+        plan0 = self.private_plan(text)
+        if plan0:
+            self.enter_help(chat)
+            return self.help_reply(plan0) + "\n\n" + self.s.messages["guided_offer"]
         body = self.local.post("/verify", json={"text": text}).json()
         out = format_claims(body, self.s.labels, self.s.messages)
         for c in body.get("claims", []):
@@ -111,10 +148,35 @@ class TelegramBot:
         return out
 
     def handle(self, msg: dict) -> str:
-        if msg.get("text") and not msg["text"].startswith("/"):
-            return self.check_text(msg["text"])
-        if msg.get("text"):
+        chat = (msg.get("chat") or {}).get("id")
+        text = msg.get("text") or ""
+        if text.startswith("/forget"):
+            self.help_until.pop(chat, None)
+            self.raksha.pop(chat, None)
+            return self.s.messages["forgot"]
+        if text.startswith(("/help_me", "/madad")):
+            self.enter_help(chat)
+            self.raksha[chat], first = begin(self.flow, "hi" if text.startswith("/madad") else "en")
+            return first
+        session = self.raksha.get(chat)
+        if session and session.expires < time.monotonic():
+            self.raksha.pop(chat, None)
+            session = None
+        if session and text and not text.startswith("/"):               # inside the flow nothing is fact-checked or sent to the local API
+            reply = advance(self.flow, session, text, self.actions, date.today())
+            if session.done:
+                self.raksha.pop(chat, None)
+            return reply
+        if text and not text.startswith("/"):
+            return self.check_text(text, chat)
+        if text:
             return self.s.messages["start"]
+        if self.in_help(chat) and any(k in msg for k in ("photo", "video", "video_note", "document", "animation", "sticker")):
+            return self.s.messages["help_images_refused"]              # refused before any download: the file is never fetched
+        caption = msg.get("caption")
+        if caption and (plan0 := self.private_plan(caption)):
+            self.enter_help(chat)
+            return self.help_reply(plan0)
         voice = msg.get("voice") or msg.get("audio")
         if voice:
             r = self.local.post("/voice/transcribe", content=self._download(voice["file_id"]))
@@ -124,14 +186,14 @@ class TelegramBot:
             head = self.s.messages["transcript"].format(language=t["language"], text=t["text"])
             if t["language_uncertain"]:
                 head += "\n" + self.s.messages["uncertain"]
-            return head + "\n\n" + (self.check_text(t["text"]) if t["text"].strip() else self.s.messages["none_found"])
+            return head + "\n\n" + (self.check_text(t["text"], chat) if t["text"].strip() else self.s.messages["none_found"])
         photo = msg.get("photo")
         if photo:
             data = self._download(photo[-1]["file_id"])                    # Telegram lists sizes small to large
             r = self.local.post("/media/check", content=data)
             if r.status_code != httpx.codes.OK:
                 return self.s.messages["image_failed"]
-            return format_media(r.json(), self.s.labels, self.s.messages) + ("\n\n" + self.check_text(msg["caption"]) if msg.get("caption") else "")
+            return format_media(r.json(), self.s.labels, self.s.messages) + ("\n\n" + self.check_text(msg["caption"], chat) if msg.get("caption") else "")
         return self.s.messages["unsupported"]
 
     def run(self) -> None:

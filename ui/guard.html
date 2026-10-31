@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Call guard</title>
+<link rel="stylesheet" href="/static/jv.css">
+<style>
+  * { box-sizing: border-box; }
+  html, body { min-height: 100%; }
+  body { transition: background .3s; }
+  body.s-careful { background: var(--warn-soft); }
+  body.s-scam { background: var(--bad-soft); }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 18px 16px 40px; text-align: center; }
+  h1 { font-size: 26px; margin: 10px 0 6px; }
+  .lang { display: flex; justify-content: center; gap: 8px; margin: 8px 0; }
+  .lang button { border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 999px; padding: 6px 16px; font-size: 14px; cursor: pointer; }
+  .lang button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-top: 14px; text-align: left; }
+  .card li { margin: 6px 0; }
+  .big { display: block; width: 100%; font-size: 24px; padding: 26px 16px; border-radius: 18px; margin-top: 16px; }
+  .state { font-size: 26px; font-weight: 700; line-height: 1.3; margin: 22px 0 6px; }
+  .s-scam .state { color: var(--bad); font-size: 30px; }
+  .s-careful .state { color: var(--warn); }
+  .heard { color: var(--mute); font-size: 14px; min-height: 40px; }
+  .acts { display: grid; gap: 10px; margin-top: 14px; }
+  .acts a, .acts button { display: block; font-size: 19px; padding: 16px; border-radius: 14px; text-decoration: none; text-align: center; }
+  .acts .hang { background: var(--bad); color: #fff; border: 0; font-weight: 700; }
+  .fine { color: var(--mute); font-size: 13px; margin-top: 18px; }
+  .hide { display: none; }
+  .err { color: var(--bad); font-weight: 600; margin-top: 12px; }
+  .typed { display: flex; gap: 8px; margin-top: 14px; } .typed input { flex: 1; font-size: 16px; padding: 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--text); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 id="t-title">Is this call a scam?</h1>
+  <div class="lang" role="group" aria-label="Language"><button id="l-en" aria-pressed="true">English</button><button id="l-hi" aria-pressed="false">हिंदी</button></div>
+
+  <div id="consent" class="card">
+    <b id="t-consent-h">Before you start</b>
+    <ul id="t-consent">
+      <li>Put the call on speaker and keep this page open.</li>
+      <li>This page listens through your phone's microphone only while the button is on, in short pieces.</li>
+      <li>Nothing is recorded or kept. The sound is turned into words, checked, and thrown away.</li>
+      <li>The other person is not told. We cannot say whether listening to a call this way is allowed where you are. Your choice.</li>
+      <li>It can miss scams and it can be wrong. It will never tell you a call is safe.</li>
+    </ul>
+    <button class="btn big" id="start">Start listening</button>
+    <div class="typed"><input id="typed" placeholder="Or type what the caller says" aria-label="Typed words"><button class="btn ghost" id="send">Check</button></div>
+  </div>
+
+  <div id="live" class="hide">
+    <div class="state" id="state" aria-live="assertive"></div>
+    <div class="heard" id="heard"></div>
+    <div class="acts" id="acts">
+      <button class="hang" id="hang">Hang up</button>
+      <a class="btn ghost hide" id="family" target="_blank" rel="noreferrer noopener">Tell someone I trust</a>
+      <button class="btn ghost" id="money">I already sent money or shared a code</button>
+      <div class="card hide" id="routes"></div>
+      <button class="btn ghost" id="stop">Stop listening</button>
+    </div>
+  </div>
+  <div class="err" id="err" role="alert"></div>
+  <p class="fine" id="t-fine">Call guard looks at the words of a call for how scams are built. It does not know who is calling. If money has left your account, call 1930 now.</p>
+</div>
+<script src="/static/nav.js"></script>
+<script>
+const T = {
+  en: { title: "Is this call a scam?", start: "Start listening", ch: "Before you start", hang: "Hang up", money: "I already sent money or shared a code", family: "Tell someone I trust", stop: "Stop listening", send: "Check", ph: "Or type what the caller says",
+        consent: ["Put the call on speaker and keep this page open.", "This page listens through your phone's microphone only while the button is on, in short pieces.", "Nothing is recorded or kept. The sound is turned into words, checked, and thrown away.", "The other person is not told. We cannot say whether listening to a call this way is allowed where you are. Your choice.", "It can miss scams and it can be wrong. It will never tell you a call is safe."],
+        fine: "Call guard looks at the words of a call for how scams are built. It does not know who is calling. If money has left your account, call 1930 now.",
+        mic: "The microphone could not be opened. Allow it in the browser, or type the words instead.", busy: "The checker is busy or offline. Nothing was kept. Try again shortly; if it keeps failing, the daily limit may be used up." },
+  hi: { title: "क्या यह कॉल ठगी है?", start: "सुनना शुरू करें", ch: "शुरू करने से पहले", hang: "फ़ोन काटें", money: "मैं पैसे भेज चुका/चुकी हूँ या कोड बता दिया", family: "किसी भरोसेमंद को बताएं", stop: "सुनना बंद करें", send: "जाँचें", ph: "या कॉल करने वाले की बात यहाँ लिखें",
+        consent: ["कॉल को स्पीकर पर रखिए और यह पेज खुला रखिए।", "यह पेज बटन चालू होने पर ही, छोटे-छोटे हिस्सों में, फ़ोन के माइक्रोफ़ोन से सुनता है।", "कुछ भी रिकॉर्ड या सेव नहीं होता। आवाज़ को शब्दों में बदलकर जाँचा जाता है और फिर हटा दिया जाता है।", "सामने वाले को पता नहीं चलता। इस तरह कॉल सुनना आपकी जगह पर ठीक है या नहीं, हम नहीं कह सकते। फ़ैसला आपका है।", "यह ठगी चूक सकता है और गलत भी हो सकता है। यह कभी नहीं कहेगा कि कॉल सुरक्षित है।"],
+        fine: "यह पेज कॉल के शब्दों में ठगी के तरीके देखता है। यह नहीं जानता कि कॉल कौन कर रहा है। पैसे निकल गए हों तो अभी 1930 पर कॉल करें।",
+        mic: "माइक्रोफ़ोन नहीं खुला। ब्राउज़र में अनुमति दीजिए, या शब्द लिखकर जाँचिए।", busy: "जाँच अभी व्यस्त या बंद है। कुछ भी सेव नहीं हुआ। एक मिनट बाद फिर कोशिश कीजिए।" },
+};
+const $ = (id) => document.getElementById(id);
+let lang = "en", sid = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now()).replace(/[^A-Za-z0-9_-]/g, "").padEnd(12, "x").slice(0, 36);
+let stream = null, rec = null, timer = null, running = false, lastState = "";
+const CHUNK_MS = 6000;
+
+function paint() {
+  const t = T[lang];
+  document.documentElement.lang = lang;
+  $("t-title").textContent = t.title; $("start").textContent = t.start; $("t-consent-h").textContent = t.ch; $("hang").textContent = t.hang; $("money").textContent = t.money; $("family").textContent = t.family;
+  $("stop").textContent = t.stop; $("send").textContent = t.send; $("typed").placeholder = t.ph; $("t-fine").textContent = t.fine;
+  $("t-consent").innerHTML = t.consent.map((x) => "<li></li>").join(""); [...$("t-consent").children].forEach((li, i) => (li.textContent = t.consent[i]));
+  $("l-en").setAttribute("aria-pressed", lang === "en"); $("l-hi").setAttribute("aria-pressed", lang === "hi");
+}
+$("l-en").onclick = () => { lang = "en"; paint(); }; $("l-hi").onclick = () => { lang = "hi"; paint(); };
+
+function show(out) {
+  $("live").classList.remove("hide"); $("consent").classList.add("hide");
+  document.body.className = "s-" + out.state;
+  $("state").textContent = out.message[lang] + (out.advice ? " " + out.advice[lang] : ""); $("heard").textContent = out.heard ? "… " + out.heard : "";
+  if (out.state === "scam" && lastState !== "scam") {
+    if (navigator.vibrate) navigator.vibrate([400, 150, 400, 150, 600]);
+    if (window.speechSynthesis) { const u = new SpeechSynthesisUtterance(out.message[lang]); u.lang = lang === "hi" ? "hi-IN" : "en-IN"; speechSynthesis.speak(u); }
+  }
+  $("family").classList.toggle("hide", !out.family_alert);
+  if (out.family_alert) $("family").href = "https://wa.me/?text=" + encodeURIComponent(out.family_alert[lang]);
+  lastState = out.state;
+}
+async function post(url, opts) {
+  try { const r = await fetch(url, opts); if (!r.ok) throw new Error(r.status); $("err").textContent = ""; return await r.json(); }
+  catch (e) { $("err").textContent = T[lang].busy; return null; }
+}
+async function sendAudio(blob) {
+  if (!blob.size) return;
+  const out = await post("/guard/chunk", { method: "POST", headers: { "x-session": sid }, body: blob });
+  if (out) show(out);
+}
+function cycle() {
+  if (!running) return;
+  rec = new MediaRecorder(stream);
+  const parts = [];
+  rec.ondataavailable = (e) => parts.push(e.data);
+  rec.onstop = () => { sendAudio(new Blob(parts, { type: rec.mimeType })); };
+  rec.start();
+  timer = setTimeout(() => { rec.stop(); cycle(); }, CHUNK_MS);      // each piece is a whole audio file, so the server can decode it alone
+}
+$("start").onclick = async () => {
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  catch (e) { $("err").textContent = T[lang].mic; return; }
+  running = true; lastState = ""; $("live").classList.remove("hide"); $("consent").classList.add("hide"); $("state").textContent = ""; cycle();
+};
+$("stop").onclick = $("hang").onclick = async () => {
+  running = false; clearTimeout(timer);
+  if (rec && rec.state !== "inactive") rec.stop();
+  if (stream) stream.getTracks().forEach((t) => t.stop());
+  await fetch("/guard/" + sid, { method: "DELETE" }).catch(() => {});
+  document.body.className = ""; $("live").classList.add("hide"); $("consent").classList.remove("hide"); lastState = "";
+};
+$("send").onclick = async () => {
+  const text = $("typed").value.trim(); if (!text) return;
+  const out = await post("/guard/text", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ session: sid, text }) });
+  if (out) { show(out); $("typed").value = ""; }
+};
+$("money").onclick = async () => {
+  const plan = await post("/act/plan", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text: "I lost money, I was scammed", labels: [], ledger_seqs: [] }) });
+  if (!plan) return;
+  const box = $("routes"); box.classList.remove("hide"); box.innerHTML = "";
+  plan.routes.forEach((r) => { const d = document.createElement("div"); const b = document.createElement("b"); b.textContent = r.title + (r.contact ? " (" + r.contact + ")" : ""); const p = document.createElement("p"); p.textContent = r.detail; d.append(b, p); box.append(d); });
+};
+paint();
+</script>
+</body>
+</html>
