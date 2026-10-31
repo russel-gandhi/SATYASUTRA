@@ -394,6 +394,8 @@ class TelegramSettings(_Strict):
     local_timeout_s: float = Field(gt=0)     # a full claim check can take a while
     retry_s: float = Field(gt=0)
     max_reply_chars: int = Field(gt=0)
+    private_header: str                      # sent on every call to our API: the server keeps no record of such a request
+    help_mode_s: float = Field(gt=0)         # how long a chat stays in help mode (memory only, never written down)
     labels: dict[str, str]                   # verdict label -> plain words for a chat
     messages: dict[str, str]
 

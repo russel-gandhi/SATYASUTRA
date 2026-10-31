@@ -155,6 +155,8 @@ telegram:
   local_timeout_s: 120
   retry_s: 5
   max_reply_chars: 3800            # Telegram refuses messages over 4096
+  private_header: x-private
+  help_mode_s: 3600
   labels:                          # one sentence per verdict, spoken plainly; {publisher} and {rating} come from the first source
     REFUTED: "This is false. {publisher} checked this very claim and rated it \"{rating}\"."
     SUPPORTED: "This checks out. {publisher} looked at this claim and rated it \"{rating}\"."
@@ -188,6 +190,10 @@ telegram:
     voice_failed: "I couldn't read that voice note: {reason}"
     image_failed: "I couldn't read that image."
     unsupported: "I can check text, voice notes and photos."
+    help_intro: "I'm sorry this is happening. It is not your fault, and you do not have to deal with it alone. I will not check this message or keep it. Here is what you can do:"
+    help_no_images: "Please do not send me any photo, video or file about this. I will not open, keep or check them. Use the official services above: they are made for this. Send /forget to leave this mode and clear it."
+    help_images_refused: "I am in help mode, so I did not download that file and did not look at it. Please do not send private images to anyone but the official services above. Send /forget to leave help mode."
+    forgot: "Done. I am out of help mode and I keep nothing from this chat. Telegram itself still keeps the chat on its servers: you can delete it from your side."
     error: "Something went wrong while checking that. Nothing was recorded, please try again."
 
 explain:

@@ -6,6 +6,7 @@ Start it with:  uvicorn satyasutra.api.app:create_app --factory
 from __future__ import annotations
 
 import json
+from contextvars import ContextVar
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -41,7 +42,7 @@ from ..schemas.core import sha256_text
 from ..sources import FactCheckClient, FactCheckResult, ProbeResult, probe_all
 from ..sources import WikidataClient
 from ..sources.bluesky import PostNotFound, fetch_post
-from ..act import build_pack, build_plan, load_actions
+from ..act import build_pack, build_plan, is_intimate, load_actions
 from ..scam import check_links, load_domains
 from ..voice import Transcriber, Transcript, VoiceError, second_opinion
 from ..audio import SpoofDetector
@@ -60,6 +61,7 @@ from ..report import build_report
 
 ROOT = Path(__file__).resolve().parents[3]
 JOB_ID = r"^[A-Za-z0-9_-]+$"
+PRIVATE: ContextVar[bool] = ContextVar("private", default=False)
 MAX_NON_CLAIMS_SHOWN = 3        # what the model made of a message that held no claim, so the reply can say how it was read
 
 
@@ -175,6 +177,25 @@ def create_app(
             await self.inner(scope, receive, send_with_header if scope["type"] == "http" else send)
 
     app.add_middleware(RevalidatePages)
+
+    private_header = cfg.runtime.telegram.private_header.encode()
+
+    class PrivateMode:
+        """A request carrying the private header (the Telegram bot sends it on every call) is marked for the whole request, so `keep` writes nothing for it."""
+        def __init__(self, inner):
+            self.inner = inner
+
+        async def __call__(self, scope, receive, send):
+            if scope["type"] != "http":
+                return await self.inner(scope, receive, send)
+            flagged = any(k == private_header and v == b"1" for k, v in scope.get("headers", []))
+            token = PRIVATE.set(flagged)
+            try:
+                await self.inner(scope, receive, send)
+            finally:
+                PRIVATE.reset(token)
+
+    app.add_middleware(PrivateMode)
     app.state.config = cfg
     app.state.ledger = ledger
     app.state.worker = worker
@@ -574,7 +595,15 @@ def create_app(
     def store() -> RecordStore:
         return RecordStore(_path(cfg.runtime.report.db_path))
 
+    def refuse_private_topic(text: str) -> None:
+        """Text about private images is not fact-checked: a verdict would put it in the ledger, which cannot be edited. It gets guidance only (/act/plan)."""
+        if is_intimate(text, load_actions(config_dir() / "actions.yaml")):
+            raise HTTPException(status_code=409, detail="this looks like a private-images situation: nothing was checked or stored. Use /act/plan for the next steps")
+
     def keep(kind: str, body: dict) -> str | None:
+        """Save an investigation record. Never for a private request, and never for anything that reads as the private-images topic, whatever the caller says."""
+        if PRIVATE.get() or is_intimate(json.dumps(body, default=str, ensure_ascii=False), load_actions(config_dir() / "actions.yaml")):
+            return None
         try:
             return store().add_record(kind, body, cfg.runtime.report.max_record_bytes)
         except (ValueError, OSError):
@@ -631,6 +660,7 @@ def create_app(
         clean = text.strip()
         if not clean:
             raise HTTPException(status_code=422, detail="text must not be blank")
+        refuse_private_topic(clean)
         job, run = uuid.uuid4().hex[:16], AgentRun()
         graph = build_claim_agent(cfg, ledger, text_post, do_extract, do_lookup, do_judge, do_ground, run, do_official, do_web)
 
@@ -678,6 +708,7 @@ def create_app(
                 if not text or len(text) > settings.max_text_chars:
                     raise HTTPException(status_code=422, detail=f"text must be 1 to {settings.max_text_chars} characters")
                 post = text_post(text)
+            refuse_private_topic(post.text)
             if fastclock is not None:
                 fastclock.process(post)            # a repeat is still a post that spread: it counts toward the cluster's velocity
             cached = verdicts().get_or_compute(post.text, lambda: _run(post))
