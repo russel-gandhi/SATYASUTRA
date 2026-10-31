@@ -7,6 +7,22 @@
 <link rel="stylesheet" href="/static/jv.css">
 <style>
   :root { --purple: #b07aff; }
+  .jnav { padding-inline: 22px; }
+  .kpis { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+  .kpi { background: var(--panel); border: 1px solid var(--line); border-top: 3px solid var(--accent); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; }
+  .kpi.bad { border-top-color: var(--bad); } .kpi.ok { border-top-color: var(--ok); } .kpi.warn { border-top-color: var(--warn); } .kpi.idle { border-top-color: var(--idle); }
+  .kpi .klabel { color: var(--mute); font-size: 13px; } .kpi b { font-size: 38px; line-height: 1.05; letter-spacing: -.02em; }
+  .dash { display: grid; gap: 12px; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 12px; align-items: start; }
+  .dash .span2 { grid-column: span 2; } @media (max-width: 1000px) { .dash { grid-template-columns: 1fr; } .dash .span2 { grid-column: auto; } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; min-width: 0; }
+  .panel h3 { margin: 0 0 12px; font-size: 15px; }
+  .donutbox { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; } .donut { width: 150px; height: 150px; flex: none; }
+  .dmid { font: 700 22px system-ui, sans-serif; fill: var(--text); } .dsub { font: 11px system-ui, sans-serif; fill: var(--mute); }
+  .dlegend { flex: 1; min-width: 180px; display: grid; gap: 8px; } .dl { display: grid; grid-template-columns: 12px 1fr auto 42px; gap: 10px; align-items: center; } .dl i { width: 12px; height: 12px; border-radius: 4px; display: block; } .dl .small { text-align: right; }
+  .cols { display: flex; gap: 18px; align-items: flex-end; height: 150px; overflow-x: auto; } .col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; min-width: 44px; }
+  .cb { width: 34px; background: var(--accent); border-radius: 6px 6px 0 0; } .cv { font-weight: 700; font-size: 13px; }
+  .brow { grid-template-columns: minmax(70px, 120px) 1fr 30px; } .brow > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .bar { height: 10px; min-width: 6px; }
+  .it .badge { display: inline-block; width: auto; } .it .title { margin-top: 2px; } .foot { margin-top: 16px; }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", "Noto Sans Devanagari", "Noto Sans Kannada", sans-serif; }
   .shell { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: calc(100vh - 60px); }
@@ -79,17 +95,53 @@ function recentList(items) {
   return box;
 }
 
+const KIND = { claims: "Text claims", media: "Images", video: "Videos", voice: "Voice notes", audio: "Voice checks", notice: "Notices", page: "Web pages", doc: "PDFs" };
+const LANG = { en: "English", hi: "Hindi", kn: "Kannada", ta: "Tamil", te: "Telugu", ml: "Malayalam", mr: "Marathi", bn: "Bengali", gu: "Gujarati", pa: "Punjabi", ur: "Urdu" };
+const TONE_VAR = { bad: "var(--bad)", ok: "var(--ok)", warn: "var(--warn)", idle: "var(--idle)" };
+const panel = (title, body, cls) => { const c = el("section", "panel " + (cls || "")); c.append(el("h3", "", title), body); return c; };
+const SVGNS = "http://www.w3.org/2000/svg";
+const svgEl = (tag, attrs) => { const e = document.createElementNS(SVGNS, tag); Object.entries(attrs || {}).forEach(([k, x]) => e.setAttribute(k, x)); return e; };
+
+function donut(counts) {
+  const box = el("div", "donutbox"), total = Object.values(counts).reduce((a, b) => a + b, 0);
+  if (!total) { box.append(el("div", "small", "Nothing yet.")); return box; }
+  const svg = svgEl("svg", { viewBox: "0 0 120 120", class: "donut", role: "img", "aria-label": "Verdict split" }), R = 46, C = 2 * Math.PI * R; let off = 0;
+  svg.append(svgEl("circle", { cx: 60, cy: 60, r: R, fill: "none", stroke: "var(--idle-soft, #25304e)", "stroke-width": 16 }));
+  const legend = el("div", "dlegend");
+  Object.entries(counts).sort((a, b) => b[1] - a[1]).forEach(([k, c]) => {
+    const nm = NAME[k] || [k, "idle"], len = (c / total) * C;
+    svg.append(svgEl("circle", { cx: 60, cy: 60, r: R, fill: "none", stroke: TONE_VAR[nm[1]], "stroke-width": 16, "stroke-dasharray": len + " " + (C - len), "stroke-dashoffset": -off, transform: "rotate(-90 60 60)" }));
+    off += len;
+    const row = el("div", "dl"); row.append(Object.assign(el("i"), { style: "background:" + TONE_VAR[nm[1]] }), el("span", "", nm[0]), el("b", "", String(c)), el("span", "small", Math.round((100 * c) / total) + "%")); legend.append(row);
+  });
+  const mid = svgEl("text", { x: 60, y: 62, "text-anchor": "middle", class: "dmid" }); mid.textContent = String(total);
+  const sub = svgEl("text", { x: 60, y: 76, "text-anchor": "middle", class: "dsub" }); sub.textContent = "verdicts";
+  svg.append(mid, sub); box.append(svg, legend); return box;
+}
+
+function columns(perDay) {
+  const days = Object.entries(perDay).sort(), max = Math.max(1, ...days.map((d) => d[1])), box = el("div", "cols");
+  if (!days.length) { box.append(el("div", "small", "Nothing yet.")); return box; }
+  days.forEach(([d, c]) => { const col = el("div", "col"); col.append(el("span", "cv", String(c)), Object.assign(el("div", "cb"), { style: "height:" + Math.max(6, (100 * c) / max) + "px" }), el("span", "small", d.slice(5))); box.append(col); });
+  return box;
+}
+
 const VIEWS = {
   async overview(v) {
-    const o = await jget("/intel/overview"), t = o.totals;
-    const tiles = el("div", "tiles");
-    [["Investigations", t.investigations], ["Claims", t.claims], ["Distinct claims", t.claim_groups], ["Media checked", t.media], ["Media to review", o.media_needing_review.length]].forEach(([k, n]) => { const d = el("div", "tile"); d.append(Object.assign(el("b"), { textContent: n }), el("span", "small", k)); tiles.append(d); });
-    v.append(tiles, el("div", "small", o.note));
-    const g = el("div", "grid"); g.style.marginTop = "12px";
-    g.append(card("Verdicts", bars(o.verdicts)), card("Languages", bars(o.languages, "")), card("Evidence sources used", bars(Object.fromEntries(o.sources.map((s) => [s.publisher + " (tier " + s.tier + ")", s.count])))));
-    const day = card("Investigations per day", bars(o.per_day));
-    g.append(day, card("Media needing a closer look", recentList(o.media_needing_review)), card("Recent investigations", recentList(o.recent)), card("Geography", el("div", "small", o.geography)));
-    v.append(g);
+    const o = await jget("/intel/overview"), t = o.totals, vd = o.verdicts;
+    const n = (k) => vd[k] || 0, review = o.media_needing_review.length;
+    const kpis = el("div", "kpis");
+    [["Investigations", t.investigations, "accent", "everything checked on this server"], ["False claims", n("REFUTED"), "bad", "refuted by fact-checkers or outlets"], ["Supported", n("SUPPORTED"), "ok", "reported as fact by reputable outlets"],
+     ["Unverified", n("UNVERIFIABLE_YET"), "idle", "not enough trusted evidence"], ["Media to review", review, "warn", "edited or suspect files"]].forEach(([k, num, tone, hint]) => {
+      const d = el("div", "kpi " + tone); d.append(el("span", "klabel", k), Object.assign(el("b"), { textContent: num }), el("span", "small", hint)); kpis.append(d);
+    });
+    v.append(kpis);
+
+    const g = el("div", "dash");
+    g.append(panel("Verdicts", donut(vd), "span2"), panel("What was checked", bars(Object.fromEntries(Object.entries(t.by_kind).map(([k, c]) => [KIND[k] || k, c])), "")), panel("Languages", bars(Object.fromEntries(Object.entries(o.languages).map(([k, c]) => [LANG[k] || k, c])), "")));
+    g.append(panel("Investigations per day", columns(o.per_day), "span2"), panel("Evidence sources used", bars(Object.fromEntries(o.sources.slice(0, 8).map((s) => [s.publisher, s.count])), "")));
+    g.append(panel("Recent investigations", recentList(o.recent.slice(0, 6)), "span2"), panel("Media needing a closer look", recentList(o.media_needing_review.slice(0, 6))));
+    v.append(g, el("div", "small foot", o.note + " " + o.geography));
   },
 
   async graph(v) {
