@@ -28,7 +28,7 @@ from ..fastclock import Cluster, Escalator, FastClock, FastClockWorker
 from ..media import check_media, forensic_scores
 from ..video import check_video
 from ..provenance import ImageIndex
-from ..agent.graph import AgentRun, build_claim_agent
+from ..agent.graph import BUSY_REASONS, AgentRun, build_claim_agent
 from ..claims import ExtractionResult, Grounded, Judgements, OfficialResult, check_official, extract_claims, ground_entities, judge_reviews
 from ..errors import ConfigError, SourceError
 from ..ingest import author_salt, hash_author
@@ -425,6 +425,8 @@ def create_app(
 
     def _run(post: Post) -> dict:
         done = verify_post(post, cfg, ledger, do_extract, do_lookup, do_judge)
+        if done.extraction.status == "failed" and done.extraction.reason.startswith(BUSY_REASONS):
+            raise HTTPException(status_code=503, detail="The language model is at its rate limit or unreachable right now, so nothing was checked and nothing was guessed. Please try again in about a minute.")
         if done.extraction.status in ("blocked", "failed"):
             raise HTTPException(status_code=502, detail=f"claim extraction {done.extraction.status}: {done.extraction.reason}")
         return verdict_body(post, done)

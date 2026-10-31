@@ -37,6 +37,13 @@ class ExtractionFailed(SourceError):
     """Claim extraction was blocked or failed, so there is nothing to check."""
 
 
+class ModelBusy(SourceError):
+    """The language model is out of quota or unreachable on every configured model: the run stops and says so, it does not guess."""
+
+
+BUSY_REASONS = ("QuotaExhausted", "RateLimited", "Unreachable")
+
+
 class AgentState(TypedDict, total=False):
     job: str
     text: str
@@ -73,6 +80,8 @@ def build_claim_agent(
 
     def extract_node(state: AgentState) -> dict:
         ex = extract(state["post"])
+        if ex.status == "failed" and ex.reason.startswith(BUSY_REASONS):
+            raise ModelBusy("gemini_llm", ex.reason)
         if ex.status in ("blocked", "failed"):
             raise ExtractionFailed("gemini_llm", f"claim extraction {ex.status}: {ex.reason}")
         summary = f"{len(ex.claims)} checkable claim(s), {len(ex.non_claims)} not checkable ({ex.status})"

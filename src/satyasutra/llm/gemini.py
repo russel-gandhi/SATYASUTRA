@@ -79,6 +79,8 @@ class GeminiClient:
         return key
 
     def generate_json(self, prompt: str, schema: dict, system: str | None = None) -> Reply:
+        """Try each configured model in order. A model that times out, answers 5xx, is rate limited, out of quota or gone is skipped for the next one
+        (free-tier quotas are per model); a bad key or a blocked prompt is not retried anywhere. The reply names the model that answered."""
         key = self._key()
         body: dict = {
             "contents": [{"parts": [{"text": prompt}]}],
@@ -86,18 +88,37 @@ class GeminiClient:
         }
         if system:
             body["systemInstruction"] = {"parts": [{"text": system}]}
-        url = f"{self._p.api_base}/models/{self.model}:generateContent"
+        first: Exception | None = None
+        for model in self._p.models:
+            try:
+                reply = self._one_model(model, key, body)
+                self.model = model
+                return reply
+            except (Unreachable, RateLimited, QuotaExhausted) as exc:
+                first = first or exc
+            except SchemaChanged as exc:
+                if "not found" not in exc.detail:                 # a model closed to this key is skipped; any other schema change is real
+                    raise
+                first = first or exc
+        assert first is not None
+        raise first
 
-        attempts = 0
+    def _one_model(self, model: str, key: str, body: dict) -> Reply:
+        url = f"{self._p.api_base}/models/{model}:generateContent"
+        attempts = transient = 0
         while True:
             attempts += 1
             self._spacer.wait()
             started = time.perf_counter()
             try:
                 response = self._http.post(url, params={self._src.auth_param or "key": key}, json=body)
-            except httpx.TimeoutException:
-                raise Unreachable(SOURCE_ID, "timed out") from None
             except httpx.HTTPError as exc:
+                if transient < self._p.transient_retries:
+                    transient += 1
+                    self._sleep(self._p.transient_backoff_s)
+                    continue
+                if isinstance(exc, httpx.TimeoutException):
+                    raise Unreachable(SOURCE_ID, "timed out") from None
                 raise Unreachable(SOURCE_ID, type(exc).__name__) from None
             took = round(time.perf_counter() - started, 2)
 
@@ -113,14 +134,18 @@ class GeminiClient:
                     raise RateLimited(SOURCE_ID, f"HTTP 429, retry delay {wait if wait is not None else 'not stated'}")
                 self._sleep(wait)
                 continue
-            return self._parse(response, took, attempts)
+            if response.status_code >= HTTPStatus.INTERNAL_SERVER_ERROR and transient < self._p.transient_retries:
+                transient += 1
+                self._sleep(self._p.transient_backoff_s)
+                continue
+            return self._parse(response, took, attempts, model)
 
-    def _parse(self, response: httpx.Response, took: float, attempts: int) -> Reply:
+    def _parse(self, response: httpx.Response, took: float, attempts: int, model: str) -> Reply:
         code = response.status_code
         if code in (HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN):
             raise AuthRefused(SOURCE_ID, f"HTTP {code}")
         if code == HTTPStatus.NOT_FOUND:
-            raise SchemaChanged(SOURCE_ID, f"model {self.model} not found or closed to new keys")
+            raise SchemaChanged(SOURCE_ID, f"model {model} not found or closed to new keys")
         if code >= HTTPStatus.INTERNAL_SERVER_ERROR:
             raise Unreachable(SOURCE_ID, f"HTTP {code}")
         if code != HTTPStatus.OK:
@@ -148,4 +173,4 @@ class GeminiClient:
             raise BadOutput(SOURCE_ID, "model output is not valid JSON") from None
         if not isinstance(parsed, dict):
             raise BadOutput(SOURCE_ID, "model output is not a JSON object")
-        return Reply(parsed, self.model, (data.get("usageMetadata") or {}).get("totalTokenCount"), took, attempts)
+        return Reply(parsed, model, (data.get("usageMetadata") or {}).get("totalTokenCount"), took, attempts)

@@ -69,6 +69,8 @@ class GeminiPolicy(_Strict):
     request_timeout_s: float = Field(gt=0)
     max_retries: int = Field(ge=0)               # extra attempts after a 429 that names a short retry delay
     max_retry_wait_s: float = Field(ge=0)        # a longer retry delay than this is reported, not waited out
+    transient_retries: int = Field(ge=0)         # extra attempts on a timeout or a 5xx before the next model is tried
+    transient_backoff_s: float = Field(ge=0)     # wait before such a retry
     requests_per_minute: int | None = None      # filled from docs/gemini_limits.md after a measurement
     measured_on: str = ""
 

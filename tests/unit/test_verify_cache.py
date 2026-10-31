@@ -86,7 +86,7 @@ def test_an_expired_entry_is_recomputed_and_writes_a_new_ledger_row_only_if_the_
 def test_a_failed_run_is_never_cached(world):
     client, store, state = world
     state["gemini_code"], state["gemini"] = 500, {"error": {"message": "boom"}}
-    assert client.post("/verify", json={"text": POST_TEXT}).status_code == 502
+    assert client.post("/verify", json={"text": POST_TEXT}).status_code == 503
     state["gemini_code"], state["gemini"] = 200, gemini_reply([item(POST_TEXT)])
     ok = post(client)
     assert ok["from_cache"] is False and ok["claims"]

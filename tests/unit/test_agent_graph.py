@@ -40,14 +40,16 @@ def review():
 
 
 class Deps:
-    def __init__(self, claims=True, extraction_status="ok", relation="same", fail_lookup=False):
+    def __init__(self, claims=True, extraction_status="ok", relation="same", fail_lookup=False, reason=""):
+        self.reason = reason
         self.claims, self.status, self.relation, self.fail_lookup = [claim()] if claims else [], extraction_status, relation, fail_lookup
         self.ev = review()
         self.calls = []
 
     def extract(self, post):
         self.calls.append("extract")
-        return ExtractionResult(self.status, self.claims, reason="boom" if self.status == "failed" else "", model="m", prompt_sha256="p")
+        reason = (self.reason or "boom") if self.status == "failed" else ""
+        return ExtractionResult(self.status, self.claims, reason=reason, model="m", prompt_sha256="p")
 
     def lookup(self, text, lang):
         self.calls.append("lookup")
@@ -106,6 +108,11 @@ def test_a_failed_extraction_is_an_error_event_with_the_class_only_and_writes_no
     events, run, ledger = run_graph(tmp_path, Deps(extraction_status="failed"))
     assert events[-1].kind == "error" and events[-1].data["type"] == "ExtractionFailed" and events[-1].node == "extract"
     assert "boom" not in events[-1].model_dump_json() and run.outcome is None and ledger.head() is None
+
+
+def test_a_model_at_its_quota_is_a_model_busy_event_so_the_page_can_say_try_again(tmp_path):
+    events, run, ledger = run_graph(tmp_path, Deps(extraction_status="failed", reason="QuotaExhausted: daily quota used up"))
+    assert events[-1].kind == "error" and events[-1].data["type"] == "ModelBusy" and run.outcome is None and ledger.head() is None
 
 
 def test_a_registry_outage_is_an_error_event_not_a_guess(tmp_path):

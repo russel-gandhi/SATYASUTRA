@@ -159,11 +159,11 @@ def test_bad_requests_are_422_and_call_nothing(world, payload):
     assert client.post("/verify", json=payload).status_code == 422 and state["calls"] == []
 
 
-def test_a_model_outage_is_502_not_an_invented_verdict(world):
+def test_a_model_outage_is_503_try_again_not_an_invented_verdict(world):
     client, store, state = world
     state["gemini_code"], state["gemini"] = 500, {"error": {"message": "boom"}}
     response = client.post("/verify", json={"text": POST_TEXT})
-    assert response.status_code == 502 and store.head() is None and "g-key" not in response.text
+    assert response.status_code == 503 and "try again" in response.json()["detail"].lower() and store.head() is None and "g-key" not in response.text
 
 
 def test_a_missing_key_is_503_with_the_variable_name_not_a_crash(tmp_path):
