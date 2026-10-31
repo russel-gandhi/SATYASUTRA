@@ -30,3 +30,12 @@ thresholds:
       more varied than screenshots and flat graphics, so false matches on those are
       not bounded by this sample.'
     date: '2026-10-31'
+  escalation_min_authors_per_min:
+    value: 0.6
+    calibrated_on: 'scripts/calibrate_escalation.py capture --seconds 300 on the live
+      Bluesky stream, 2026-10-31: 1216 posts, 1205 clusters; 1205 have 1 distinct
+      author, 3 have 2 (a motivational quote, a templated greeting, a weather bot:
+      chatter, not spreading claims), none has 3 or more. Floor = 3 distinct authors
+      in the 300 s window, so general chatter escalates nothing. General chatter,
+      not a news event: recalibrate during one.'
+    date: '2026-10-31'

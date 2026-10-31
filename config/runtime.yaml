@@ -72,3 +72,10 @@ provenance:
 
 trace:
   summary_max_chars: 200
+
+escalation:
+  enabled: false
+  reserve_per_minute: 5        # of policy.gemini.requests_per_minute; the rest is the escalation budget
+  tick_s: 5
+  retry_after_s: 300
+  max_audits_kept: 1000

@@ -20,7 +20,7 @@ from ..config import Config, load_config
 from ..envfile import load_env_file
 from ..agent import format_sse, trace_events
 from ..cache import TTLCache
-from ..fastclock import FastClock, FastClockWorker
+from ..fastclock import Cluster, Escalator, FastClock, FastClockWorker
 from ..claims import ExtractionResult, extract_claims
 from ..errors import ConfigError, SourceError
 from ..ingest import author_salt, hash_author
@@ -59,6 +59,7 @@ def create_app(
     fastclock: FastClock | None = None,
     verdict_cache: VerdictCache | None = None,
     worker: FastClockWorker | None = None,
+    escalator: Escalator | None = None,
 ) -> FastAPI:
     load_env_file(ROOT / ".env")
     cfg = config or load_config()
@@ -75,9 +76,13 @@ def create_app(
     async def lifespan(_app: FastAPI):
         if worker is not None:
             worker.start()
+        if escalator is not None:
+            escalator.start()
         try:
             yield
         finally:
+            if escalator is not None:
+                await escalator.stop()
             if worker is not None:
                 await worker.stop()
 
@@ -104,6 +109,19 @@ def create_app(
     do_extract = extract or (lambda post: extract_claims(gemini(), cfg, post))
     do_lookup = lookup or (lambda text, lang: factcheck().search(text, lang))
     do_fetch = fetch or (lambda uri: fetch_post(uri, cfg, salt))
+
+    def audit_cluster(post: Post) -> dict:
+        """The escalator's audit is the /verify path itself, so a cluster's result lands in the verdict cache and the ledger."""
+        return mark(verdicts().get_or_compute(post.text, lambda: _run(post)))
+
+    def cluster_post(cluster: Cluster) -> Post:
+        now = datetime.now(timezone.utc)
+        return Post(id=cluster.rep_post_id, source_id=cfg.runtime.ingest.source_id, url=worker.post_url(cluster.rep_post_id) or "",
+                    author_hash=hash_author(salt, cluster.rep_post_id), text=cluster.rep_text, posted_at=now, fetched_at=now)
+
+    if escalator is None and worker is not None and cfg.runtime.escalation.enabled:
+        escalator = Escalator(cfg, worker, audit_cluster, cluster_post)
+    app_escalator = escalator
 
     @app.get("/health")
     def health() -> dict:
@@ -145,6 +163,12 @@ def create_app(
         if worker is None:
             raise HTTPException(status_code=503, detail="the fast-clock worker is not enabled (fastclock.worker_enabled in config/runtime.yaml)")
         return worker.stats()
+
+    @app.get("/fastclock/escalations")
+    def fastclock_escalations(n: int = Query(default=20, ge=1, le=200)) -> dict:
+        if app_escalator is None:
+            raise HTTPException(status_code=503, detail="escalation is not enabled (escalation.enabled in config/runtime.yaml)")
+        return {**app_escalator.stats(), "recent": app_escalator.recent(n)}
 
     @app.get("/trace/stream")
     async def trace_stream(job: str = Query(min_length=1, max_length=64, pattern=JOB_ID)) -> StreamingResponse:

@@ -173,6 +173,14 @@ class ExtractSettings(_Strict):
     max_claims_per_post: int = Field(gt=0)
 
 
+class EscalationSettings(_Strict):
+    enabled: bool                            # audit top clusters automatically; off so the API and its tests spend no model calls
+    reserve_per_minute: int = Field(ge=0)    # of the Gemini requests per minute, kept free for people calling /verify
+    tick_s: float = Field(gt=0)              # how often the escalator looks at the ranking when it has nothing to do
+    retry_after_s: float = Field(gt=0)       # a cluster whose audit failed waits this long before it is eligible again
+    max_audits_kept: int = Field(gt=0)       # audit results remembered, oldest forgotten first
+
+
 class TraceSettings(_Strict):
     summary_max_chars: int = Field(gt=0)     # tool-call summaries are cut to this length before they are streamed
 
@@ -223,6 +231,7 @@ class RuntimeFile(_Strict):
     verify: VerifySettings
     provenance: ProvenanceSettings
     trace: TraceSettings
+    escalation: EscalationSettings
 
 
 class Config(_Strict):

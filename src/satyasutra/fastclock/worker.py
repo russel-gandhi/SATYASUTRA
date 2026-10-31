@@ -59,6 +59,7 @@ class FastClockWorker:
         self.started_mono: float | None = None
         self.last_post_mono: float | None = None
         self.error = ""
+        self.escalator = None                      # set by Escalator so its counters appear in stats()
 
     # lifecycle ---------------------------------------------------------------------------------------------------------
 
@@ -130,7 +131,7 @@ class FastClockWorker:
     def stats(self) -> dict:
         times = sorted(self._times_ms)
         clusterer = self.fastclock.clusterer
-        return {
+        out = {
             "running": self.running,
             "error": self.error,
             "uptime_s": round(self._mono() - self.started_mono, 1) if self.started_mono is not None else 0.0,
@@ -149,6 +150,9 @@ class FastClockWorker:
             "stream_skipped": dict(self.ingest.skipped),
             "last_post_age_s": round(self._mono() - self.last_post_mono, 1) if self.last_post_mono is not None else None,
         }
+        if self.escalator is not None:
+            out |= self.escalator.stats()
+        return out
 
     def post_url(self, post_id: str) -> str | None:
         """The public web address of a post from its at:// id, or None for ids that are not Bluesky posts."""
