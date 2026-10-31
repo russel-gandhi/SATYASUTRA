@@ -126,6 +126,15 @@
   <div class="results">
     <div class="card trace" id="trace" style="display:none"></div>
     <div id="links"></div>
+    <details class="card" style="margin-top:14px"><summary><b>How to use this site</b></summary>
+      <ol>
+        <li><b>Text:</b> paste a forwarded message or claim, press Investigate. You see each step live, then the verdict with its sources. "Cannot tell" is an honest answer.</li>
+        <li><b>Link or PDF, Image or video, Voice note:</b> use the other tabs. Image and video checks show tampering signals, never "this is real".</li>
+        <li><b>If a call feels like a scam:</b> open <a href="/guard">Call guard</a>, put the call on speaker, and watch the screen go amber or red.</li>
+        <li><b>If private pictures are being shared or threatened:</b> open <a href="/help">Private help</a>. It keeps nothing and has a one-tap exit.</li>
+        <li><b>After a check:</b> build a shareable Trust report, or delete the stored record of your checks.</li>
+      </ol>
+    </details>
     <div id="out"></div>
     <div id="act"></div>
     <div id="rep"></div>
@@ -415,7 +424,14 @@ function offerReport(kind, id) {
   const card = el("div", "claim"); card.append(el("div", "small", "Trust report: one page with the verdict, the evidence, the sources, the graph and the limits, as a shareable link. It covers " + n + " submission" + (n > 1 ? "s" : "") + " from this session (" + Object.keys(RECS).join(", ") + ")."));
   const mk = (lang, label) => { const b = el("button", "ghost toggle", label); b.onclick = async () => { b.disabled = true; try { const r = await api("/report/build", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ record_ids: Object.values(RECS), lang }) }); window.open(r.url, "_blank"); } catch (e) { card.append(el("div", "err", "Could not build the report: " + e.message)); } b.disabled = false; }; return b; };
   const clear = el("button", "ghost toggle", "Start a new report"); clear.onclick = () => { Object.keys(RECS).forEach((k) => delete RECS[k]); box.replaceChildren(); };
-  card.append(mk("en", "Build trust report"), " ", mk("hi", "रिपोर्ट हिन्दी में"), " ", clear);
+  const del = el("button", "ghost toggle", "Delete these checks"); del.onclick = async () => {
+    if (!confirm("Delete the stored record of these checks from the server and from this browser?")) return;
+    const ids = Object.values(RECS);
+    await Promise.all(ids.map((i) => fetch("/records/" + i, { method: "DELETE" }).catch(() => {})));
+    try { const h = JSON.parse(localStorage.getItem("jv_history") || "[]").filter((x) => !ids.includes(x)); localStorage.setItem("jv_history", JSON.stringify(h)); } catch (_) {}
+    Object.keys(RECS).forEach((k) => delete RECS[k]); box.replaceChildren(el("div", "small", "Deleted."));
+  };
+  card.append(mk("en", "Build trust report"), " ", mk("hi", "रिपोर्ट हिन्दी में"), " ", clear, " ", del);
   box.append(card);
 }
 
