@@ -14,7 +14,7 @@ from functools import cache
 from pathlib import Path
 from typing import Any, Callable
 
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, Header, HTTPException, Query, Request
 from fastapi import Path as Path_
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, StreamingResponse
@@ -44,6 +44,8 @@ from ..sources import WikidataClient
 from ..sources.bluesky import PostNotFound, fetch_post
 from ..act import build_pack, build_plan, is_intimate, load_actions
 from ..scam import check_links, load_domains
+from ..scam.script import load_script
+from ..scam.session import SessionFull, Sessions
 from ..voice import Transcriber, Transcript, VoiceError, second_opinion
 from ..audio import SpoofDetector
 from ..card import build_card, load_cards
@@ -98,6 +100,11 @@ class CaseNote(BaseModel):
 
 class UrlRequest(BaseModel):
     url: str = Field(min_length=1, max_length=2000)
+
+
+class GuardText(BaseModel):
+    session: str = Field(min_length=8, max_length=64, pattern="^[A-Za-z0-9_-]+$")
+    text: str = Field(min_length=1)
 
 
 class VerifyRequest(BaseModel):
@@ -376,6 +383,47 @@ def create_app(
         rows = build_view(worker.top(), lambda text: (c.body if (c := verdicts().get(text)) else None), cfg)
         return {"rows": rows, "stats": worker.stats(),
                 "note": "Only the Bluesky stream we watch is covered, in memory since the server started. A row says what we have already found; it is not a verdict, and topics are matched by word lists."}
+
+    guard_rules = load_script()
+    guard_calls = Sessions(guard_rules)
+
+    def guard_reply(call, text: str, session_id: str) -> dict:
+        v = call.add(text)
+        return {"state": v.state, "signals": v.signals, "scam_type": v.scam_type, "message": guard_rules.states[v.state].model_dump(),
+                "heard": call.tail, "note": "Script words only; it cannot know who is calling. It never says a call is safe. Nothing is recorded or stored."}
+
+    @app.post("/guard/chunk")
+    async def guard_chunk(request: Request, x_session: str = Header(min_length=8, max_length=64, pattern="^[A-Za-z0-9_-]+$")) -> dict:
+        """A few seconds of call audio in, the call's state out. The audio is transcribed and dropped; nothing is written to disk or to any record."""
+        data = await request.body()
+        if not data or len(data) > guard_rules.settings.max_chunk_bytes:
+            raise HTTPException(status_code=422, detail=f"send 1 to {guard_rules.settings.max_chunk_bytes} bytes of audio")
+        try:
+            t = await run_in_threadpool((transcribe or speech().transcribe), data)
+            call = guard_calls.get(x_session)
+        except VoiceError as exc:
+            raise HTTPException(status_code=422, detail=str(exc))
+        except SessionFull:
+            raise HTTPException(status_code=503, detail="Too many calls are being listened to right now. Try again in a minute.")
+        return guard_reply(call, t.text[: guard_rules.settings.max_text_chars], x_session)
+
+    @app.post("/guard/text")
+    def guard_text(req: GuardText) -> dict:
+        """The same rules on typed words (for a quick try without a microphone). Also in memory only."""
+        try:
+            call = guard_calls.get(req.session)
+        except SessionFull:
+            raise HTTPException(status_code=503, detail="Too many calls are being listened to right now. Try again in a minute.")
+        return guard_reply(call, req.text[: guard_rules.settings.max_text_chars], req.session)
+
+    @app.delete("/guard/{session_id}")
+    def guard_end(session_id: str = Path_(pattern="^[A-Za-z0-9_-]{8,64}$")) -> dict:
+        guard_calls.end(session_id)
+        return {"ended": True}
+
+    @app.get("/guard", include_in_schema=False)
+    def guard_page() -> FileResponse:
+        return FileResponse(ROOT / "ui" / "guard.html", media_type="text/html")
 
     @app.get("/officials", include_in_schema=False)
     def officials_page() -> FileResponse:

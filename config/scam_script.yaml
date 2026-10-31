@@ -1,0 +1,193 @@
+# Scam Guard script rules (package SG1): plain word groups, no model. A scam call is a script: an authority, a threat, urgency, secrecy and a request for money, a code or remote access.
+# Phrases are matched as whole words or phrases after lower-casing, English, Hindi and romanised Hindi (Hinglish).
+# The Hindi and Hinglish phrases are OUR drafts and have NOT been reviewed by a native speaker (SG7): reviewed_by stays empty until someone does.
+# The numbers (window, minimum signals) are policy choices tuned on the small dev part of tests/guard/set.jsonl only, not calibrated on real calls.
+reviewed_by: ""
+reviewed_on: ""
+settings:
+  window_chunks: 6            # a signal heard in the last N chunks still counts
+  min_signals_amber: 2        # this many different signals in the window make "be careful"
+  session_s: 900              # a call session is forgotten after this many seconds without a chunk (memory only)
+  max_sessions: 200
+  max_chunk_bytes: 2000000
+  max_text_chars: 2000
+  tail_chars: 160             # how much of the latest words is sent back for the screen
+signals:
+  authority:
+    - police
+    - cbi
+    - customs
+    - "cyber cell"
+    - "cyber crime"
+    - court
+    - "narcotics"
+    - "enforcement directorate"
+    - "bank officer"
+    - "rbi"
+    - "trai"
+    - "पुलिस"
+    - "सीबीआई"
+    - "कस्टम"
+    - "साइबर सेल"
+    - "कोर्ट"
+    - "पुलिस वाला"
+    - "police station"
+    - "inspector"
+  threat:
+    - arrest
+    - arrested
+    - "case registered"
+    - "case has been registered"
+    - "account will be blocked"
+    - "account blocked"
+    - "sim will be blocked"
+    - "sim disconnected"
+    - "legal action"
+    - "case is registered"
+    - "power will be cut"
+    - "connection will be disconnected"
+    - "will be disconnected"
+    - "connection kat jayega"
+    - "bijli kat jayegi"
+    - "warrant"
+    - "गिरफ्तार"
+    - "गिरफ़्तार"
+    - "केस दर्ज"
+    - "खाता बंद"
+    - "वारंट"
+    - "arrest ho jaoge"
+    - "arrest ho jayega"
+    - "case ho gaya"
+    - "account band"
+    - "warrant nikla"
+  urgency:
+    - "right now"
+    - "immediately"
+    - "within an hour"
+    - "within 30 minutes"
+    - "tonight"
+    - "do not disconnect"
+    - "don't disconnect"
+    - "stay on the line"
+    - "last warning"
+    - "अभी"
+    - "तुरंत"
+    - "फ़ोन मत काटिए"
+    - "फोन मत काटिए"
+    - "abhi"
+    - "turant"
+    - "phone mat katna"
+    - "line par bane rahiye"
+  secrecy:
+    - "do not tell anyone"
+    - "don't tell anyone"
+    - "do not tell your family"
+    - "do not call your family"
+    - "keep this secret"
+    - "किसी को मत बताना"
+    - "किसी को न बताएं"
+    - "घर वालों को मत बताना"
+    - "kisi ko mat batana"
+    - "kisi ko nahi batana"
+    - "ghar walon ko mat batana"
+  credential_request:
+    - otp
+    - "o t p"
+    - pin
+    - cvv
+    - "card number"
+    - "upi pin"
+    - "password"
+    - "ओटीपी"
+    - "पिन"
+    - "सीवीवी"
+    - "कार्ड नंबर"
+    - "otp batao"
+    - "otp bataiye"
+    - "pin batao"
+    - "card number batao"
+  money_request:
+    - "safe account"
+    - "transfer the money"
+    - "transfer money"
+    - "send money"
+    - "pay the fine"
+    - "verification deposit"
+    - "gift card"
+    - "security deposit"
+    - "सेफ अकाउंट"
+    - "पैसे ट्रांसफर"
+    - "पैसे भेजिए"
+    - "जुर्माना भरिए"
+    - "paise bhejo"
+    - "paise transfer karo"
+    - "paise bhejiye"
+    - "fine bharo"
+  remote_access:
+    - anydesk
+    - teamviewer
+    - "quicksupport"
+    - "install an app"
+    - "install the app"
+    - "share your screen"
+    - "screen share"
+    - "एनीडेस्क"
+    - "स्क्रीन शेयर"
+    - "app install karo"
+    - "screen share karo"
+  personal_crisis:
+    - "your son is"
+    - "your daughter is"
+    - "in custody"
+    - "had an accident"
+    - "in the hospital"
+    - "आपका बेटा"
+    - "आपकी बेटी"
+    - "हिरासत में"
+    - "एक्सीडेंट"
+    - "aapka beta"
+    - "aapki beti"
+    - "hirasat mein"
+    - "accident ho gaya"
+# A sentence with one of these cancels the signals listed in negation_cancels for that sentence only: a real bank saying "never share your OTP" must not alert.
+negations:
+  - "do not share"
+  - "don't share"
+  - "never share"
+  - "never ask"
+  - "will never ask"
+  - "does not ask"
+  - "do not give"
+  - "don't give"
+  - "should not share"
+  - "beware of"
+  - "कभी नहीं माँगता"
+  - "कभी नहीं मांगता"
+  - "साझा न करें"
+  - "शेयर न करें"
+  - "न बताएं"
+  - "kabhi share na karein"
+  - "kabhi nahi mangta"
+  - "share na karein"
+  - "kisi ko na batayein"
+negation_cancels: [credential_request, money_request, remote_access]
+# Red ("this looks like a scam"): any of these signal sets all present in the window. Amber ("be careful"): the minimum number of different signals, or any single signal here.
+red_when:
+  - [credential_request]
+  - [remote_access]
+  - [money_request, threat]
+  - [money_request, authority]
+  - [personal_crisis, money_request]
+  - [authority, threat]
+amber_on: [secrecy, money_request]
+# The scam type shown with a red alert: the first entry whose signals are all present.
+types:
+  digital_arrest: [authority, threat]
+  family_emergency: [personal_crisis, money_request]
+  bank_or_code_request: [credential_request]
+  remote_access_scam: [remote_access]
+  payment_demand: [money_request]
+states:
+  listening: {en: "Listening. Nothing alarming heard so far.", hi: "सुन रहा हूँ। अब तक कुछ चिंताजनक नहीं सुना।"}
+  careful: {en: "Be careful. Some things said on this call are common in scams.", hi: "सावधान रहिए। इस कॉल की कुछ बातें ठगी में आम हैं।"}
+  scam: {en: "This looks like a scam. Hang up. Do not share any code or send money.", hi: "यह ठगी लगती है। फ़ोन काट दीजिए। कोई कोड न बताएं, पैसे न भेजें।"}
