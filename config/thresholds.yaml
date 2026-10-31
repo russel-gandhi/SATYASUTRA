@@ -66,3 +66,12 @@ thresholds:
       photo with a small AI-edited region can read as real. The detector''s published accuracy
       is the authors'' own figure and was not reproduced here.'
     date: '2026-10-31'
+  audio_synthetic_probability:
+    value: 0.9
+    model_sha256: 905e330265c40a76955911ce86691fb4c8f2ed9c8085f4f046cac1383592a0ac
+    calibrated_on: 'docs/calibration/audio_synthetic_2026-10-31.txt: 20 real clips (mostly old or noisy Commons recordings, one Hindi)
+      and 19 synthetic clips (Gemini TTS English and Hindi, Windows SAPI), as collected and after phone-style compression (Opus
+      12 kbit/s, 8 kHz). Median window probability of fake at 0.9: 19 of 19 synthetic caught and 0 of 20 real flagged, in both runs.
+      Limits: 39 clips, real class is old radio and not modern phone speech, no cloned voices of real people, no ElevenLabs-style
+      output, one Indian language only (Hindi, from Gemini), the same clips were used to pick the cut and to report it.'
+    date: '2026-10-31'
