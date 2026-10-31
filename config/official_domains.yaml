@@ -1,0 +1,54 @@
+# Domains the lookalike-link check treats as the real ones (friend's map S2, Verify -> Act).
+# Basis: well-known official sites of Indian government bodies and of three banks that phishing often imitates. Each name resolved in DNS
+# on 2026-10-31 (a name resolving says it exists, not that it is the best official page). This is a list to compare against, not a
+# register of every official site: a domain that is not here is reported as "not in our list", never as a scam.
+checked_on: '2026-10-31'
+
+settings:
+  max_edit_distance: 2        # a name this close to an official name (and not equal) is a lookalike
+  min_label_chars: 4          # shorter names only match through look-alike characters, never by edit distance or embedding
+
+# Two-label public suffixes, so "pmkisan.gov.in" is read as name "pmkisan" under "gov.in".
+suffixes: [gov.in, nic.in, co.in, org.in, ac.in, res.in, net.in, edu.in, com.au, co.uk]
+
+# Endings that mark a government-style address; a name under one that is not in the list below is not judged.
+government_suffixes: [gov.in, nic.in]
+
+# Link text counts as a domain only with a scheme, a leading www., or one of these endings.
+tlds: [in, com, org, net, gov, co, info, xyz, top, online, site, click, link, app, live, shop, store, club, vip, icu, cc, ly, me, io, sbi]
+
+# Characters read as the letter they imitate before names are compared.
+homoglyphs: {"0": "o", "1": "l", "3": "e", "5": "s", "8": "b", "rn": "m", "vv": "w", "|": "l", "!": "i",
+  "а": "a", "е": "e", "о": "o", "р": "p", "с": "c", "х": "x", "у": "y", "і": "i", "ѕ": "s", "ο": "o", "ι": "i", "ν": "v"}
+
+# Link shorteners hide the real destination; we do not follow links, so these are reported as unverifiable.
+shorteners: [bit.ly, tinyurl.com, t.co, goo.gl, cutt.ly, is.gd, rb.gy, shorturl.at, wa.me]
+
+domains:
+  - {domain: india.gov.in, owner: National Portal of India, category: government}
+  - {domain: mygov.in, owner: MyGov, category: government}
+  - {domain: uidai.gov.in, owner: UIDAI (Aadhaar), category: government}
+  - {domain: incometax.gov.in, owner: Income Tax e-filing portal, category: government}
+  - {domain: incometaxindia.gov.in, owner: Income Tax Department, category: government}
+  - {domain: epfindia.gov.in, owner: EPFO, category: government}
+  - {domain: pmkisan.gov.in, owner: PM-KISAN, category: government}
+  - {domain: cybercrime.gov.in, owner: National Cyber Crime Reporting Portal, category: government}
+  - {domain: digilocker.gov.in, owner: DigiLocker, category: government}
+  - {domain: parivahan.gov.in, owner: Ministry of Road Transport (Parivahan), category: government}
+  - {domain: indiapost.gov.in, owner: India Post, category: government}
+  - {domain: eci.gov.in, owner: Election Commission of India, category: government}
+  - {domain: mohfw.gov.in, owner: Ministry of Health and Family Welfare, category: government}
+  - {domain: pib.gov.in, owner: Press Information Bureau, category: government}
+  - {domain: imd.gov.in, owner: India Meteorological Department, category: government}
+  - {domain: passportindia.gov.in, owner: Passport Seva, category: government}
+  - {domain: umang.gov.in, owner: UMANG, category: government}
+  - {domain: pmjay.gov.in, owner: Ayushman Bharat PM-JAY, category: government}
+  - {domain: gst.gov.in, owner: GST portal, category: government}
+  - {domain: sebi.gov.in, owner: SEBI, category: regulator}
+  - {domain: rbi.org.in, owner: Reserve Bank of India, category: regulator}
+  - {domain: npci.org.in, owner: NPCI (UPI), category: regulator}
+  - {domain: irctc.co.in, owner: IRCTC, category: government}
+  - {domain: stopncii.org, owner: StopNCII.org, category: helpline}
+  - {domain: sbi.co.in, owner: State Bank of India, category: bank}
+  - {domain: hdfcbank.com, owner: HDFC Bank, category: bank}
+  - {domain: icicibank.com, owner: ICICI Bank, category: bank}

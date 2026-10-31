@@ -86,6 +86,7 @@
         <span class="spin" id="spin">working...</span>
       </div>
       <div id="trace" class="trace" style="display:none"></div>
+      <div id="links"></div>
       <div id="out"></div>
     </section>
     <section style="margin-top:16px">
@@ -261,11 +262,26 @@ function streamAgent(text) {
   });
 }
 
+const LINK_CLASS = { lookalike: "err", similar_name: "err", shortened: "claim", gov_style: "claim", unknown: "claim", official: "claim" };
+async function checkLinks(text) {
+  const box = $("links"); box.replaceChildren();
+  try {
+    const d = await api("/links/check?text=" + encodeURIComponent(text));
+    d.links.filter((l) => l.status !== "unknown").forEach((l) => {
+      const row = el("div", LINK_CLASS[l.status] || "claim");
+      row.append(Object.assign(el("b"), { textContent: l.status === "official" ? "Official link: " : l.status === "shortened" ? "Shortened link: " : l.status === "gov_style" ? "Government-style link: " : "Possible lookalike link: " }), l.reason + ".");
+      box.append(row);
+    });
+    if (d.links.some((l) => l.status === "lookalike" || l.status === "similar_name")) box.append(el("div", "small", "Do not open it or enter details. We checked the name only and never opened the link. To report a cyber fraud, use the official national portal or call the helpline from the official website."));
+  } catch (_) {}
+}
+
 async function verify() {
   const text = $("text").value.trim(), uri = $("uri").value.trim();
   const out = $("out"); out.replaceChildren();
   if (!text && !uri) return;
   $("go").disabled = true; $("spin").style.display = "inline";
+  checkLinks(text || uri);
   if (!uri) {
     const got = await streamAgent(text);
     if (!got && !out.childNodes.length) out.append(el("div", "claim small", "No checkable claim found in this text. Opinions and chatter are not claims."));

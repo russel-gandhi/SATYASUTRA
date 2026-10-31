@@ -145,7 +145,7 @@ def handler(engine: Engine):
 
         def do_GET(self):
             if self.path == "/health":
-                self._send(200, {"status": "ok", "device": engine.device})
+                self._send(200, {"status": "ok", "device": engine.device, "ai_detector": engine.smaug_error or "loaded"})
             else:
                 self._send(404, {"detail": "not found"})
 

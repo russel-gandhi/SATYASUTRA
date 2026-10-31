@@ -15,3 +15,5 @@ config/sources.local.yaml
 *.env.txt
 forensics/
 serve.log
+serve.err.log
+forensics/service.err.log

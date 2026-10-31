@@ -19,7 +19,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, model_validator
 
 from .. import __version__
-from ..config import Config, load_config
+from ..config import Config, config_dir, load_config
 from ..envfile import load_env_file
 from ..agent import format_sse, trace_events
 from ..cache import TTLCache
@@ -39,6 +39,7 @@ from ..schemas.core import sha256_text
 from ..sources import FactCheckClient, FactCheckResult, ProbeResult, probe_all
 from ..sources import WikidataClient
 from ..sources.bluesky import PostNotFound, fetch_post
+from ..scam import check_links, load_domains
 from ..sources.index import OfficialIndex
 from ..verdict_cache import VerdictCache, mark
 
@@ -133,6 +134,10 @@ def create_app(
         return OfficialIndex(_path(cfg.runtime.official.db_path))
 
     do_official = official or ((lambda text: check_official(gemini(), cfg, official_index(), text)) if extract is None else None)
+    @cache
+    def link_domains():
+        return load_domains(config_dir() / "official_domains.yaml")
+
     do_lookup = lookup or (lambda text, lang: factcheck().search(text, lang))
     do_fetch = fetch or (lambda uri: fetch_post(uri, cfg, salt))
 
@@ -199,6 +204,14 @@ def create_app(
         if worker is None:
             raise HTTPException(status_code=503, detail="the fast-clock worker is not enabled (fastclock.worker_enabled in config/runtime.yaml)")
         return worker.stats()
+
+    @app.get("/links/check")
+    def links_check(text: str = Query(min_length=1, max_length=cfg.runtime.verify.max_text_chars)) -> dict:
+        """Name-only check of every link in the text against the official-domain list. Links are never opened."""
+        found = check_links(text, link_domains())
+        return {"links": [{"link": f.link, "host": f.host, "status": f.status, "reason": f.reason, "real_domain": f.real_domain, "owner": f.owner} for f in found],
+                "checked_on": link_domains().checked_on,
+                "note": "Only the name is checked; the link is never opened. A link that is not in our list is not thereby safe."}
 
     @app.get("/fastclock/cluster/{cluster_id}")
     def fastclock_cluster(cluster_id: int) -> dict:
