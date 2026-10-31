@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, model_validator
 
 from .. import __version__
@@ -122,6 +122,10 @@ def create_app(
     if escalator is None and worker is not None and cfg.runtime.escalation.enabled:
         escalator = Escalator(cfg, worker, audit_cluster, cluster_post)
     app_escalator = escalator
+
+    @app.get("/", include_in_schema=False)
+    def home() -> FileResponse:
+        return FileResponse(ROOT / "ui" / "index.html", media_type="text/html")
 
     @app.get("/health")
     def health() -> dict:

@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SATYASUTRA</title>
+<style>
+  :root {
+    --bg: #0b0f17; --panel: #121826; --line: #232c3f; --text: #e8ecf5; --mute: #8b95ab; --accent: #7aa2ff;
+    --ok: #3ecf8e; --bad: #ff6b6b; --warn: #f5b84b; --idle: #6b7690;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) { --bg: #f4f6fb; --panel: #fff; --line: #dde2ee; --text: #131a2a; --mute: #5d6885; --accent: #2f5bd8; --idle: #7b86a3; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { padding: 20px 16px 8px; max-width: 1180px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: baseline; justify-content: space-between; }
+  h1 { margin: 0; font-size: 22px; letter-spacing: .14em; }
+  .tag { color: var(--mute); font-size: 13px; }
+  .pills { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pill { border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; font-size: 12px; color: var(--mute); background: var(--panel); }
+  .pill b { color: var(--text); font-weight: 600; }
+  .pill.good b { color: var(--ok); } .pill.bad b { color: var(--bad); }
+  main { max-width: 1180px; margin: 0 auto; padding: 8px 16px 40px; display: grid; gap: 16px; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  h2 { margin: 0 0 10px; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--mute); font-weight: 600; }
+  textarea, input[type=text] { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 10px; font: inherit; }
+  textarea { min-height: 96px; resize: vertical; }
+  .row { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  button { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 9px 16px; font: inherit; font-weight: 600; cursor: pointer; }
+  button.ghost { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+  button:disabled { opacity: .5; cursor: progress; }
+  .claim { border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-top: 12px; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; letter-spacing: .04em; color: #0b0f17; }
+  .REFUTED { background: var(--bad); } .SUPPORTED { background: var(--ok); } .MISSING_CONTEXT, .OUT_OF_CONTEXT { background: var(--warn); }
+  .UNVERIFIABLE_YET, .NOT_A_CLAIM, .INCONCLUSIVE { background: var(--idle); color: #fff; }
+  .claim .q { margin: 8px 0 4px; font-weight: 600; }
+  .small { color: var(--mute); font-size: 13px; }
+  ul { margin: 6px 0 0; padding-left: 18px; }
+  a { color: var(--accent); }
+  .cluster { padding: 10px 0; border-top: 1px solid var(--line); }
+  .cluster:first-of-type { border-top: 0; }
+  .cluster .txt { overflow-wrap: anywhere; }
+  .nums { display: flex; gap: 12px; color: var(--mute); font-size: 12px; margin-top: 2px; flex-wrap: wrap; }
+  .err { color: var(--bad); margin-top: 10px; }
+  footer { max-width: 1180px; margin: 0 auto; padding: 0 16px 28px; color: var(--mute); font-size: 12px; }
+  .spin { display: none; margin-left: 4px; color: var(--mute); align-self: center; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>SATYASUTRA</h1>
+    <div class="tag">Live claim verification with an auditable ledger. It says "cannot tell" instead of guessing.</div>
+  </div>
+  <div class="pills" id="pills"></div>
+</header>
+
+<main>
+  <div>
+    <section>
+      <h2>Check a claim or a Bluesky post</h2>
+      <textarea id="text" placeholder="Paste a claim or a post's text (any language)"></textarea>
+      <div class="row"><input type="text" id="uri" placeholder="or a Bluesky post address starting with at://"></div>
+      <div class="row">
+        <button id="go">Verify</button>
+        <button class="ghost" id="chain">Check ledger integrity</button>
+        <span class="spin" id="spin">working...</span>
+      </div>
+      <div id="out"></div>
+    </section>
+  </div>
+
+  <div>
+    <section>
+      <h2>What is spreading now (live Bluesky stream)</h2>
+      <div id="clusters" class="small">Loading...</div>
+    </section>
+  </div>
+</main>
+
+<footer>
+  Verdicts come from live sources only: Gemini reads the claim, the Google Fact Check API supplies reviews, and rules decide.
+  Only a review that matches the claim closely can decide it; everything else is shown as related and never used to decide.
+</footer>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
+
+async function api(path, opts) {
+  const r = await fetch(path, opts);
+  let body = null;
+  try { body = await r.json(); } catch (_) {}
+  if (!r.ok) throw new Error((body && body.detail) ? (typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail)) : "HTTP " + r.status);
+  return body;
+}
+
+function pill(label, value, cls) {
+  const p = el("span", "pill " + (cls || ""));
+  p.append(label + " ");
+  p.append(Object.assign(el("b"), { textContent: value }));
+  return p;
+}
+
+async function refreshPills() {
+  const box = $("pills"); const items = [];
+  try { const s = await api("/fastclock/stats"); items.push(pill("posts/min", s.posts_per_minute, "good"), pill("processed", s.posts_processed), pill("clusters", s.clusters_now)); }
+  catch (_) { items.push(pill("stream", "off", "bad")); }
+  try { const h = await api("/health"); items.push(pill("ledger rows", h.ledger_entries)); } catch (_) {}
+  box.replaceChildren(...items);
+}
+
+async function refreshClusters() {
+  const box = $("clusters");
+  try {
+    const d = await api("/fastclock/top");
+    if (!d.clusters.length) { box.textContent = "No clusters yet."; return; }
+    box.replaceChildren(...d.clusters.map((c) => {
+      const row = el("div", "cluster");
+      const t = el("div", "txt", c.example_text); row.append(t);
+      const n = el("div", "nums");
+      n.append(el("span", "", c.authors_per_minute + " authors/min"), el("span", "", c.size + " posts"));
+      if (c.example_url) { const a = el("a", "", "open post"); a.href = c.example_url; a.target = "_blank"; a.rel = "noopener"; n.append(a); }
+      const use = el("a", "", "check this"); use.href = "#"; use.onclick = (e) => { e.preventDefault(); $("text").value = c.example_text; $("uri").value = ""; window.scrollTo({ top: 0, behavior: "smooth" }); };
+      n.append(use); row.append(n);
+      return row;
+    }));
+  } catch (e) { box.textContent = "Stream panel off: " + e.message; }
+}
+
+function renderClaim(c) {
+  const box = el("div", "claim");
+  const head = el("div"); head.append(el("span", "badge " + c.label, c.label.replaceAll("_", " ")), " ", el("span", "small", "confidence: " + c.confidence_band));
+  box.append(head, el("div", "q", c.text));
+  if (c.quote && c.quote !== c.text) box.append(el("div", "small", "original: " + c.quote));
+  if (c.reasons && c.reasons.length) { const u = el("ul"); c.reasons.forEach((r) => u.append(el("li", "", r))); box.append(u); }
+  if (c.citations && c.citations.length) {
+    box.append(el("div", "small", "Evidence"));
+    const u = el("ul");
+    c.citations.forEach((e) => { const li = el("li"); const a = el("a", "", (e.publisher || "source") + (e.rating ? ": " + e.rating : "")); a.href = e.url; a.target = "_blank"; a.rel = "noopener"; li.append(a); u.append(li); });
+    box.append(u);
+  }
+  if (c.related && c.related.length) {
+    box.append(el("div", "small", "Related reviews (not used to decide)"));
+    const u = el("ul");
+    c.related.forEach((r) => { const li = el("li"); const a = el("a", "", (r.publisher || "source") + ": " + (r.rating || "")); a.href = r.url; a.target = "_blank"; a.rel = "noopener"; li.append(a, " ", el("span", "small", "match " + r.relevance + ". " + r.why_not_used)); u.append(li); });
+    box.append(u);
+  }
+  const foot = el("div", "small"); const a = el("a", "", "ledger entry #" + c.ledger_seq); a.href = "/ledger/" + c.ledger_seq; a.target = "_blank"; foot.append(a);
+  box.append(foot);
+  return box;
+}
+
+async function verify() {
+  const text = $("text").value.trim(), uri = $("uri").value.trim();
+  const out = $("out"); out.replaceChildren();
+  if (!text && !uri) return;
+  $("go").disabled = true; $("spin").style.display = "inline";
+  try {
+    const body = await api("/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(uri ? { uri } : { text }) });
+    const meta = el("div", "small");
+    meta.textContent = body.cached ? "answered from cache" : "computed just now";
+    out.append(meta);
+    if (!body.claims.length) out.append(el("div", "claim small", "No checkable claim found in this text (" + body.extraction.status + "). Opinions and chatter are not claims."));
+    body.claims.forEach((c) => out.append(renderClaim(c)));
+  } catch (e) { out.append(el("div", "err", "Could not verify: " + e.message)); }
+  finally { $("go").disabled = false; $("spin").style.display = "none"; refreshPills(); }
+}
+
+async function chain() {
+  const out = $("out");
+  try { const r = await api("/ledger/verify"); out.prepend(el("div", "claim", r.ok ? "Ledger intact: " + r.checked + " entries verified." : "Ledger BROKEN at entry " + r.first_bad_seq + ": " + r.reason)); }
+  catch (e) { out.prepend(el("div", "err", e.message)); }
+}
+
+$("go").onclick = verify; $("chain").onclick = chain;
+refreshPills(); refreshClusters(); setInterval(refreshPills, 5000); setInterval(refreshClusters, 5000);
+</script>
+</body>
+</html>
