@@ -1,5 +1,7 @@
 # Plan to the deadline (2 Nov 2026, 00:00)
 
+> **Superseded (31 Oct, 13:20 IST)** by [`BUILD_PLAN.md`](BUILD_PLAN.md) (schedule, checkpoints, cut order) and [`BUILD_MAP_FINAL.md`](BUILD_MAP_FINAL.md) (packages, owners, file ownership). Kept for history.
+
 Written 31 Oct 2026, about 33 hours before the deadline. Goal: a working prototype that gives real results and does not break.
 Not a benchmark exercise. The no-mock-data rule and the "say what was not tested" rule still apply.
 
