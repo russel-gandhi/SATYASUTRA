@@ -81,7 +81,12 @@ forensics\venv311\Scripts\python forensics\service.py --port 8100          # Tru
   the fallback (about 1.7x slower than real time). The UI transcribes, shows the text and language, then runs the normal claim agent.
   It reads words only; it does not detect cloned voices (B2 audio-deepfake model not approved or installed). Hindi transcripts have word errors.
   `assets/fonts/NotoSansDevanagari.ttf` (OFL) is for the correction card, drawn in the browser because Pillow here lacks raqm.
-- Not done: Telegram bot (needs a fresh token), escalation never fired live, TruFor false-alarm rate on real social-media images
+- Explanations (`explain.py`): SHAP-style. The verdict rules are plain code, so exact Shapley values are computed by re-running them on evidence subsets
+  (credit per review; 'removing it changes the verdict?'; word overlap; what new evidence would change the label). Media: per detector score, cut, margin
+  and Shapley value. Returned as `explanation` by `/verify`, `/agent/stream` and `/media/check`; UI 'Why this verdict' panels. Model steps (extraction, translation,
+  same-claim judge) are inputs and are NOT attributed; the output says so. Above `explain.max_players` evidence items only leave-one-out is shown.
+- Telegram bot: `scripts/telegram_bot.py` (long polling, calls the local API; `src/satyasutra/bot/`). Needs the API running.
+- Not done: (Telegram bot done, see above) (needs a fresh token), escalation never fired live, TruFor false-alarm rate on real social-media images
   unknown, README with a real-vs-roadmap table. `tests/unit/test_trace_sse.py::test_leaving_mid_run...` failed once under full-suite load and
   passes alone (timing).
 - Official text and contrast refutation (friend's map A1, A2): `sources/official.py` + `sources/index.py` fetch the RBI press-release and SEBI

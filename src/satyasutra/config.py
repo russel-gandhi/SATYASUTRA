@@ -248,6 +248,11 @@ class VoiceSettings(_Strict):
     low_language_prob: float = Field(ge=0, le=1)   # below this the detected language is shown as uncertain (a display rule, not a calibrated cut)
 
 
+class ExplainSettings(_Strict):
+    max_players: int = Field(gt=0)           # evidence items up to this many get exact Shapley values (the work doubles per item); more get leave-one-out only
+    words_shown: int = Field(gt=0)           # words listed per side in the word-overlap view
+
+
 class TelegramSettings(_Strict):
     api_base: str                            # Telegram Bot API host
     local_api: str                           # our own API, which the bot calls for every check
@@ -312,6 +317,7 @@ class RuntimeFile(_Strict):
     official: OfficialSettings
     voice: VoiceSettings
     telegram: TelegramSettings
+    explain: ExplainSettings
 
 
 class Config(_Strict):

@@ -63,6 +63,7 @@
   .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
   .chip { border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; font-size: 12px; text-decoration: none; color: var(--text); }
   .spin { display: none; margin-left: 4px; color: var(--mute); align-self: center; }
+.why{margin-top:8px}.whyrow{margin:6px 0;padding:6px 8px;border-left:3px solid var(--line,#ccc)}.bar{display:inline-block;width:90px;height:8px;background:#0001;border-radius:4px;vertical-align:middle;overflow:hidden}.bar>span{display:block;height:100%;background:#2e7d32}.bar>span.neg{background:#c62828}
 </style>
 </head>
 <body>
@@ -213,6 +214,42 @@ async function spreadLine(text, box) {
   } catch (_) { box.textContent = ""; }
 }
 
+function bar(v) {
+  const w = el("span", "bar"); const i = el("span", v < 0 ? "neg" : ""); i.style.width = Math.min(100, Math.abs(v) * 100) + "%"; w.append(i); return w;
+}
+
+function explainClaim(x) {
+  const d = el("details", "why"); d.append(el("summary", "", "Why this verdict (SHAP-style breakdown)"));
+  d.append(el("div", "small", x.method));
+  if (!x.evidence.length) d.append(el("div", "small", "No evidence was found, so there is nothing to attribute."));
+  x.evidence.forEach((r) => {
+    const row = el("div", "whyrow");
+    row.append(el("div", "", (r.publisher || "source") + (r.rating ? ": " + r.rating : "") + (r.decided ? "  [used to decide]" : "  [not used]")));
+    if (r.shapley !== null) { const line = el("div", "small"); line.append(bar(r.shapley), " credit " + r.shapley.toFixed(2)); row.append(line); }
+    row.append(el("div", "small", r.flips_verdict_if_removed ? "Removing this would change the verdict." : "Removing this alone would not change the verdict."));
+    if (r.why_not_used) row.append(el("div", "small", "Why not used: " + r.why_not_used));
+    if (r.words) row.append(el("div", "small", "Shared words: " + (r.words.shared.join(", ") || "none") + ". Only in the claim: " + (r.words.only_in_claim.join(", ") || "none") + ". Only in the review: " + (r.words.only_in_review.join(", ") || "none") + "."));
+    d.append(row);
+  });
+  if (x.counterfactuals.length) { d.append(el("div", "small", "What would change it")); const u = el("ul"); x.counterfactuals.forEach((c) => u.append(el("li", "small", c))); d.append(u); }
+  d.append(el("div", "small", x.not_attributed));
+  return d;
+}
+
+function explainMedia(x) {
+  const d = el("details", "why"); d.append(el("summary", "", "Why this result (SHAP-style breakdown)"));
+  d.append(el("div", "small", x.method));
+  x.signals.forEach((s) => {
+    const row = el("div", "whyrow"); row.append(el("div", "", s.signal));
+    if (s.score !== undefined) row.append(el("div", "small", s.score === null ? "no score" : "score " + s.score.toFixed(2) + ", cut " + s.cut + ", " + (s.over_cut ? "over" : "under") + " the cut by " + Math.abs(s.margin).toFixed(2)));
+    else row.append(el("div", "small", s.matches + " match(es). " + s.meaning));
+    const line = el("div", "small"); line.append(bar(s.shapley), " credit " + s.shapley.toFixed(2)); row.append(line);
+    d.append(row);
+  });
+  d.append(el("div", "small", x.pixel_level));
+  return d;
+}
+
 function renderClaim(c) {
   const box = el("div", "claim");
   const head = el("div"); head.append(el("span", "badge " + c.label, c.label.replaceAll("_", " ")), " ", el("span", "small", "confidence: " + c.confidence_band));
@@ -237,6 +274,7 @@ function renderClaim(c) {
     c.related.forEach((r) => { const li = el("li"); const a = el("a", "", (r.publisher || "source") + ": " + (r.rating || "")); a.href = r.url; a.target = "_blank"; a.rel = "noopener"; li.append(a, " ", el("span", "small", "match " + r.relevance + ". " + r.why_not_used)); u.append(li); });
     box.append(u);
   }
+  if (c.explanation && c.explanation.method) box.append(explainClaim(c.explanation));
   const foot = el("div", "small"); const a = el("a", "", "ledger entry #" + c.ledger_seq); a.href = "/ledger/" + c.ledger_seq; a.target = "_blank"; foot.append(a);
   box.append(foot);
   return box;
@@ -379,6 +417,7 @@ async function checkImage() {
       body.matches.forEach((h) => { const li = el("li"); const a = el("a", "", h.publisher + ": " + h.title); a.href = h.article_url; a.target = "_blank"; a.rel = "noopener"; li.append(a, " ", el("span", "small", "distance " + h.distance + (h.mirrored ? ", mirrored" : "") + (h.reviewed_at ? ", reviewed " + h.reviewed_at.slice(0, 10) : ""))); m.append(li); });
       card.append(m);
     }
+    if (body.explanation && body.explanation.method) card.append(explainMedia(body.explanation));
     out.append(card);
   } catch (e) { out.replaceChildren(el("div", "err", "Could not check the image: " + e.message)); }
 }

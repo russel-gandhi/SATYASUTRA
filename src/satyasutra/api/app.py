@@ -288,7 +288,7 @@ def create_app(
             raise HTTPException(status_code=422, detail=f"not an image: {exc}")
         heatmap = result.forensics.pop("heatmap_png_b64", None)
         return {"width": result.width, "height": result.height, "label": result.label, "reasons": result.reasons,
-                "matches": result.matches, "forensics": result.forensics, "heatmap_png_b64": heatmap}
+                "matches": result.matches, "forensics": result.forensics, "heatmap_png_b64": heatmap, "explanation": result.explanation}
 
     @app.post("/video/check")
     async def video_check(request: Request) -> dict:
@@ -390,7 +390,7 @@ def verdict_body(post: Post, done, grounded: dict | None = None) -> dict:
             {
                 "claim_id": r.claim.id, "text": r.claim.text_en, "quote": r.claim.text_orig, "lang": r.claim.lang,
                 "label": r.outcome.verdict.label, "confidence_band": r.outcome.verdict.confidence_band,
-                "flags": r.outcome.verdict.flags, "reasons": r.outcome.reasons,
+                "flags": r.outcome.verdict.flags, "reasons": r.outcome.reasons, "explanation": r.outcome.explanation,
                 "citations": [e.model_dump(mode="json") for e in r.outcome.verdict.evidence],
                 "related": [{"url": a.evidence.url, "publisher": a.evidence.publisher, "rating": a.evidence.rating,
                              "reviewed_claim": a.evidence.reviewed_claim, "relevance": round(a.relevance, 2), "why_not_used": a.reason}

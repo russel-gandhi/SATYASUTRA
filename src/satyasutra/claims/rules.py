@@ -17,6 +17,7 @@ from typing import Callable, Literal
 
 from ..config import Config
 from ..errors import ForgeError
+from ..explain import explain_claim
 from ..fastclock.normalise import normalise
 from ..schemas import Claim, Evidence, Verdict
 from ..schemas.core import TRUSTED_TIERS, sha256_text
@@ -68,9 +69,10 @@ class RuleOutcome:
     reasons: list[str] = field(default_factory=list)       # one line per decision, in the order the rules ran
     related: list[Assessment] = field(default_factory=list)  # reviews of other claims: shown to people, never used to decide
     unmapped_ratings: list[str] = field(default_factory=list)
+    explanation: dict = field(default_factory=dict)         # SHAP-style attribution of the evidence (satyasutra/explain.py); never used to decide
 
 
-def decide(
+def _decide(
     claim: Claim,
     evidence: list[Evidence],
     config: Config,
@@ -165,3 +167,11 @@ def decide(
 
 def _role(a: Assessment, role: str) -> Evidence:
     return a.evidence.model_copy(update={"role": role})
+
+
+def decide(claim: Claim, evidence: list[Evidence], config: Config, now: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
+           judged: dict[str, str] | None = None) -> RuleOutcome:
+    """The verdict rules, plus an explanation of how much each evidence item mattered (computed by re-running the same rules on subsets)."""
+    outcome = _decide(claim, evidence, config, now, judged)
+    outcome.explanation = explain_claim(claim, evidence, outcome, config, lambda sub: _decide(claim, sub, config, now, judged).verdict.label)
+    return outcome

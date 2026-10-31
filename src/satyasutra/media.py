@@ -18,6 +18,7 @@ import httpx
 
 from .config import Config
 from .errors import ConfigError
+from .explain import explain_media
 from .provenance import BadImage, ImageIndex, fingerprint
 
 SCOPE_NOTE = "TruFor finds edited images (splicing, copy-move, retouching). It does not detect fully AI-generated images."
@@ -33,6 +34,12 @@ class MediaResult:
     forensics: dict
     label: str
     reasons: list[str] = field(default_factory=list)
+    explanation: dict = field(default_factory=dict)
+
+
+def label_from(edited: bool, ai_generated: bool) -> str:
+    """The label rule alone: a lone AI-image detector hit outranks an edit hit, and no hit is INCONCLUSIVE, never authentic."""
+    return "SYNTHETIC_SUSPECTED" if ai_generated else ("EDITED" if edited else "INCONCLUSIVE")
 
 
 def forensic_scores(cfg: Config, data: bytes, client: httpx.Client | None = None) -> dict:
@@ -97,4 +104,5 @@ def check_media(cfg: Config, data: bytes, index: ImageIndex, analyse=forensic_sc
         reasons.append(f"appeared in {len(matches)} fact-checker article(s): a lead about its history, not a verdict on any claim")
     else:
         reasons.append("not in the debunked-image index; that says nothing about whether it is authentic")
-    return MediaResult(fp.width, fp.height, matches, forensics, label, reasons)
+    explanation = explain_media(cfg, forensics, matches, label, label_from) if forensics.get("available") else {}
+    return MediaResult(fp.width, fp.height, matches, forensics, label, reasons, explanation)

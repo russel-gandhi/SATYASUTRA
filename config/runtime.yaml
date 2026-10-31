@@ -166,3 +166,7 @@ telegram:
     image_failed: "Could not read that image."
     unsupported: "I can check text, voice notes and photos."
     error: "Something went wrong while checking. Nothing was recorded; please try again."
+
+explain:
+  max_players: 8
+  words_shown: 12
