@@ -107,7 +107,7 @@ def scan(src: Path, base: Path | None = None) -> list[Finding]:
         if not path.is_file() or "__pycache__" in path.parts:
             continue
         rel = path.relative_to(base).as_posix()
-        if path.suffix in DATA_SUFFIXES:
+        if path.suffix.lower() in DATA_SUFFIXES:
             found.append(Finding("data-file", rel, 1, "data file inside src/"))
         elif path.suffix == ".py":
             found.extend(scan_file(path, rel))
