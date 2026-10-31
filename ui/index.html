@@ -416,7 +416,7 @@ async function verify() {
   try {
     const body = await api("/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(uri ? { uri } : { text }) });
     const meta = el("div", "small");
-    meta.textContent = body.cached ? "answered from cache" : "computed just now";
+    meta.textContent = body.from_cache ? "answered from cache" : "computed just now";
     out.append(meta);
     if (!body.claims.length) out.append(el("div", "claim small", "No checkable claim found in this text (" + body.extraction.status + "). Opinions and chatter are not claims."));
     body.claims.forEach((c) => out.append(renderClaim(c)));

@@ -115,3 +115,38 @@ def test_reads_and_writes_leave_no_open_connection_so_the_file_can_be_deleted(tm
     fill(store)
     store.get(1), store.head(), list(store.entries()), store.verify()
     path.unlink()                                  # Windows refuses this while any connection is still open
+
+
+def test_memory_path_is_rejected_clearly():
+    with pytest.raises(ValueError, match="memory"):
+        SQLiteLedgerStore(":memory:", code_version="t1")
+
+
+def test_read_only_store_does_not_touch_the_database(tmp_path):
+    db = tmp_path / "l.sqlite3"
+    fill(SQLiteLedgerStore(db, code_version="t1"), 2)
+    con = sqlite3.connect(db)
+    con.execute("DROP TRIGGER entries_no_update")
+    con.commit()
+    con.close()
+    ro = SQLiteLedgerStore(db, code_version="t1", read_only=True)
+    assert ro.verify().ok
+    with pytest.raises(sqlite3.OperationalError):
+        ro.append("verdict", {"x": 1})
+    con = sqlite3.connect(db)
+    triggers = {r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type = 'trigger'")}
+    con.close()
+    assert triggers == {"entries_no_delete"}, "a read-only open must not repair or create anything"
+
+
+def test_verify_script_rejects_a_database_that_is_not_a_ledger(tmp_path):
+    db = tmp_path / "other.db"
+    con = sqlite3.connect(db)
+    con.execute("CREATE TABLE x (a)")
+    con.commit()
+    con.close()
+    r = subprocess.run([sys.executable, str(ROOT / "scripts" / "verify_ledger.py"), "--db", str(db)], capture_output=True, text=True)
+    assert r.returncode == 2 and "intact" not in r.stdout
+    con = sqlite3.connect(db)
+    assert [n for (n,) in con.execute("SELECT name FROM sqlite_master")] == ["x"]
+    con.close()
