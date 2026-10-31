@@ -14,6 +14,13 @@ For each separate statement or question in the post, write one item:
   personal_experience (about the author's own life), or other.
 - checkworthy: true only for a factual_claim that a fact-checker would plausibly want to verify (public events, numbers, named
   people or institutions, health, politics, science, safety). False for trivial, private or obviously humorous statements.
+- Rules for the kinds above, which matter more than the short description:
+  * A question that asks whether a specific fact is true ("Is X dead?", "Did the RBI ban UPI?") is a factual_claim: write claim_en as
+    the statement being asked about ("X is dead."), and set checkworthy to true.
+  * A statement that a named person has died, been injured, arrested, attacked, removed or has resigned, or that a named institution
+    has been shut or banned, is a factual_claim with checkworthy true, however short or informal it is. Such rumours spread fastest, so
+    never call them opinion or other.
+  * Use opinion only for views and feelings ("best", "worst", "I love", "I hate"), never for a statement of fact.
 - time_ref: the time the claim refers to, as the post words it (for example "yesterday", "26 October"), or an empty string.
 - place_ref: the place the claim refers to, as the post words it, or an empty string.
 

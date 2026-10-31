@@ -60,6 +60,7 @@ from ..report import build_report
 
 ROOT = Path(__file__).resolve().parents[3]
 JOB_ID = r"^[A-Za-z0-9_-]+$"
+MAX_NON_CLAIMS_SHOWN = 3        # what the model made of a message that held no claim, so the reply can say how it was read
 
 
 class CardRequest(BaseModel):
@@ -704,7 +705,8 @@ def verdict_body(post: Post, done, grounded: dict | None = None) -> dict:
     ex = done.extraction
     return {
         "post": {"id": post.id, "url": post.url, "source_id": post.source_id},
-        "extraction": {"status": ex.status, "reason": ex.reason, "model": ex.model, "non_claims": len(ex.non_claims)},
+        "extraction": {"status": ex.status, "reason": ex.reason, "model": ex.model, "non_claims": len(ex.non_claims), "promoted": len(ex.promoted),
+                       "non_claim_items": [{"quote": n.quote, "kind": n.kind, "paraphrase": n.paraphrase_en} for n in ex.non_claims[:MAX_NON_CLAIMS_SHOWN]]},
         "claims": [
             {
                 "claim_id": r.claim.id, "text": r.claim.text_en, "quote": r.claim.text_orig, "lang": r.claim.lang,

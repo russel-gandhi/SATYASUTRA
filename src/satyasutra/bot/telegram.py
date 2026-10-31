@@ -16,13 +16,26 @@ import httpx
 from ..config import Config
 
 log = logging.getLogger("satyasutra.bot")
+NO_CLAIM_QUOTE_CHARS = 120      # how much of the user's own words is echoed back when nothing was checkable
+
+
+def no_claim_reply(extraction: dict, messages: dict[str, str]) -> str:
+    """Why nothing was checked, in the user's terms: how the message was read, or that it could not be read at all. Never a verdict."""
+    if extraction.get("status") == "invalid_output":
+        return messages["could_not_read"]
+    items = extraction.get("non_claim_items") or []
+    if items:
+        first = items[0]
+        kind = messages.get(f"kind_{first.get('kind', '')}", messages["kind_other"])
+        return messages["none_found_read"].format(kind=kind, quote=" ".join(str(first.get("quote", "")).split())[:NO_CLAIM_QUOTE_CHARS])
+    return messages["none_found"]
 
 
 def format_claims(body: dict, labels: dict[str, str], messages: dict[str, str]) -> str:
     """One short paragraph per claim: the verdict in a sentence, who said so and a link. The jargon (bands, rule trail) stays on the web page."""
     claims = body.get("claims") or []
     if not claims:
-        return messages["none_found"]
+        return no_claim_reply(body.get("extraction") or {}, messages)
     parts = []
     for c in claims:
         cites = [x for x in c.get("citations", []) if x.get("url")]
