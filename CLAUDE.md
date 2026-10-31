@@ -20,7 +20,7 @@ Remote: `github.com/aadamaftabpersonal-boop/FORGEHackathon` (public).
   a **Done when** section and a **Closed** section written on completion. Tickets for a phase are written when it starts.
 - CLI: `python tools/forge.py board | list | show ID | start ID | done ID --evidence "..." | new | check`.
   `start` refuses if a dependency is not done. `done` requires the ticket to be started and records date, evidence and commit.
-  Do not put a colon in a ticket title (it breaks the YAML header).
+  `forge.py new` writes the header with a YAML dumper, so titles may contain colons; hand-written headers still need quoting.
 - **Evidence must be true.** Close a ticket only after its Done-when command passes, and say what was not verified.
   Do not pipe test output through `tail`/`head` when you need the exit code; it hides failures.
 - One commit per finished chunk, message starts `F<phase>-<nn>:`, branch per phase (`phase-1/walking-skeleton`). Commits end with
