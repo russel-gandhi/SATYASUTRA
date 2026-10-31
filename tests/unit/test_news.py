@@ -80,3 +80,13 @@ def test_a_headline_sharing_only_common_words_does_not_cover_a_claim_whose_rare_
     assert w["assassinated"] > w["minister"]                          # nobody has printed it: it weighs most
     assert check_news(CFG, index, "Prime Minister was assassinated").status == "not_found"
     assert check_news(CFG, index, "Prime Minister inaugurates a bridge").status == "reported"
+
+
+def test_the_claims_most_distinctive_word_must_be_in_the_headline_even_when_the_names_match(tmp_path):
+    index = OfficialIndex(tmp_path / "n.sqlite3")
+    for i, title in enumerate(["PM Modi inaugurates tourism projects in Gujarat", "Prime Minister Modi addresses rally", "Minister Modi visits Delhi",
+                               "Heavy rain alert for Kerala", "Stocks close higher", "Cricket final today", "New metro line opens", "Budget session begins"]):
+        index.add(next(iter(parse_news(f"<rss><channel><item><title>{title}</title><link>https://www.thehindu.com/n/{i}</link></item></channel></rss>".encode(),
+                                       FEED, CFG, NOW))))
+    assert check_news(CFG, index, "Prime Minister Modi was assassinated").status == "not_found"
+    assert check_news(CFG, index, "Prime Minister Modi addresses rally").status == "reported"

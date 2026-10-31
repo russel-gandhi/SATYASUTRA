@@ -139,10 +139,11 @@ def check_news(cfg: Config, index: OfficialIndex, text: str) -> NewsResult:
         return NewsResult("unavailable", note="No news headlines are loaded, so nothing could be said about whether this is reported.")
     candidates = index.search(" ".join(words), s.max_candidates, s.min_token_chars)
     weight = weights(words, index.texts(), cfg)
+    rarest = _key(max(words, key=weight.__getitem__), s.stem_chars)      # the claim's most distinctive word (the event: 'assassinated') must be there
     hits: list[NewsHit] = []
     for p in candidates:
         share, matched = coverage(words, p.text, weight, cfg)
-        if share >= s.min_coverage and matched >= s.min_matched_words:
+        if share >= s.min_coverage and matched >= s.min_matched_words and rarest in _keys(p.text, s.stem_chars):
             hits.append(NewsHit(p.publisher, p.title, p.url, p.published_at, round(share, 2)))
     hits.sort(key=lambda h: (h.coverage, h.published_at or EPOCH), reverse=True)
     result = NewsResult("reported" if hits else "not_found", hits[:s.max_results], len(s.feeds), len({h.publisher for h in hits}), items, oldest, newest)
