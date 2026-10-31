@@ -1,26 +1,32 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Command centre</title>
+<link rel="stylesheet" href="/static/jv.css">
 <style>
-  :root { --bg: #0b0f17; --panel: #121826; --line: #232c3f; --text: #e8ecf5; --mute: #8b95ab; --accent: #7aa2ff; --ok: #3ecf8e; --bad: #ff6b6b; --warn: #f5b84b; --idle: #6b7690; --purple: #b07aff; }
-  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --bg: #f4f6fb; --panel: #fff; --line: #dde2ee; --text: #131a2a; --mute: #5d6885; --accent: #2f5bd8; --idle: #7b86a3; } }
+  :root { --purple: #b07aff; }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", "Noto Sans Devanagari", "Noto Sans Kannada", sans-serif; }
-  .wrap { max-width: 1180px; margin: 0 auto; padding: 14px 16px 50px; }
+  .shell { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: calc(100vh - 60px); }
+  .side { background: var(--panel); border-right: 1px solid var(--line); padding: 18px 12px; }
+  .side .who { font-size: 12px; color: var(--mute); padding: 0 10px 12px; }
+  .main { padding: 18px 22px 50px; max-width: 1240px; }
+  @media (max-width: 860px) { .shell { grid-template-columns: 1fr; } .side { border-right: 0; border-bottom: 1px solid var(--line); } }
   h1 { font-size: 20px; margin: 4px 0; } h2 { margin: 0 0 8px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--mute); }
   .small { color: var(--mute); font-size: 12px; }
-  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 14px; }
-  .tabs button { background: var(--panel); color: var(--mute); border: 1px solid var(--line); border-radius: 8px; padding: 7px 14px; font: inherit; cursor: pointer; }
-  .tabs button.on { color: var(--text); border-color: var(--accent); }
+  .tabs { display: flex; flex-direction: column; gap: 2px; }
+  .tabs button { background: transparent; color: var(--mute); border: 0; border-radius: 8px; padding: 10px 12px; font: inherit; cursor: pointer; text-align: left; }
+  .tabs button:hover { background: var(--accent-soft); color: var(--text); }
+  .tabs button.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  @media (max-width: 860px) { .tabs { flex-direction: row; flex-wrap: wrap; } }
   button.b { background: transparent; color: var(--accent); border: 1px solid var(--line); border-radius: 8px; padding: 5px 11px; font: inherit; cursor: pointer; }
   button.p { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 6px 14px; font: inherit; font-weight: 600; cursor: pointer; }
   .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
   .tiles { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); margin-bottom: 12px; }
-  .tile { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; } .tile b { display: block; font-size: 26px; }
+  .tile { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; } .tile b { display: block; font-size: 30px; line-height: 1.1; }
   .brow { display: grid; grid-template-columns: 130px 1fr 34px; gap: 8px; align-items: center; margin: 3px 0; font-size: 13px; }
   .bar { height: 9px; border-radius: 5px; background: var(--accent); } .bar.bad { background: var(--bad); } .bar.ok { background: var(--ok); } .bar.warn { background: var(--warn); } .bar.idle { background: var(--idle); }
   .badge { display: inline-block; padding: 1px 9px; border-radius: 6px; font-size: 12px; font-weight: 700; color: #0b0f17; margin-right: 4px; }
@@ -38,11 +44,16 @@
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>Command centre</h1>
-  <div class="small">For journalists, fact-checkers and officials. Every number comes from the investigations stored on this server. It is not live or nationwide data. No sign-in in this build, so anyone who can open this page sees all stored investigations.</div>
-  <div class="tabs" id="tabs"></div>
-  <div id="view"></div>
+<div class="shell">
+  <aside class="side">
+    <div class="who">Command centre<br>for journalists, fact-checkers and officials</div>
+    <div class="tabs" id="tabs"></div>
+  </aside>
+  <div class="main">
+    <h1 id="vtitle">Intelligence overview</h1>
+    <div class="small">Every number comes from the investigations stored on this server. It is not live or nationwide data. No sign-in in this build, so anyone who can open this page sees all stored investigations.</div>
+    <div id="view" style="margin-top:14px"></div>
+  </div>
 </div>
 <script src="/static/nav.js"></script>
 <script>
@@ -193,7 +204,7 @@ function forceGraph(g, on, pick) {
 
 const TABS = [["overview", "Intelligence overview"], ["graph", "Evidence graph explorer"], ["media", "Media forensics lab"], ["claims", "Claim intelligence"], ["registry", "Bharat registry"], ["workspace", "Investigation workspace"]];
 async function show(k) {
-  [...$("tabs").children].forEach((b) => b.classList.toggle("on", b.dataset.k === k));
+  [...$("tabs").children].forEach((b) => b.classList.toggle("on", b.dataset.k === k)); const cur = TABS.find((x) => x[0] === k); if (cur) $("vtitle").textContent = cur[1];
   const v = $("view"); v.replaceChildren(el("div", "small", "Loading...")); location.hash = k;
   const fresh = el("div");
   try { await VIEWS[k](fresh); } catch (e) { fresh.replaceChildren(el("div", "small", "Could not load: " + e.message)); }

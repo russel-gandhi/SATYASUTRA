@@ -4,131 +4,145 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SATYASUTRA</title>
+<link rel="stylesheet" href="/static/jv.css">
 <style>
-  :root {
-    --bg: #0b0f17; --panel: #121826; --line: #232c3f; --text: #e8ecf5; --mute: #8b95ab; --accent: #7aa2ff;
-    --ok: #3ecf8e; --bad: #ff6b6b; --warn: #f5b84b; --idle: #6b7690;
-  }
-  @media (prefers-color-scheme: light) {
-    :root:not([data-theme="dark"]) { --bg: #f4f6fb; --panel: #fff; --line: #dde2ee; --text: #131a2a; --mute: #5d6885; --accent: #2f5bd8; --idle: #7b86a3; }
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
-  header { padding: 20px 16px 8px; max-width: 1180px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: baseline; justify-content: space-between; }
-  h1 { margin: 0; font-size: 22px; letter-spacing: .14em; }
-  .tag { color: var(--mute); font-size: 13px; }
-  .pills { display: flex; flex-wrap: wrap; gap: 8px; }
-  .pill { border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; font-size: 12px; color: var(--mute); background: var(--panel); }
-  .pill b { color: var(--text); font-weight: 600; }
-  .pill.good b { color: var(--ok); } .pill.bad b { color: var(--bad); }
-  main { max-width: 1180px; margin: 0 auto; padding: 8px 16px 40px; display: grid; gap: 16px; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
-  @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
-  section { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
-  h2 { margin: 0 0 10px; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--mute); font-weight: 600; }
-  textarea, input[type=text] { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 10px; font: inherit; }
-  textarea { min-height: 96px; resize: vertical; }
-  .row { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
-  button { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 9px 16px; font: inherit; font-weight: 600; cursor: pointer; }
-  button.ghost { background: transparent; color: var(--accent); border: 1px solid var(--line); }
-  button:disabled { opacity: .5; cursor: progress; }
-  .claim { border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-top: 12px; }
-  .badge { display: inline-block; padding: 2px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; letter-spacing: .04em; color: #0b0f17; }
-  .REFUTED, .EDITED { background: var(--bad); } .SYNTHETIC, .SYNTHETIC_SUSPECTED { background: var(--warn); } .SUPPORTED { background: var(--ok); } .MISSING_CONTEXT, .OUT_OF_CONTEXT { background: var(--warn); }
-  .headline { font-size: 1.5rem; font-weight: 700; margin-bottom: 4px; } .headline.bad { color: var(--bad); } .headline.ok { color: var(--ok); } .headline.warn { color: var(--warn); } .headline.idle { color: var(--idle); }
-  .advice { font-weight: 600; margin: 6px 0 10px; } .sect { font-weight: 600; margin-top: 10px; } ul.found { margin: 4px 0 8px; padding-left: 20px; } ul.found li { margin: 4px 0; } details.more { margin-top: 10px; }
-  .UNVERIFIABLE_YET, .NOT_A_CLAIM, .INCONCLUSIVE { background: var(--idle); color: #fff; }
-  .claim .q { margin: 8px 0 4px; font-weight: 600; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
+  .hero { background: radial-gradient(900px 300px at 85% -10%, #dfe7ff 0, transparent 70%), radial-gradient(700px 260px at 0% 0%, #fff1de 0, transparent 70%); padding: 44px 0 28px; }
+  :root[data-theme="dark"] .hero { background: none; }
+  .hero h1 { margin: 0 auto 8px; max-width: 14em; text-align: center; font-size: clamp(30px, 5vw, 46px); line-height: 1.12; letter-spacing: -.02em; }
+  .hero .sub { text-align: center; color: var(--mute); max-width: 36em; margin: 0 auto 18px; font-size: 17px; }
+  .feats { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px 22px; margin: 0 0 22px; color: var(--mute); font-size: 13px; }
+  .feats span { display: inline-flex; align-items: center; gap: 7px; }
+  .feats i { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); display: inline-block; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; }
+  .invest { max-width: 780px; margin: 0 auto; }
+  .tabs { display: flex; gap: 4px; flex-wrap: wrap; background: var(--idle-soft); border-radius: 10px; padding: 4px; margin-bottom: 14px; }
+  .tabs button { flex: 1; min-width: 70px; background: transparent; color: var(--mute); border: 0; border-radius: 8px; padding: 9px 10px; cursor: pointer; font-weight: 600; }
+  .tabs button[aria-selected="true"] { background: var(--panel); color: var(--accent); box-shadow: 0 1px 3px rgba(15, 26, 58, .12); }
+  .tabpanel[hidden] { display: none; }
+  textarea, input[type=text] { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 12px; font: inherit; }
+  textarea { min-height: 110px; resize: vertical; }
+  .row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .drop { display: block; border: 2px dashed var(--line); border-radius: 12px; padding: 26px 16px; text-align: center; color: var(--mute); cursor: pointer; background: var(--bg); }
+  .drop:hover, .drop.over { border-color: var(--accent); background: var(--accent-soft); }
+  .drop strong { display: block; color: var(--text); margin-bottom: 2px; }
+  .drop + .drop { margin-top: 10px; }
+  .cta { width: 100%; margin-top: 12px; padding: 13px; font-size: 16px; }
+  .langs { text-align: center; color: var(--mute); font-size: 13px; margin-top: 12px; }
+  .pills { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 14px; }
+  .pill { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 3px 12px; font-size: 12px; color: var(--mute); }
+  .pill b { color: var(--text); } .pill.good b { color: var(--ok); } .pill.bad b { color: var(--bad); }
+  .results { max-width: 780px; margin: 18px auto 0; display: grid; gap: 14px; }
+  .results:empty { display: none; }
+  .results > *:empty { display: none; }
+  .sectionhead { display: flex; justify-content: space-between; align-items: baseline; margin: 34px 0 12px; }
+  .sectionhead h2 { margin: 0; font-size: 20px; }
+  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+  .fc { display: flex; flex-direction: column; gap: 8px; }
+  .fc .src { font-size: 12px; color: var(--mute); }
+  .fc .txt { font-weight: 600; overflow-wrap: anywhere; flex: 1; }
+  .fc .acts { display: flex; gap: 14px; font-size: 13px; }
+  .fc .acts a { text-decoration: none; font-weight: 600; }
+  .tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; background: var(--idle-soft); color: var(--idle); width: max-content; }
+  .tag.fact { background: var(--ok-soft); color: var(--ok); } .tag.dis { background: var(--bad-soft); color: var(--bad); }
+  .ledgerbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 30px; color: var(--mute); font-size: 13px; }
+  footer { max-width: 1180px; margin: 0 auto; padding: 24px 16px 36px; color: var(--mute); font-size: 12px; }
+
+  /* verdict card */
+  .claim { border: 1px solid var(--line); border-left-width: 6px; border-radius: 12px; padding: 16px; background: var(--panel); }
+  .claim.t-bad { background: var(--bad-soft); border-color: var(--bad); } .claim.t-ok { background: var(--ok-soft); border-color: var(--ok); }
+  .claim.t-warn { background: var(--warn-soft); border-color: var(--warn); } .claim.t-idle { background: var(--idle-soft); border-color: var(--idle); }
+  .headline { font-size: 2rem; font-weight: 800; line-height: 1.1; margin-bottom: 4px; letter-spacing: -.01em; } .headline.bad { color: var(--bad); } .headline.ok { color: var(--ok); } .headline.warn { color: var(--warn); } .headline.idle { color: var(--idle); }
+  .claim .q { margin: 8px 0 4px; font-weight: 600; font-size: 17px; }
+  .advice { font-weight: 600; margin: 8px 0 10px; } .sect { font-weight: 700; margin-top: 12px; } ul.found { margin: 4px 0 8px; padding-left: 20px; } ul.found li { margin: 5px 0; } details.more { margin-top: 10px; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; letter-spacing: .03em; color: #fff; }
+  .REFUTED, .EDITED { background: var(--bad); } .SYNTHETIC, .SYNTHETIC_SUSPECTED, .MISSING_CONTEXT, .OUT_OF_CONTEXT { background: var(--warn); } .SUPPORTED { background: var(--ok); }
+  .UNVERIFIABLE_YET, .NOT_A_CLAIM, .INCONCLUSIVE { background: var(--idle); }
   .small { color: var(--mute); font-size: 13px; }
   ul { margin: 6px 0 0; padding-left: 18px; }
-  a { color: var(--accent); }
-  .cluster { padding: 10px 0; border-top: 1px solid var(--line); }
-  .cluster:first-of-type { border-top: 0; }
-  .cluster .txt { overflow-wrap: anywhere; }
-  .nums { display: flex; gap: 12px; color: var(--mute); font-size: 12px; margin-top: 2px; flex-wrap: wrap; }
   .err { color: var(--bad); margin-top: 10px; }
-  footer { max-width: 1180px; margin: 0 auto; padding: 0 16px 28px; color: var(--mute); font-size: 12px; }
-  .stage { position: relative; display: inline-block; max-width: 100%; margin-top: 12px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; line-height: 0; }
+  .stage { position: relative; display: inline-block; max-width: 100%; margin-top: 12px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; line-height: 0; }
   .stage img { max-width: 100%; max-height: 360px; display: block; }
-  .stage img.heat { position: absolute; inset: 0; width: 100%; height: 100%; max-height: none; opacity: .7; mix-blend-mode: normal; pointer-events: none; }
+  .stage img.heat { position: absolute; inset: 0; width: 100%; height: 100%; max-height: none; opacity: .7; pointer-events: none; }
   .film { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
-  .frame { width: 150px; }
-  .frame .stage { margin-top: 0; width: 150px; }
-  .frame .stage img { max-height: none; width: 100%; }
+  .frame { width: 150px; } .frame .stage { margin-top: 0; width: 150px; } .frame .stage img { max-height: none; width: 100%; }
   .frame.flag .stage { border-color: var(--bad); box-shadow: 0 0 0 2px var(--bad); }
   .frame .cap { font-size: 12px; color: var(--mute); margin-top: 2px; }
   .toggle { margin-top: 6px; }
-  .trace { margin-top: 12px; border-left: 2px solid var(--line); padding-left: 12px; }
-  .step { font-size: 13px; margin: 4px 0; color: var(--mute); }
-  .step b { color: var(--text); font-weight: 600; }
-  .step.run b::after { content: " ..."; color: var(--accent); }
-  .step.tool { margin-left: 14px; }
+  .trace { border-left: 3px solid var(--accent-soft); padding-left: 12px; }
+  .step { font-size: 13px; margin: 4px 0; color: var(--mute); } .step b { color: var(--text); font-weight: 600; }
+  .step.run b::after { content: " ..."; color: var(--accent); } .step.tool { margin-left: 14px; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-  .chip { border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; font-size: 12px; text-decoration: none; color: var(--text); }
+  .chip { border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; font-size: 12px; text-decoration: none; color: var(--text); background: var(--panel); }
   .spin { display: none; margin-left: 4px; color: var(--mute); align-self: center; }
-.why{margin-top:8px}.whyrow{margin:6px 0;padding:6px 8px;border-left:3px solid var(--line,#ccc)}.bar{display:inline-block;width:90px;height:8px;background:#0001;border-radius:4px;vertical-align:middle;overflow:hidden}.bar>span{display:block;height:100%;background:#2e7d32}.bar>span.neg{background:#c62828}
+  button.ghost, .toggle { background: transparent; color: var(--accent); border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px; cursor: pointer; font-weight: 600; }
+  button.ghost:disabled { opacity: .5; }
+  .why{margin-top:8px}.whyrow{margin:6px 0;padding:6px 8px;border-left:3px solid var(--line)}.bar{display:inline-block;width:90px;height:8px;background:var(--idle-soft);border-radius:4px;vertical-align:middle;overflow:hidden}.bar>span{display:block;height:100%;background:var(--ok)}.bar>span.neg{background:var(--bad)}
 </style>
 </head>
 <body>
-<header>
-  <div>
-    <h1>SATYASUTRA</h1>
-    <div class="tag">Paste a claim, a link, a photo, a video, a voice note or a PDF. We search the net, check the evidence and tell you if it is true, false or if we cannot tell. It says "cannot tell" instead of guessing.</div>
-    <div class="chips"><span class="chip">English</span><span class="chip">हिन्दी</span><span class="chip">ಕನ್ನಡ</span><span class="chip">Text</span><span class="chip">Link</span><span class="chip">Image</span><span class="chip">Video</span><span class="chip">Voice</span><span class="chip">PDF</span></div>
-  </div>
-  <div class="pills" id="pills"></div>
-</header>
+<div class="hero">
+  <div class="wrap">
+    <h1>India's digital truth, in your hands</h1>
+    <p class="sub">Paste a claim, a link, a photo, a video or a voice note. We search the web and official sources, then tell you if it is true, false, or that we cannot tell yet.</p>
+    <div class="feats"><span><i></i>Searches the live web and fact-checkers</span><span><i></i>Checks photos, video and voice for tampering</span><span><i></i>Works in English, हिन्दी, ಕನ್ನಡ and more</span></div>
 
-<main>
-  <div>
-    <section>
-      <h2>Check a claim or a Bluesky post</h2>
-      <textarea id="text" placeholder="Paste a claim or a post's text (any language)"></textarea>
-      <div class="row"><input type="text" id="uri" placeholder="or a Bluesky post address starting with at://"></div>
-      <div class="row">
-        <button id="go">Verify</button>
-        <button class="ghost" id="chain">Check ledger integrity</button>
-        <span class="spin" id="spin">working...</span>
+    <div class="card invest">
+      <div class="tabs" role="tablist" id="tabs">
+        <button role="tab" data-tab="text" aria-selected="true">Text</button>
+        <button role="tab" data-tab="link" aria-selected="false">Link or PDF</button>
+        <button role="tab" data-tab="image" aria-selected="false">Image or video</button>
+        <button role="tab" data-tab="audio" aria-selected="false">Voice note</button>
       </div>
-      <div class="row"><label class="small">or a voice note: <input type="file" id="audio" accept="audio/*,.ogg,.opus,.m4a,.mp3,.wav"></label></div>
-      <div id="voiceOut" class="small"></div>
-      <div id="trace" class="trace" style="display:none"></div>
-      <div id="links"></div>
-      <div id="out"></div>
-      <div id="act"></div>
-      <div id="rep"></div>
-    </section>
-    <section style="margin-top:16px">
-      <h2>Check a notice or a message screenshot</h2>
-      <input type="file" id="notice" accept="image/*">
-      <div class="small" style="margin-top:6px">A language model copies the text from the picture; then links, scam wording and the issuer's claim are checked in code. It says what it found, not whether the notice is genuine.</div>
-      <div id="noticeOut"></div>
-    </section>
-    <section style="margin-top:16px">
-      <h2>Check a web page or a PDF circular</h2>
-      <div class="row"><input type="text" id="pageUrl" placeholder="Paste a public web page address (https://...)"><button class="ghost" id="pageGo">Read page</button></div>
-      <input type="file" id="pdf" accept="application/pdf" style="margin-top:6px">
-      <div class="small" style="margin-top:6px">We read the text (only public pages; we never get past a login or a block), check its links and wording in code, then you can send its text to the claim check.</div>
-      <div id="docOut"></div>
-    </section>
-    <section style="margin-top:16px">
-      <h2>Check an image or video</h2>
-      <input type="file" id="file" accept="image/*,video/*">
-      <div class="small" style="margin-top:6px">Looks the image up in fact-checkers' past articles and asks TruFor (GRIP-UNINA, University of Naples) whether it was edited. It does not detect fully AI-generated images, or face-swap and AI-generated video; for video it checks a handful of frames.</div>
-      <div id="mediaOut"></div>
-    </section>
+
+      <div class="tabpanel" data-panel="text">
+        <textarea id="text" placeholder="Paste a message, claim or post (any language)"></textarea>
+        <div class="row"><input type="text" id="uri" placeholder="or a Bluesky post address starting with at://"></div>
+        <button class="btn cta" id="go">Investigate now</button>
+        <div class="row"><span class="spin" id="spin">working...</span></div>
+      </div>
+
+      <div class="tabpanel" data-panel="link" hidden>
+        <div class="row" style="margin-top:0"><input type="text" id="pageUrl" placeholder="Paste a public web page address (https://...)" style="flex:1"><button class="btn" id="pageGo">Read page</button></div>
+        <label class="drop" style="margin-top:10px"><input type="file" id="pdf" accept="application/pdf" hidden><strong>Drop a PDF circular here or click to choose</strong>PDF, read in code; only public pages, we never get past a login or a block</label>
+      </div>
+
+      <div class="tabpanel" data-panel="image" hidden>
+        <label class="drop"><input type="file" id="file" accept="image/*,video/*" hidden><strong>Drop an image or video here or click to choose</strong>Checked against fact-checkers' past articles and for editing. AI-generated video and face-swaps are not detected.</label>
+        <label class="drop"><input type="file" id="notice" accept="image/*" hidden><strong>A notice or message screenshot?</strong>We copy its text, then check links, scam wording and who it claims to be from.</label>
+      </div>
+
+      <div class="tabpanel" data-panel="audio" hidden>
+        <label class="drop"><input type="file" id="audio" accept="audio/*,.ogg,.opus,.m4a,.mp3,.wav" hidden><strong>Drop a voice note here or click to choose</strong>We transcribe it, check what it says, and test whether the voice is synthetic.</label>
+        <div id="voiceOut" class="small"></div>
+      </div>
+      <div class="langs">Language is detected automatically.</div>
+    </div>
+    <div class="pills" id="pills"></div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="results">
+    <div class="card trace" id="trace" style="display:none"></div>
+    <div id="links"></div>
+    <div id="out"></div>
+    <div id="act"></div>
+    <div id="rep"></div>
+    <div id="noticeOut"></div>
+    <div id="docOut"></div>
+    <div id="mediaOut"></div>
   </div>
 
-  <div>
-    <section>
-      <h2>What India is checking right now <a class="small" href="/officials">see all</a></h2>
-      <div id="clusters" class="small">Loading...</div>
-    </section>
-  </div>
-</main>
+  <div class="sectionhead"><h2>Being fact-checked across India right now</h2><a href="/officials">See everything</a></div>
+  <div class="grid" id="clusters"><div class="small">Loading...</div></div>
+
+  <div class="ledgerbar"><button class="ghost" id="chain">Check ledger integrity</button><span>Every verdict is written to a tamper-evident ledger.</span></div>
+</div>
 
 <footer>
-  Verdicts come from live sources only: Gemini reads the claim, the Google Fact Check API supplies reviews, and rules decide.
-  Only a review that matches the claim closely can decide it; everything else is shown as related and never used to decide.
+  Verdicts come from live sources only: Gemini reads the claim, the Google Fact Check API and a live news search supply evidence, and rules written in code decide.
+  Only evidence from fact-checkers, reputable outlets or official sources can decide a claim; everything else is shown as context.
 </footer>
 
 <script>
@@ -162,17 +176,31 @@ async function refreshClusters() {
   const box = $("clusters");
   try {
     const d = await api("/pulse");
-    const rows = [...d.rumours.slice(0, 5).map((r) => ({ text: r.text, kind: "being fact-checked: " + r.outlet, url: r.url })), ...d.stories.filter((g) => g.language === "en").slice(0, 4).map((g) => ({ text: g.text, kind: g.size + " outlets carry it", url: g.items[0].url }))];
+    const when = (iso) => { if (!iso) return ""; const m = Math.round((Date.now() - new Date(iso)) / 60000); return m < 90 ? Math.max(m, 1) + " min ago" : m < 2880 ? Math.round(m / 60) + " h ago" : Math.round(m / 1440) + " d ago"; };
+    const rows = [...d.rumours.slice(0, 6).map((r) => ({ text: r.text, tag: "Fact-checked by " + r.outlet, cls: "fact", at: r.published_at, url: r.url, dis: r.topic === "disaster" })), ...d.stories.filter((g) => g.language === "en").slice(0, 3).map((g) => ({ text: g.text, tag: g.size + " outlets carry it", cls: "", at: g.latest, url: g.items[0].url, dis: g.topic === "disaster" }))];
     if (!rows.length) { box.textContent = "Nothing yet."; return; }
     box.replaceChildren(...rows.map((c) => {
-      const row = el("div", "cluster"); row.append(el("div", "txt", c.text));
-      const n = el("div", "nums"); n.append(el("span", "", c.kind));
-      const a = el("a", "", "open"); a.href = c.url; a.target = "_blank"; a.rel = "noopener"; n.append(a);
-      const use = el("a", "", "check this"); use.href = "#"; use.onclick = (e) => { e.preventDefault(); $("text").value = c.text; $("uri").value = ""; window.scrollTo({ top: 0, behavior: "smooth" }); };
-      n.append(use); row.append(n); return row;
+      const card = el("div", "card fc"); const tag = el("span", "tag " + (c.dis ? "dis" : c.cls), c.dis ? "Disaster-related" : c.tag);
+      card.append(tag, el("div", "txt", c.text), el("div", "src", (c.dis ? c.tag + " · " : "") + when(c.at)));
+      const acts = el("div", "acts"); const a = el("a", "", "Read"); a.href = c.url; a.target = "_blank"; a.rel = "noopener";
+      const use = el("a", "", "Check this"); use.href = "#"; use.onclick = (e) => { e.preventDefault(); selectTab("text"); $("text").value = c.text; $("uri").value = ""; window.scrollTo({ top: 0, behavior: "smooth" }); $("text").focus(); };
+      acts.append(use, a); card.append(acts); return card;
     }));
-  } catch (e) { box.textContent = "Pulse unavailable: " + e.message; }
+  } catch (e) { box.textContent = "Live feed unavailable: " + e.message; }
 }
+
+function selectTab(name) {
+  document.querySelectorAll("#tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === name)));
+  document.querySelectorAll(".tabpanel").forEach((p) => { p.hidden = p.dataset.panel !== name; });
+}
+document.querySelectorAll("#tabs button").forEach((b) => { b.onclick = () => selectTab(b.dataset.tab); });
+document.querySelectorAll("label.drop").forEach((drop) => {
+  const input = drop.querySelector("input[type=file]"), title = drop.querySelector("strong"), first = title.textContent;
+  ["dragenter", "dragover"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("over"); }));
+  ["dragleave", "drop"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove("over"); }));
+  drop.addEventListener("drop", (e) => { if (e.dataTransfer.files.length) { input.files = e.dataTransfer.files; input.dispatchEvent(new Event("change", { bubbles: true })); } });
+  input.addEventListener("change", () => { title.textContent = input.files.length ? input.files[0].name : first; });
+});
 
 const SVG = "http://www.w3.org/2000/svg";
 function spreadChart(timeline) {
@@ -325,7 +353,7 @@ const SURE = { high: "We are confident in this.", medium: "We are fairly sure.",
 
 function renderClaim(c) {
   const [headline, tone, advice] = SAY[c.label] || [c.label, "idle", ""];
-  const box = el("div", "claim");
+  const box = el("div", "claim t-" + tone);
   const head = el("div", "headline " + tone, headline);
   box.append(head, el("div", "q", "“" + c.text + "”"));
   if (c.quote && c.quote !== c.text) box.append(el("div", "small", "original: " + c.quote));
