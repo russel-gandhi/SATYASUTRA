@@ -150,3 +150,19 @@ def test_correction_card_links_must_be_https():
     with pytest.raises(ValidationError):
         CorrectionCard(verdict_id="v", lang="hi", headline="h", sentence="s", links=[], checked_at=NOW)
     assert CorrectionCard(verdict_id="v", lang="hi", headline="h", sentence="s", links=["https://pib.gov.in"], checked_at=NOW)
+
+
+def test_deciding_record_itself_must_be_trusted():
+    # D35: a Tier 4 "supports" cannot borrow trust from an unrelated Tier 1 record
+    v = verdict("SUPPORTED", evidence=[ev("supports", tier=4), ev("context", tier=1, passage="Only for farmers.")])
+    assert v.label == "UNVERIFIABLE_YET" and "COERCED" in v.flags
+    assert verdict("MISSING_CONTEXT", evidence=[ev("supports", tier=1), ev("context", tier=4)]).label == "UNVERIFIABLE_YET"
+
+
+def test_trusted_support_and_contradiction_is_a_conflict():
+    # Bible 8.4: both sides -> UNVERIFIABLE_YET with CONFLICT
+    for label in ("SUPPORTED", "REFUTED"):
+        v = verdict(label, evidence=[ev("supports"), ev("contradicts", passage="It pays Rs 1,000.")])
+        assert v.label == "UNVERIFIABLE_YET" and {"CONFLICT", "COERCED"} <= set(v.flags) and v.confidence_band == "low"
+    # a low-tier contradiction is context only and does not cause a conflict
+    assert verdict("SUPPORTED", evidence=[ev("supports"), ev("contradicts", tier=4)]).label == "SUPPORTED"

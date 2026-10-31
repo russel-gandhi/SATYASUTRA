@@ -131,23 +131,29 @@ class Verdict(_Model):
             raise ValueError(f"label {self.label!r} is not allowed on the {self.axis} axis")
 
         fallback = "UNVERIFIABLE_YET" if self.axis == "claim" else "INCONCLUSIVE"
-        if not self._supported_by_evidence():
+        conflict = self._trusted_conflict()
+        if conflict or not self._supported_by_evidence():
             self.label = fallback
             self.confidence_band = "low"
-            if "COERCED" not in self.flags:
-                self.flags = [*self.flags, "COERCED"]
+            added = ["COERCED", "CONFLICT"] if conflict else ["COERCED"]
+            self.flags = [*self.flags, *(f for f in added if f not in self.flags)]
         return self
+
+    def _trusted_conflict(self) -> bool:
+        """Bible 8.4: trusted support and trusted contradiction together -> UNVERIFIABLE_YET with CONFLICT."""
+        if self.axis != "claim" or self.label not in CLAIM_DECISIVE:
+            return False
+        roles = {e.role for e in self.evidence if e.tier in TRUSTED_TIERS}
+        return "supports" in roles and "contradicts" in roles
 
     def _supported_by_evidence(self) -> bool:
         ev = self.evidence
-        roles = {e.role for e in ev}
-        trusted = any(e.tier in TRUSTED_TIERS for e in ev)
         label = self.label
         if self.axis == "claim":
             if label not in CLAIM_DECISIVE:
                 return True                                   # UNVERIFIABLE_YET and NOT_A_CLAIM need nothing
-            if not trusted:
-                return False                                  # D35: only Tier 1 or 2 can decide
+            # D35: only Tier 1 or 2 records can decide, so the deciding roles must come from those records.
+            roles = {e.role for e in ev if e.tier in TRUSTED_TIERS}
             if label == "SUPPORTED":
                 return "supports" in roles
             if label == "REFUTED":
@@ -156,7 +162,7 @@ class Verdict(_Model):
         if label not in MEDIA_DECISIVE:
             return True
         if label == "OUT_OF_CONTEXT":
-            return "earlier_appearance" in roles
+            return any(e.role == "earlier_appearance" for e in ev)
         if label == "AUTHENTIC_IN_CONTEXT":
             # I11: finding nothing is not authenticity. Needs positive provenance evidence.
             return any(e.route == "provenance" and e.role == "supports" for e in ev)
