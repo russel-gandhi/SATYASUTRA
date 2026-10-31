@@ -32,6 +32,8 @@ class Entity:
     label: str
     description: str
     url: str
+    died: str = ""            # date of death recorded on Wikidata (ISO date), only looked up for claims about death
+    died_references: int = 0   # how many references the statement carries; zero means nobody cited a source
 
 
 class WikidataClient:
@@ -91,3 +93,22 @@ class WikidataClient:
         if not isinstance(top, dict) or not isinstance(top.get("id"), str):
             raise SchemaChanged(SOURCE_ID, "a search result has no id")
         return Entity(name, top["id"], str(top.get("label", "")), str(top.get("description", "")), self._settings.entity_url_template.format(id=top["id"]))
+
+    def death_date(self, entity_id: str) -> tuple[str, int] | None:
+        """The date of death Wikidata records for a person, with the number of references on that statement; None when it records none.
+        Wikidata is edited by volunteers and can be vandalised, so the caller shows this as context and never as a check of the claim."""
+        params = {"action": "wbgetclaims", "format": "json", "entity": entity_id, "property": self._settings.death_property}
+        self._spacer.wait()
+        try:
+            response = self._http.get(self._settings.endpoint, params=params)
+        except httpx.HTTPError as exc:
+            raise Unreachable(SOURCE_ID, type(exc).__name__) from None
+        if response.status_code != HTTPStatus.OK:
+            raise Unreachable(SOURCE_ID, f"HTTP {response.status_code}")
+        try:
+            statements = response.json().get("claims", {}).get(self._settings.death_property, [])
+            best = next(s for s in statements if s.get("mainsnak", {}).get("snaktype") == "value")
+            value = best["mainsnak"]["datavalue"]["value"]["time"]
+        except (ValueError, StopIteration, KeyError, AttributeError, TypeError):
+            return None
+        return value.lstrip("+").split("T")[0], len(best.get("references", []))

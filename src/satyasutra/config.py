@@ -327,6 +327,8 @@ class KnowledgeGraphSettings(_Strict):
     timeout_s: float = Field(gt=0)
     max_entities: int = Field(gt=0)          # entities named in one claim, at most
     name_max_chars: int = Field(gt=0)        # longer names are not entity names
+    death_property: str                      # the Wikidata property for date of death
+    death_terms: list[str]                   # words in a claim (English and Hindi) that make the date of death worth looking up
 
 
 class ForensicsSettings(_Strict):

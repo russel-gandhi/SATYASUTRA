@@ -149,7 +149,7 @@ def create_app(
     def wikidata() -> WikidataClient:
         return WikidataClient(cfg, TTLCache(_path(cfg.runtime.cache_db_path)))
 
-    do_ground = ground or ((lambda text: ground_entities(gemini(), cfg, text, wikidata().search)) if extract is None else None)
+    do_ground = ground or ((lambda text: ground_entities(gemini(), cfg, text, wikidata().search, wikidata().death_date)) if extract is None else None)
     @cache
     def official_index() -> OfficialIndex:
         return OfficialIndex(_path(cfg.runtime.official.db_path))
@@ -482,7 +482,7 @@ def verdict_body(post: Post, done, grounded: dict | None = None) -> dict:
                              "reviewed_claim": a.evidence.reviewed_claim, "relevance": round(a.relevance, 2), "why_not_used": a.reason}
                             for a in r.outcome.related],
                 "ledger_seq": r.ledger_seq,
-                **({"entities": [{"name": e.name, "id": e.id, "label": e.label, "description": e.description, "url": e.url}
+                **({"entities": [{"name": e.name, "id": e.id, "label": e.label, "description": e.description, "url": e.url, "died": e.died, "died_references": e.died_references}
                                  for e in grounded[r.claim.id].entities]} if grounded and r.claim.id in grounded else {}),
             }
             for r in done.results

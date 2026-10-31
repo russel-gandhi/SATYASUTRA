@@ -6,6 +6,7 @@ mention. A failed call or lookup yields fewer entities and a recorded reason, ne
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Callable
 
@@ -35,7 +36,12 @@ class Grounded:
     error: str = ""                                        # exception class when a step failed
 
 
-def ground_entities(client: GeminiClient, config: Config, claim_text: str, lookup: Callable[[str], Entity | None]) -> Grounded:
+def mentions_death(text: str, terms: list[str]) -> bool:
+    return any(re.search(r"(?<!\w)" + re.escape(t.casefold()) + r"(?!\w)", text.casefold()) for t in terms)
+
+
+def ground_entities(client: GeminiClient, config: Config, claim_text: str, lookup: Callable[[str], Entity | None],
+                    death: Callable[[str], tuple[str, int] | None] | None = None) -> Grounded:
     settings = config.runtime.knowledge_graph
     out = Grounded()
     safe = claim_text.replace(CLAIM_OPEN, "").replace(CLAIM_CLOSE, "")
@@ -65,6 +71,14 @@ def ground_entities(client: GeminiClient, config: Config, claim_text: str, looku
             continue
         if found:
             found.name = name                                        # shown under the words the claim used
+            if death and mentions_death(safe, settings.death_terms):
+                try:
+                    record = death(found.id)
+                except SourceError as exc:
+                    out.error = type(exc).__name__
+                    record = None
+                if record:
+                    found.died, found.died_references = record
             out.entities.append(found)
         else:
             out.unmatched.append(name)
