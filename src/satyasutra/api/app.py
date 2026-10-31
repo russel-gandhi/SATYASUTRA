@@ -11,7 +11,8 @@ from functools import cache
 from pathlib import Path
 from typing import Any, Callable
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, model_validator
 
@@ -21,6 +22,8 @@ from ..envfile import load_env_file
 from ..agent import format_sse, trace_events
 from ..cache import TTLCache
 from ..fastclock import Cluster, Escalator, FastClock, FastClockWorker
+from ..media import check_media, forensic_scores
+from ..provenance import ImageIndex
 from ..claims import ExtractionResult, Judgements, extract_claims, judge_reviews
 from ..errors import ConfigError, SourceError
 from ..ingest import author_salt, hash_author
@@ -61,6 +64,8 @@ def create_app(
     worker: FastClockWorker | None = None,
     escalator: Escalator | None = None,
     judge: Callable[[str, list], Judgements] | None = None,
+    analyse_image: Callable[[Config, bytes], dict] = forensic_scores,
+    image_index: ImageIndex | None = None,
 ) -> FastAPI:
     load_env_file(ROOT / ".env")
     cfg = config or load_config()
@@ -176,6 +181,25 @@ def create_app(
         if app_escalator is None:
             raise HTTPException(status_code=503, detail="escalation is not enabled (escalation.enabled in config/runtime.yaml)")
         return {**app_escalator.stats(), "recent": app_escalator.recent(n)}
+
+    @cache
+    def images() -> ImageIndex:
+        return image_index or ImageIndex(_path(cfg.runtime.provenance.db_path))
+
+    @app.post("/media/check")
+    async def media_check(request: Request) -> dict:
+        """Raw image bytes in the body. Returns provenance matches and TruFor's manipulation read; see satyasutra/media.py."""
+        limit = cfg.runtime.forensics.max_upload_bytes
+        data = await request.body()
+        if not data or len(data) > limit:
+            raise HTTPException(status_code=422, detail=f"send 1 to {limit} bytes of image in the request body")
+        try:
+            result = await run_in_threadpool(check_media, cfg, data, images(), analyse_image)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=f"not an image: {exc}")
+        heatmap = result.forensics.pop("heatmap_png_b64", None)
+        return {"width": result.width, "height": result.height, "label": result.label, "reasons": result.reasons,
+                "matches": result.matches, "forensics": result.forensics, "heatmap_png_b64": heatmap}
 
     @app.get("/trace/stream")
     async def trace_stream(job: str = Query(min_length=1, max_length=64, pattern=JOB_ID)) -> StreamingResponse:

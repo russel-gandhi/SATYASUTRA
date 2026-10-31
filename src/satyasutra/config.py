@@ -209,6 +209,13 @@ class ProvenanceSettings(_Strict):
     commons: CommonsSettings
 
 
+class ForensicsSettings(_Strict):
+    url: str                                 # the local TruFor service (forensics/service.py), which runs in its own Python environment
+    timeout_s: float = Field(gt=0)
+    max_upload_bytes: int = Field(gt=0)      # an uploaded image larger than this is refused
+    threshold: str                           # name of the calibrated cut in thresholds.yaml for the manipulation score
+
+
 class VerifySettings(_Strict):
     posts_endpoint: str                      # Bluesky AppView getPosts, used when /verify is given a post URI
     timeout_s: float = Field(gt=0)
@@ -233,6 +240,7 @@ class RuntimeFile(_Strict):
     provenance: ProvenanceSettings
     trace: TraceSettings
     escalation: EscalationSettings
+    forensics: ForensicsSettings
 
 
 class Config(_Strict):
