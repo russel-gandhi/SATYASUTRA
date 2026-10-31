@@ -49,7 +49,8 @@ from ..card import build_card, load_cards
 from ..intel import case_view, global_graph, group_claims, media_lab, overview, registry, summarise
 from ..inputs import InputError, fetch_page, image_metadata, image_thumb, pdf_text
 from ..notice import NoticeError, analyse_text, check_notice
-from ..officials import build_view
+from ..officials import annotate, build_view
+from ..pulse import Pulse
 from ..sources.index import OfficialIndex
 from ..sources.news import check_news, refresh_news_if_stale
 from ..sources.official import refresh_if_stale
@@ -311,6 +312,20 @@ def create_app(
             return await run_in_threadpool(analysed, text, request.headers.get("x-filename", "")[:120], "doc", {"kind": "pdf"})
         except InputError as exc:
             raise HTTPException(status_code=422, detail=str(exc))
+
+    @cache
+    def pulse() -> Pulse:
+        return Pulse(cfg)
+
+    @app.get("/pulse")
+    def pulse_data() -> dict:
+        """What India is reading, searching and fact-checking right now, fetched live from Indian outlets, fact-checkers and Google Trends India (cached for refresh_s)."""
+        return annotate(pulse().snapshot(), lambda text: (c.body if (c := verdicts().get(text)) else None), cfg)
+
+    @app.get("/pulse/match")
+    def pulse_match(text: str = Query(min_length=1, max_length=cfg.runtime.verify.max_text_chars)) -> dict:
+        """Is a pasted claim already in the latest Indian headlines or fact-checkers' articles? Context for the reader: it never changes a verdict."""
+        return pulse().match(text)
 
     @app.get("/officials/data")
     def officials_data() -> dict:

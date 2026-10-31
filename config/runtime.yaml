@@ -310,3 +310,47 @@ intel:
     - {name: Indian Cybercrime Coordination Centre, reason: "answers 403 to our honest User-Agent; it is only linked as a place to report"}
     - {name: IMD weather and NDMA disaster alerts, reason: "no machine-readable public feed was found, so nothing is connected"}
     - {name: State government portals, reason: "not connected in this build"}
+
+# India pulse: what is being read, searched and rumoured in India right now. It replaces the Bluesky stream as the "what is spreading" source (the stream worker stays off).
+# Three lanes, all fetched live: Google Trends India (search terms with the outlets covering them), fact-checkers' newest articles (what people are asking about right now),
+# and top headlines in English, Hindi and Kannada clustered across outlets (one story carried by many outlets). It is a window on what Indian media and searchers are
+# doing, not a measure of what is spreading on WhatsApp, which no public source shows. The headline cluster cut is a policy choice, not calibrated.
+pulse:
+  refresh_s: 300
+  timeout_s: 15
+  workers: 8
+  trends_url: https://trends.google.com/trending/rss?geo=IN
+  trends_namespace: "{https://trends.google.com/trending/rss}"     # XML namespace of the Trends item fields
+  headline_feeds:
+    - {id: gnews_en, language: en, publisher: Google News India, url: "https://news.google.com/rss?hl=en-IN&gl=IN&ceid=IN:en"}
+    - {id: gnews_nation_en, language: en, publisher: Google News India, url: "https://news.google.com/rss/headlines/section/topic/NATION?hl=en-IN&gl=IN&ceid=IN:en"}
+    - {id: gnews_hi, language: hi, publisher: Google News India, url: "https://news.google.com/rss?hl=hi&gl=IN&ceid=IN:hi"}
+    - {id: gnews_kn, language: kn, publisher: Google News India, url: "https://news.google.com/rss?hl=kn&gl=IN&ceid=IN:kn"}
+    - {id: livehindustan_hi, language: hi, publisher: Live Hindustan, url: "https://www.livehindustan.com/rss/3127"}
+    - {id: hindu_in, language: en, publisher: The Hindu, url: "https://www.thehindu.com/news/national/feeder/default.rss"}
+    - {id: toi_top, language: en, publisher: Times of India, url: "https://timesofindia.indiatimes.com/rssfeedstopstories.cms"}
+    - {id: ndtv_top, language: en, publisher: NDTV, url: "https://feeds.feedburner.com/ndtvnews-top-stories"}
+    - {id: ht_india, language: en, publisher: Hindustan Times, url: "https://www.hindustantimes.com/feeds/rss/india-news/rssfeed.xml"}
+    - {id: ie_india, language: en, publisher: The Indian Express, url: "https://indianexpress.com/section/india/feed/"}
+    - {id: mint, language: en, publisher: Mint, url: "https://www.livemint.com/rss/news"}
+    - {id: indiatoday_nation, language: en, publisher: India Today, url: "https://www.indiatoday.in/rss/1206514"}
+  fact_check_feeds:
+    - {id: boom_en, language: en, publisher: BOOM, url: "https://www.boomlive.in/feed"}
+    - {id: boom_hi, language: hi, publisher: BOOM Hindi, url: "https://hindi.boomlive.in/feed"}
+    - {id: altnews_en, language: en, publisher: Alt News, url: "https://www.altnews.in/feed/"}
+    - {id: altnews_hi, language: hi, publisher: Alt News Hindi, url: "https://www.altnews.in/hindi/feed/"}
+    - {id: factly_en, language: en, publisher: Factly, url: "https://factly.in/feed/"}
+    - {id: vishvas_en, language: en, publisher: Vishvas News, url: "https://www.vishvasnews.com/feed/"}
+    - {id: vishvas_te, language: te, publisher: Vishvas News Telugu, url: "https://www.vishvasnews.com/telugu/feed/"}
+    - {id: newschecker_en, language: en, publisher: Newschecker, url: "https://www.newschecker.in/feed"}
+    - {id: newschecker_hi, language: hi, publisher: Newschecker Hindi, url: "https://www.newschecker.in/hi/feed"}
+    - {id: newschecker_kn, language: kn, publisher: Newschecker Kannada, url: "https://www.newschecker.in/kn/feed"}
+  max_age_hours: 36
+  max_rumours: 30
+  max_stories: 20
+  max_trends: 20
+  trend_news_items: 3
+  cluster_jaccard: 0.34
+  common_word_share: 0.12          # a word in more than this share of headlines is too common to link two of them (measured per refresh, not a fixed list)
+  min_token_chars: 3
+  min_outlets: 2                   # a story needs this many distinct outlets to be listed as carried by several

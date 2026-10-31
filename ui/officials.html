@@ -3,92 +3,90 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SATYASUTRA for officials</title>
+<title>What is spreading</title>
 <style>
   :root { --bg: #0b0f17; --panel: #121826; --line: #232c3f; --text: #e8ecf5; --mute: #8b95ab; --accent: #7aa2ff; --ok: #3ecf8e; --bad: #ff6b6b; --warn: #f5b84b; --idle: #6b7690; }
-  @media (prefers-color-scheme: light) { :root { --bg: #f4f6fb; --panel: #fff; --line: #dde2ee; --text: #131a2a; --mute: #5d6885; --accent: #2f5bd8; --idle: #7b86a3; } }
+  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --bg: #f4f6fb; --panel: #fff; --line: #dde2ee; --text: #131a2a; --mute: #5d6885; --accent: #2f5bd8; --idle: #7b86a3; } }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
-  header, main { max-width: 980px; margin: 0 auto; padding: 18px 16px; }
-  h1 { margin: 0; font-size: 22px; letter-spacing: .12em; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", "Noto Sans Devanagari", "Noto Sans Kannada", "Noto Sans Telugu", sans-serif; }
+  header, main { max-width: 1000px; margin: 0 auto; padding: 14px 16px; }
+  h1 { margin: 0; font-size: 22px; } h2 { margin: 22px 0 4px; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--mute); }
   .mute { color: var(--mute); font-size: 13px; }
-  .row { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+  .tabs { display: flex; gap: 6px; margin: 10px 0 0; flex-wrap: wrap; }
+  .tabs button { background: var(--panel); color: var(--mute); border: 1px solid var(--line); border-radius: 8px; padding: 5px 12px; font: inherit; cursor: pointer; }
+  .tabs button.on { color: var(--text); border-color: var(--accent); }
+  .row { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-top: 10px; }
   .row.disaster { border-left: 4px solid var(--bad); }
-  .text { margin: 6px 0; overflow-wrap: anywhere; }
-  .meta { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--mute); font-size: 13px; }
-  .chip { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 6px; }
-  .chip.disaster { background: var(--bad); color: #0b0f17; } .chip.general { background: var(--line); color: var(--mute); }
-  .badge { display: inline-block; padding: 2px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; color: #0b0f17; }
-  .REFUTED { background: var(--bad); } .SUPPORTED { background: var(--ok); } .MISSING_CONTEXT { background: var(--warn); }
-  .UNVERIFIABLE_YET, .NOT_A_CLAIM { background: var(--idle); color: #fff; }
-  button { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 6px 12px; font: inherit; font-weight: 600; cursor: pointer; }
-  button:disabled { opacity: .5; cursor: progress; }
-  a { color: var(--accent); }
-  .err { color: var(--bad); }
+  .text { margin: 4px 0; overflow-wrap: anywhere; font-weight: 600; }
+  .meta { display: flex; flex-wrap: wrap; gap: 4px 14px; color: var(--mute); font-size: 13px; }
+  .chip { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 1px 8px; border-radius: 6px; background: var(--bad); color: #0b0f17; margin-right: 6px; }
+  .pill { display: inline-block; border: 1px solid var(--line); border-radius: 999px; padding: 1px 9px; font-size: 12px; margin: 2px 4px 2px 0; color: var(--mute); text-decoration: none; }
+  .badge { display: inline-block; padding: 1px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; color: #0b0f17; }
+  .REFUTED { background: var(--bad); } .SUPPORTED { background: var(--ok); } .MISSING_CONTEXT { background: var(--warn); } .UNVERIFIABLE_YET, .NOT_A_CLAIM { background: var(--idle); color: #fff; }
+  button.go { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 5px 12px; font: inherit; font-weight: 600; cursor: pointer; margin-top: 6px; }
+  button.go:disabled { opacity: .5; cursor: progress; }
+  a { color: var(--accent); } .err { color: var(--bad); }
 </style>
 </head>
 <body>
 <header>
-  <h1>SATYASUTRA for officials</h1>
-  <div class="mute">What is spreading right now, disaster-related topics first, and what we already know about each. A triage list: it ranks and labels, it does not decide.
-  <a href="/">Back to the checker</a></div>
-  <div class="mute" id="note"></div>
+  <h1>What India is reading and checking right now</h1>
+  <div class="mute">Fetched live from Indian news outlets, Indian fact-checkers and Google Trends India. A triage list: it ranks and labels, it does not decide. <a href="/">Back to the checker</a></div>
+  <div class="mute" id="note"></div><div class="mute" id="src"></div>
+  <div class="tabs" id="tabs"></div>
 </header>
-<main id="rows"><div class="mute">Loading...</div></main>
+<main id="main"><div class="mute">Loading (the first load reads about 20 live feeds)...</div></main>
 <script>
 const $ = (id) => document.getElementById(id);
-function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+const el = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; };
+const LANG = { all: "All languages", en: "English", hi: "हिन्दी", kn: "ಕನ್ನಡ", te: "తెలుగు" };
+const SAY = { SUPPORTED: "SUPPORTED", REFUTED: "FALSE", MISSING_CONTEXT: "MISLEADING", UNVERIFIABLE_YET: "UNVERIFIED", NOT_A_CLAIM: "NOT A CLAIM" };
+let lang = "all", data = null; const outcome = new Map();
 
-async function api(path, opts) {
-  const r = await fetch(path, opts); let b = null; try { b = await r.json(); } catch (_) {}
-  if (!r.ok) throw new Error((b && b.detail) ? (typeof b.detail === "string" ? b.detail : JSON.stringify(b.detail)) : "HTTP " + r.status);
-  return b;
-}
+async function api(path, opts) { const r = await fetch(path, opts); let b = null; try { b = await r.json(); } catch (_) {} if (!r.ok) throw new Error((b && b.detail) ? (typeof b.detail === "string" ? b.detail : JSON.stringify(b.detail)) : "HTTP " + r.status); return b; }
+const ago = (iso) => { if (!iso) return ""; const m = Math.round((Date.now() - new Date(iso)) / 60000); return m < 1 ? "just now" : m < 90 ? m + " min ago" : m < 2880 ? Math.round(m / 60) + " h ago" : Math.round(m / 1440) + " d ago"; };
+const link = (u, t) => { const a = el("a", "", t); a.href = u; a.target = "_blank"; a.rel = "noopener"; return a; };
 
-const outcome = new Map();   // what a check on a row said, kept across the 6 s refresh that rebuilds the rows
-
-function stateBox(r, btnRefresh) {
+function stateBox(text, r) {
   const box = el("div");
   if (r.state.checked) {
-    box.append(el("span", "badge " + r.state.label, r.state.label.replaceAll("_", " ")), " ", el("span", "mute", r.state.confidence_band + " confidence"));
-    if (r.state.ledger_seq != null) { const a = el("a", "", " ledger entry #" + r.state.ledger_seq); a.href = "/ledger/" + r.state.ledger_seq; a.target = "_blank"; a.rel = "noopener"; box.append(a); }
-  } else {
-    const kept = outcome.get(r.example_text);
-    const b = el("button", "", "Check this now"); const msg = el("span", kept && kept.err ? "err" : "mute", " " + (kept ? kept.text : "not checked yet"));
-    b.disabled = !!(kept && kept.busy);
-    b.onclick = async () => {
-      b.disabled = true; msg.textContent = " checking..."; msg.className = "mute"; outcome.set(r.example_text, { text: "checking...", busy: true });
-      try {
-        const d = await api("/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: r.example_text }) });
-        const n = (d.claims || []).length;
-        outcome.set(r.example_text, { text: n ? "checked" : "checked: no checkable claim found in this post (" + ((d.extraction && d.extraction.reason) || "nothing to verify") + "), so no verdict was made" });
-        btnRefresh();
-      } catch (e) { outcome.set(r.example_text, { text: e.message, err: true }); btnRefresh(); }
-    };
-    box.append(b, msg);
+    box.append(el("span", "badge " + r.state.label, SAY[r.state.label] || r.state.label), " ", el("span", "mute", r.state.confidence_band + " confidence "));
+    if (r.state.ledger_seq != null) box.append(link("/ledger/" + r.state.ledger_seq, "ledger #" + r.state.ledger_seq));
+    return box;
   }
-  return box;
+  const kept = outcome.get(text), msg = el("span", kept && kept.err ? "err mute" : "mute", " " + (kept ? kept.text : ""));
+  const b = el("button", "go", "Check this claim"); b.disabled = !!(kept && kept.busy);
+  b.onclick = () => { sessionStorage.setItem("jv_prefill", text); location.href = "/"; };
+  box.append(b, msg); return box;
 }
+function section(title, hint, rows) { const f = document.createDocumentFragment(); f.append(el("h2", "", title), el("div", "mute", hint)); if (!rows.length) f.append(el("div", "mute", "Nothing in this language right now.")); rows.forEach((r) => f.append(r)); return f; }
+function topic(r, row) { if (r.topic === "disaster") { row.classList.add("disaster"); row.append(el("span", "chip", "Disaster-related")); } }
+const keep = (r) => lang === "all" || r.language === lang;
+
+function draw() {
+  const d = data, main = $("main"); main.replaceChildren();
+  const rum = d.rumours.filter(keep).map((r) => { const row = el("div", "row"); topic(r, row); row.append(el("div", "text", r.text), (() => { const m = el("div", "meta"); m.append(el("span", "", r.outlet), el("span", "", ago(r.published_at)), link(r.url, "read the fact-check")); return m; })(), stateBox(r.text, r)); return row; });
+  const sto = d.stories.filter(keep).map((g) => { const row = el("div", "row"); topic(g, row); row.append(el("div", "text", g.text));
+    const m = el("div", "meta"); m.append(el("span", "", g.size + " outlets"), el("span", "", "latest " + ago(g.latest))); row.append(m);
+    const o = el("div"); g.items.forEach((i) => { const a = link(i.url, i.outlet); a.className = "pill"; a.title = i.title; o.append(a); }); row.append(o, stateBox(g.text, g)); return row; });
+  const tre = d.trending.map((t) => { const row = el("div", "row"); topic(t, row); row.append(el("div", "text", t.term));
+    const m = el("div", "meta"); m.append(el("span", "", "searches " + (t.traffic || "n/a")), el("span", "", ago(t.published_at))); row.append(m);
+    const o = el("div"); t.news.forEach((n) => { const a = link(n.url, n.outlet || "source"); a.className = "pill"; a.title = n.title; o.append(a); }); row.append(o); return row; });
+  main.append(section("Rumours being fact-checked now", "The newest articles from BOOM, Alt News, Factly, Vishvas News and Newschecker: what people in India are asking about today.", rum),
+              section("Stories carried by several outlets", "Headlines from Indian outlets grouped by story. A story many outlets carry is not thereby true: outlets repeat each other.", sto),
+              section("Trending searches in India", "Google Trends India: what people are searching for, with the outlets covering it. A search term is not a claim.", tre));
+}
+function tabs() { const t = $("tabs"); t.replaceChildren(); ["all", "en", "hi", "kn", "te"].forEach((k) => { const b = el("button", k === lang ? "on" : "", LANG[k]); b.onclick = () => { lang = k; tabs(); draw(); }; t.append(b); }); }
 
 async function load() {
   try {
-    const d = await api("/officials/data");
-    $("note").textContent = d.note;
-    const rows = $("rows"); rows.replaceChildren();
-    if (!d.rows.length) rows.append(el("div", "mute", "Nothing is clustering yet. Posts need to repeat before they show here."));
-    d.rows.forEach((r) => {
-      const row = el("div", "row " + r.topic);
-      row.append(el("span", "chip " + r.topic, r.topic === "disaster" ? "Disaster-related" : "General"));
-      row.append(el("div", "text", r.example_text));
-      const meta = el("div", "meta");
-      meta.append(el("span", "", r.size + " posts"), el("span", "", r.distinct_accounts + " accounts"), el("span", "", r.authors_per_minute + " authors/min"), el("span", "", "first seen " + r.first_seen.slice(11, 16) + " UTC"));
-      if (r.example_url) { const a = el("a", "", "open the first post"); a.href = r.example_url; a.target = "_blank"; a.rel = "noopener"; meta.append(a); }
-      row.append(meta, stateBox(r, load));
-      rows.append(row);
-    });
-  } catch (e) { $("rows").replaceChildren(el("div", "err", e.message)); }
+    data = await api("/pulse"); $("note").textContent = data.note;
+    const ok = Object.values(data.sources).filter((s) => s.startsWith("ok")).length, all = Object.keys(data.sources).length;
+    $("src").textContent = ok + " of " + all + " live sources answered; " + data.headlines_read + " headlines read; fetched " + ago(data.fetched_at) + (ok < all ? "; not answering: " + Object.entries(data.sources).filter(([, s]) => !s.startsWith("ok")).map(([k, s]) => k + " (" + s + ")").join(", ") : "") + ".";
+    tabs(); draw();
+  } catch (e) { $("main").replaceChildren(el("div", "err", e.message)); }
 }
-load(); setInterval(load, 6000);
+load(); setInterval(load, 60000);
 </script>
 <script src="/static/nav.js"></script>
 </body>
