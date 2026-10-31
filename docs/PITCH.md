@@ -18,6 +18,7 @@ Rumours in Indian languages move faster than fact-checks. People need an answer 
   - unknowable claims answered "cannot tell" 8/8
   - false claims refuted 7/12 (32 to 81%); coverage 7/32 (11 to 39%). **Coverage is low by design: finance-only official text, and "cannot tell" is a result.**
   - The first run had 4 true claims wrongly refuted; we found the cause (a neighbouring table cell), fixed it and reran. Tell this story: it shows the harness works.
+- Lookup on (`--factcheck on`, `docs/claim-sheet-factcheck-on.md`): 29 of 32 claims scored (3 errors, not counted), wrong 0, false claims refuted 8/12 (39 to 86%), coverage 8/29 (15 to 46%). The 3 errored rows are not a result; rerun before quoting.
 - Test split: not yet run. Do not quote it until it is, once, on a tagged commit.
 - Media: AI-made images 36/40 caught, 1/40 flagged (`docs/calibration/smaug_2026-10-31.txt`); edits flagged at TruFor 0.7 (30 photos, `docs/calibration/trufor_2026-10-31.txt`);
   synthetic speech 19/19 caught, 0/20 real flagged on a weak set (`docs/calibration/audio_synthetic_2026-10-31.txt`). Never "authentic", only "no sign found".
