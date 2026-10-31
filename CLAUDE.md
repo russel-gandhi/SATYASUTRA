@@ -44,6 +44,36 @@ uvicorn satyasutra.api.app:create_app --factory      # the API (/health, /health
 The Bash tool is Git Bash; the user's own terminal is PowerShell (no `&&`, no `printf`). Heredocs containing apostrophes can break
 the Bash tool: use the file Write tool for multi-file edits.
 
+## Running the prototype (branch `phase-8/prototype-ui`, the demo path)
+
+Priority is a working, good-looking demo for the hackathon deadline (2 Nov 00:00), not benchmarks or ticket ceremony. The no-mock-data
+rule still applies. Three processes:
+
+```
+.\.venv\Scripts\python scripts\serve.py --port 8000                       # API + UI at http://127.0.0.1:8000/ with the live stream worker on
+forensics\venv311\Scripts\python forensics\service.py --port 8100          # TruFor on the GPU (Python 3.11 + CUDA torch, git-ignored)
+.\.venv\Scripts\python scripts\media_live.py --base http://127.0.0.1:8000  # smoke test of the media path on live Commons photos
+```
+
+- `ui/index.html` is one static page: claim box (streams `GET /agent/stream?text=` and shows each node and tool call live, then the
+  verdict card with Wikidata entities), image panel (`POST /media/check`, raw bytes, heatmap overlay), live top clusters, ledger check.
+- `agent/graph.py` is the real LangGraph claim agent: read_post, extract, then registry and ground in parallel, then judge, then
+  decide (rules + ledger). It stops early when there is no checkable claim. `tool_calls` needs an additive reducer because two nodes
+  run in parallel.
+- `claims/judge.py`: Gemini only says whether a fact-check review is the same, opposite or a different claim; the rules still map the
+  rating. Failure falls back to the strict word-overlap rule. First live REFUTED seen: "COVID-19 vaccines contain microchips" via a
+  FactCheck.org review. `claims/entities.py` + `sources/wikidata.py` ground named entities to Wikidata (context only, never evidence).
+- `media.py`: provenance matches (debunked-image index, 117 items) and TruFor are separate signals. Label EDITED at or above
+  `trufor_manipulation_score` (0.7, calibrated on 30 Commons photos with self-made splices: see `docs/calibration/trufor_2026-10-31.txt`
+  and the note in `config/thresholds.yaml`), otherwise INCONCLUSIVE, never "authentic". TruFor does not detect AI-generated images.
+- `forensics/service.py` is ours; `forensics/trufor/` (clone of grip-unina/TruFor), its weights and `venv311` are git-ignored.
+  TruFor licence: informational and nonprofit use only, credit the authors (GRIP-UNINA, University Federico II of Naples).
+  The checkpoint is loaded with `weights_only=True` plus a narrow allowlist after reading its pickle statically (only tensors and a numpy scalar).
+- Starting a second server on a port a stale one holds fails silently with exit 3 and the old code keeps answering: find the PID with
+  `ps -W | grep FORGE/.venv` and `kill` that one only. Never kill all python processes (a pip install or the TruFor service may be running).
+- Not done: Telegram bot (needs a fresh token), video forensics, Hindi claim check, escalation never fired live, TruFor false-alarm
+  rate on real social-media images unknown, AI-generated-image detector not chosen.
+
 ## Secrets (read this twice)
 
 - Keys live only in a git-ignored **`.env`** at the repo root, loaded by `satyasutra.envfile.load_env_file` (names only, never values).
