@@ -29,7 +29,7 @@ from ..media import check_media, forensic_scores
 from ..video import check_video
 from ..provenance import ImageIndex
 from ..agent.graph import BUSY_REASONS, AgentRun, build_claim_agent
-from ..claims import ExtractionResult, Grounded, Judgements, OfficialResult, check_official, extract_claims, ground_entities, judge_reviews, judge_with_fallback
+from ..claims import ExtractionResult, Grounded, Judgements, OfficialResult, WebResult, check_official, check_web, extract_claims, ground_entities, judge_reviews, judge_with_fallback
 from ..errors import ConfigError, SourceError
 from ..ingest import author_salt, hash_author
 from ..ledger import LedgerStore, SQLiteLedgerStore
@@ -92,6 +92,7 @@ def create_app(
     judge: Callable[[str, list], Judgements] | None = None,
     ground: Callable[[str], Grounded] | None = None,
     official: Callable[[str], OfficialResult] | None = None,
+    web: Callable[[str], WebResult] | None = None,
     transcribe: Callable[[bytes], Transcript] | None = None,
     audio_check_fn: Callable[[bytes], object] | None = None,
     analyse_image: Callable[[Config, bytes], dict] = forensic_scores,
@@ -154,6 +155,7 @@ def create_app(
     def official_index() -> OfficialIndex:
         return OfficialIndex(_path(cfg.runtime.official.db_path))
 
+    do_web = web or ((lambda text: check_web(gemini(), cfg, text)) if extract is None else None)
     do_official = official or ((lambda text: check_official(gemini(), cfg, official_index(), text)) if extract is None else None)
     @cache
     def link_domains():
@@ -400,7 +402,7 @@ def create_app(
         if not clean:
             raise HTTPException(status_code=422, detail="text must not be blank")
         job, run = uuid.uuid4().hex[:16], AgentRun()
-        graph = build_claim_agent(cfg, ledger, text_post, do_extract, do_lookup, do_judge, do_ground, run, do_official)
+        graph = build_claim_agent(cfg, ledger, text_post, do_extract, do_lookup, do_judge, do_ground, run, do_official, do_web)
 
         async def body():
             app.state.active_traces += 1
@@ -456,7 +458,7 @@ def create_app(
         return mark(cached)
 
     def _run(post: Post) -> dict:
-        done = verify_post(post, cfg, ledger, do_extract, do_lookup, do_judge)
+        done = verify_post(post, cfg, ledger, do_extract, do_lookup, do_judge, do_web)
         if done.extraction.status == "failed" and done.extraction.reason.startswith(BUSY_REASONS):
             raise HTTPException(status_code=503, detail="The language model is at its rate limit or unreachable right now, so nothing was checked and nothing was guessed. Please try again in about a minute.")
         if done.extraction.status in ("blocked", "failed"):

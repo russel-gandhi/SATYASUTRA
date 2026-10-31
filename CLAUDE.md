@@ -116,6 +116,13 @@ forensics\venv311\Scripts\python forensics\service.py --port 8100          # Tru
   second trigger and rejected (`docs/calibration/trufor_map_2026-10-31.txt`); face-swap classifiers tested on FaceForensics++ and rejected (`docs/calibration/faceswap_2026-10-31.txt`,
   `scripts/faceswap_fetch.py`, `scripts/faceswap_probe.py`, opencv-python-headless<5 in venv311); Raksha-lite = intent `intimate_images` in `config/actions.yaml` (guidance only,
   D52 relaxed by the user's request on 2026-10-31: no images are accepted or stored).
+- Web search (`sources/websearch.py`, `claims/web.py`, `config/prompts/web.txt`, `runtime.web`): the system goes and looks. A Google News RSS search of the claim returns headlines with
+  outlet, date and link; Gemini only labels each (reports_as_fact, debunks, mentions_only, unrelated); code decides. Outlets on `web.reputable_outlets` and `web.fact_checkers` are Tier 2,
+  all others Tier 3 (shown, never deciding). SUPPORTED needs 2 distinct reputable outlets reporting it as fact (confidence capped at medium: outlets copy each other); a debunk counts from
+  one fact-checker or 2 reputable outlets; support plus a debunk is CONFLICT. This **replaces the earlier rule that news is context only** (the user asked on 2026-10-31 for the system to search
+  the net and say true or false); the lists and counts are policy choices, not calibrated. Live 2026-10-31: 'Nana Patekar is dead' SUPPORTED (NDTV, The Hindu, HT, ETV Bharat, TOI...),
+  'Chandrayaan-3 landed near the lunar south pole' SUPPORTED (BBC, Guardian), the microchip claim REFUTED high, an invented assassination and an invented RBI UPI ban stayed 'cannot tell'.
+  Risks not measured: an outlet reporting a rumour can be labelled as fact, a claim about an old event may match old headlines, Google News terms of use were not read.
 - Not done: (Telegram bot done, see above) (needs a fresh token), escalation never fired live, TruFor false-alarm rate on real social-media images
   unknown, README with a real-vs-roadmap table. `tests/unit/test_trace_sse.py::test_leaving_mid_run...` failed once under full-suite load and
   passes alone (timing).

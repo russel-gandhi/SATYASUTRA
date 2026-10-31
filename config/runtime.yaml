@@ -236,3 +236,24 @@ nli:
   max_reviews: 8
   model_label: mdeberta-v3-nli (local fallback)
 
+
+web:
+  # Searching the live web news (Google News RSS search) for what outlets say about a claim. Outlets on the two lists below are Tier 2 evidence; every other
+  # outlet is Tier 3 and is only shown. Lists and counts are policy choices, not calibrated: they were set by reading results on 2026-10-31.
+  endpoint: https://news.google.com/rss/search
+  language: en-IN
+  region: IN
+  edition: IN:en
+  timeout_s: 20
+  max_query_chars: 120
+  max_hits_read: 25
+  max_cited: 4
+  title_chars: 220
+  min_outlets_support: 2
+  min_outlets_debunk: 2
+  reputable_outlets: ["Reuters", "Associated Press", "AP News", "AFP", "BBC", "BBC News", "Al Jazeera", "The Hindu", "The Indian Express", "Hindustan Times", "The Times of India", "NDTV",
+                      "India Today", "The Economic Times", "Business Standard", "Mint", "Livemint", "The Wire", "Scroll.in", "ETV Bharat", "Press Trust of India", "PTI",
+                      "The Telegraph", "Deccan Herald", "The New Indian Express", "Firstpost", "CNN", "The Guardian", "The New York Times", "The Washington Post",
+                      "Bloomberg", "Financial Times", "Reuters India", "Hindustan Times", "Moneycontrol", "ThePrint", "The Print", "WION", "DD News", "PIB", "Press Information Bureau"]
+  fact_checkers: ["Alt News", "BOOM", "BOOM Live", "Factly", "FACTLY", "Newschecker", "Vishvas News", "PIB Fact Check", "Snopes", "PolitiFact", "FactCheck.org", "AFP Fact Check",
+                  "Reuters Fact Check", "The Quint", "India Today Fact Check", "Fact Crescendo", "Logically Facts", "Full Fact", "Africa Check", "Misbar", "Lead Stories", "Check4Spam", "Fact Check"]

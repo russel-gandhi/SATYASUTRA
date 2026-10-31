@@ -40,13 +40,17 @@ def verify_post(
     extract: Callable[[Post], ExtractionResult],
     lookup: Callable[[str, str | None], FactCheckResult],
     judge: Callable[[str, list], Judgements] | None = None,
+    web: Callable[[str], object] | None = None,
 ) -> VerifyOutcome:
     extraction = extract(post)
     out = VerifyOutcome(post, extraction)
     for claim in extraction.claims:
         found = lookup(claim.text_en, claim.lang)
         judgement = judge(claim.text_en, found.evidence) if judge else None
-        outcome = decide(claim, found.evidence, config, judged=judgement.relations if judgement else None)
+        net = web(claim.text_en) if web else None
+        outcome = decide(claim, [*found.evidence, *(net.evidence if net else [])], config, judged=judgement.relations if judgement else None)
+        if net and net.error:
+            outcome.reasons.append(f"web news search unavailable ({net.error}): no web evidence used")
         if judgement and judgement.fallback:
             outcome.reasons.append(f"same-claim judge: Gemini unavailable ({judgement.fallback}), the local NLI model judged instead (stricter: it needs both claims to entail each other)")
         if judgement and judgement.error:
