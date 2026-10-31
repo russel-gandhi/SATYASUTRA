@@ -106,6 +106,10 @@ forensics\venv311\Scripts\python forensics\service.py --port 8100          # Tru
 - Officials view (`officials.py`, `GET /officials`, `/officials/data`): spreading clusters, disaster word list (English and Hindi, tightened after 'attack' flagged a cricket chat) first,
   state from the /verify cache only. Gemini client (`llm/gemini.py`) retries a timeout or 5xx once and falls back to the next model in `policy.gemini.models`;
   a model at its limit surfaces as ModelBusy (503, 'try again in about a minute'), never a guess.
+- NLI fallback judge (`claims/nli.py`, GPU service `POST /nli`, mDeBERTa-v3 multilingual NLI, MIT, `models/mdeberta-nli/` git-ignored): when Gemini cannot judge whether a
+  fact-check review covers the same claim (quota, outage), the local model scores both directions; `same` needs mutual entailment at `nli.min_prob` (0.9, a policy choice,
+  not calibrated), any contradiction is `opposite`. Stricter than Gemini: live, the microchip claim stays UNVERIFIABLE_YET (Gemini said REFUTED), and 'Smoking doesn't cause cancer'
+  reviews are correctly `opposite`. Used only when Gemini fails; the reason line says which judge answered. Not measured on a labelled set.
 - Not done: (Telegram bot done, see above) (needs a fresh token), escalation never fired live, TruFor false-alarm rate on real social-media images
   unknown, README with a real-vs-roadmap table. `tests/unit/test_trace_sse.py::test_leaving_mid_run...` failed once under full-suite load and
   passes alone (timing).

@@ -47,6 +47,8 @@ def verify_post(
         found = lookup(claim.text_en, claim.lang)
         judgement = judge(claim.text_en, found.evidence) if judge else None
         outcome = decide(claim, found.evidence, config, judged=judgement.relations if judgement else None)
+        if judgement and judgement.fallback:
+            outcome.reasons.append(f"same-claim judge: Gemini unavailable ({judgement.fallback}), the local NLI model judged instead (stricter: it needs both claims to entail each other)")
         if judgement and judgement.error:
             outcome.reasons.append(f"same-claim judge unavailable ({judgement.error}): strict word-overlap rule used")
         out.results.append(ClaimResult(claim, outcome, record_verdict(config, ledger, claim, outcome, extraction, judgement), found.from_cache))
@@ -80,5 +82,5 @@ def _payload(claim: Claim, outcome: RuleOutcome, extraction: ExtractionResult, j
         "evidence": [{"passage_sha256": e.passage_sha256, "url": e.url, "role": e.role, "tier": e.tier, "publisher": e.publisher} for e in v.evidence],
         "reasons": outcome.reasons,
         "extraction": {"model": extraction.model, "prompt_sha256": extraction.prompt_sha256},
-        "judge": {"model": judgement.model, "prompt_sha256": judgement.prompt_sha256, "relations": len(judgement.relations), "error": judgement.error} if judgement else None,
+        "judge": {"model": judgement.model, "prompt_sha256": judgement.prompt_sha256, "relations": len(judgement.relations), "error": judgement.error, "fallback": judgement.fallback} if judgement else None,
     }

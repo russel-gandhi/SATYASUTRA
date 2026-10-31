@@ -136,6 +136,8 @@ def build_claim_agent(
             outcome = decide(claim, [*found.evidence, *(off.contrast if off else [])], cfg, judged=j.relations if j else None)
             if off and off.error:
                 outcome.reasons.append(f"official-text check unavailable ({off.error}): no official evidence used")
+            if j and j.fallback:
+                outcome.reasons.append(f"same-claim judge: Gemini unavailable ({j.fallback}), the local NLI model judged instead (stricter: it needs both claims to entail each other)")
             if j and j.error:
                 outcome.reasons.append(f"same-claim judge unavailable ({j.error}): strict word-overlap rule used")
             seq = record_verdict(cfg, ledger, claim, outcome, ex, j)

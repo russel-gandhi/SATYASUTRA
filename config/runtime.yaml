@@ -228,3 +228,10 @@ notice:
   min_matched_words: 4
   max_passages: 3
 
+nli:
+  service_url: http://127.0.0.1:8100
+  timeout_s: 60
+  min_prob: 0.9
+  max_reviews: 8
+  model_label: mdeberta-v3-nli (local fallback)
+

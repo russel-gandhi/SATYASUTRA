@@ -44,6 +44,7 @@ class Judgements:
     model: str = ""
     prompt_sha256: str = ""
     error: str = ""                      # exception class when the call failed; the rules then fall back
+    fallback: str = ""                   # when Gemini failed and the local NLI model answered: why (the exception class)
 
 
 def _clean(text: str) -> str:

@@ -282,6 +282,14 @@ class NoticeSettings(_Strict):
     max_passages: int = Field(gt=0)
 
 
+class NliSettings(_Strict):
+    service_url: str                         # the GPU service (forensics/service.py) that hosts the NLI model
+    timeout_s: float = Field(gt=0)
+    min_prob: float = Field(gt=0, le=1)      # entailment or contradiction probability needed to call a relation (a policy choice, not calibrated)
+    max_reviews: int = Field(gt=0)
+    model_label: str                         # recorded as the judge when this model answers
+
+
 class VoiceSettings(_Strict):
     service_url: str                         # the GPU service (forensics/service.py); when it is down the clip is transcribed on the CPU, slowly
     service_timeout_s: float = Field(gt=0)
@@ -365,6 +373,7 @@ class RuntimeFile(_Strict):
     knowledge_graph: KnowledgeGraphSettings
     official: OfficialSettings
     voice: VoiceSettings
+    nli: NliSettings
     notice: NoticeSettings
     officials: OfficialsSettings
     audio_spoof: AudioSpoofSettings

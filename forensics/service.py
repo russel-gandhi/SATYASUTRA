@@ -3,6 +3,7 @@
     forensics/venv311/Scripts/python forensics/service.py --port 8100
 
 POST /analyze   body: raw image bytes  ->  JSON {score, ai_score, map_mean, map_p95, width, height, device, seconds, heatmap_png_b64}
+POST /nli     body: JSON {"pairs": [[premise, hypothesis], ...]}  ->  {"labels": [...], "probs": [[p per label], ...], "seconds"}  (mDeBERTa multilingual NLI, MIT)
 POST /transcribe body: 16 kHz mono float32 PCM bytes (the API decodes with ffmpeg)  ->  JSON {text, language, language_probability, duration_s, seconds}
                 speech to text with faster-whisper on the GPU (MIT; model folder models/whisper-small, loaded on first use)
 GET  /health    ->  {"status": "ok", "device": ...}
@@ -159,7 +160,35 @@ class Speech:
                 "duration_s": round(len(audio) / SAMPLE_RATE, 2), "seconds": round(time.time() - started, 2)}
 
 
-def handler(engine: Engine, speech: Speech):
+NLI_DIR = os.path.join(HERE, "..", "models", "mdeberta-nli")
+NLI_MAX_PAIRS, NLI_MAX_TOKENS = 32, 256
+
+
+class Nli:
+    """Natural-language inference on the same GPU: for each (premise, hypothesis) the probability of entailment, neutral and contradiction."""
+
+    def __init__(self, device: str):
+        self.device, self.model, self.tok, self.lock = device, None, None, Lock()
+
+    def infer(self, raw: bytes) -> dict:
+        pairs = json.loads(raw)["pairs"]
+        if not isinstance(pairs, list) or not 0 < len(pairs) <= NLI_MAX_PAIRS:
+            raise ValueError("pairs")
+        started = time.time()
+        with self.lock:
+            if self.model is None:
+                from transformers import AutoModelForSequenceClassification, AutoTokenizer
+                path = os.path.normpath(NLI_DIR)
+                self.tok = AutoTokenizer.from_pretrained(path)
+                self.model = AutoModelForSequenceClassification.from_pretrained(path).to(self.device).eval()
+            enc = self.tok([str(a) for a, _ in pairs], [str(b) for _, b in pairs], truncation=True, max_length=NLI_MAX_TOKENS, padding=True, return_tensors="pt").to(self.device)
+            with torch.no_grad():
+                probs = torch.softmax(self.model(**enc).logits.float(), dim=-1).cpu().tolist()
+        labels = [self.model.config.id2label[i].lower() for i in range(len(self.model.config.id2label))]
+        return {"labels": labels, "probs": [[round(p, 4) for p in row] for row in probs], "seconds": round(time.time() - started, 2)}
+
+
+def handler(engine: Engine, speech: Speech, nli: Nli):
     class H(BaseHTTPRequestHandler):
         def _send(self, code: int, body: dict):
             raw = json.dumps(body).encode()
@@ -176,14 +205,14 @@ def handler(engine: Engine, speech: Speech):
                 self._send(404, {"detail": "not found"})
 
         def do_POST(self):
-            if self.path not in ("/analyze", "/transcribe"):
+            if self.path not in ("/analyze", "/transcribe", "/nli"):
                 return self._send(404, {"detail": "not found"})
             size = int(self.headers.get("Content-Length") or 0)
             if not 0 < size <= MAX_BODY:
                 return self._send(413, {"detail": f"send 1 to {MAX_BODY} bytes"})
             try:
                 body = self.rfile.read(size)
-                self._send(200, speech.transcribe(body) if self.path == "/transcribe" else engine.analyze(body))
+                self._send(200, {"/transcribe": speech.transcribe, "/nli": nli.infer}.get(self.path, engine.analyze)(body))
             except Exception as exc:                       # the class only: never echo text that could carry paths or content
                 self._send(422, {"detail": f"could not process the input ({type(exc).__name__})"})
 
@@ -201,7 +230,7 @@ def main() -> None:
     args = ap.parse_args()
     engine = Engine(args.max_side, args.cpu)
     print(f"TruFor loaded on {engine.device}; AI detector: {engine.smaug_error or 'loaded'}; listening on 127.0.0.1:{args.port}", flush=True)
-    ThreadingHTTPServer(("127.0.0.1", args.port), handler(engine, Speech(engine.device))).serve_forever()
+    ThreadingHTTPServer(("127.0.0.1", args.port), handler(engine, Speech(engine.device), Nli(engine.device))).serve_forever()
 
 
 if __name__ == "__main__":

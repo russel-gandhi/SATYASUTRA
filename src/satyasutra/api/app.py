@@ -29,7 +29,7 @@ from ..media import check_media, forensic_scores
 from ..video import check_video
 from ..provenance import ImageIndex
 from ..agent.graph import BUSY_REASONS, AgentRun, build_claim_agent
-from ..claims import ExtractionResult, Grounded, Judgements, OfficialResult, check_official, extract_claims, ground_entities, judge_reviews
+from ..claims import ExtractionResult, Grounded, Judgements, OfficialResult, check_official, extract_claims, ground_entities, judge_reviews, judge_with_fallback
 from ..errors import ConfigError, SourceError
 from ..ingest import author_salt, hash_author
 from ..ledger import LedgerStore, SQLiteLedgerStore
@@ -144,7 +144,7 @@ def create_app(
 
     do_extract = extract or (lambda post: extract_claims(gemini(), cfg, post))
     # The real judge needs Gemini, so it is on only when the real extractor is: callers that inject their own extract stay offline.
-    do_judge = judge or ((lambda text, found: judge_reviews(gemini(), cfg, text, found)) if extract is None else None)
+    do_judge = judge or ((lambda text, found: judge_with_fallback(gemini(), cfg, text, found)) if extract is None else None)
     @cache
     def wikidata() -> WikidataClient:
         return WikidataClient(cfg, TTLCache(_path(cfg.runtime.cache_db_path)))
