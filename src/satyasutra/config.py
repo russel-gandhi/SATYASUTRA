@@ -161,6 +161,11 @@ class FastClockSettings(_Strict):
     latency_samples: int = Field(gt=0)       # per-post times kept for the median and p95
     repeat_keys_kept: int = Field(gt=0)      # recent text keys remembered to count exact repeats
     example_text_chars: int = Field(gt=0)    # an example post's text is cut to this length in /fastclock/top
+    members_kept: int = Field(gt=0)          # earliest posts stored per cluster for the origin and spread trace; later ones are only counted
+    member_text_chars: int = Field(gt=0)     # stored text per trace member (a Bluesky post is at most 300 characters)
+    trace_buckets: int = Field(gt=0)         # points on the spread timeline
+    variants_shown: int = Field(gt=0)        # distinct wordings listed in a trace
+    match_min_posts: int = Field(gt=0)       # a pasted claim is matched only to clusters with at least this many posts
 
     @model_validator(mode="after")
     def _bands_divide(self) -> "FastClockSettings":

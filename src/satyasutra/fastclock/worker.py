@@ -18,6 +18,7 @@ from ..ingest import IngestStats, author_salt, stream_posts
 from ..schemas import Post
 from .clock import FastClock
 from .normalise import normalise, text_key
+from .trace import build_trace
 
 SECONDS_PER_MINUTE = 60
 AT_URI_PARTS = 3                       # did, collection, rkey
@@ -162,6 +163,18 @@ class FastClockWorker:
             return None
         return self.config.runtime.ingest.post_url_template.format(did=parts[0], rkey=parts[2])
 
+    def trace(self, cluster_id: int) -> dict | None:
+        cluster = self.fastclock.clusterer.clusters.get(cluster_id)
+        return build_trace(cluster, self._wall(), self.settings, self.post_url) if cluster else None
+
+    def match(self, text: str) -> dict | None:
+        """The live cluster a pasted claim belongs to, if any: a claim is only 'spreading' when near-identical posts are on the stream."""
+        cluster = self.fastclock.clusterer.find(text)
+        if cluster is None or cluster.size < self.settings.match_min_posts:
+            return None
+        return {"cluster_id": cluster.id, "posts": cluster.size, "distinct_accounts": len(cluster.accounts),
+                "authors_per_minute": round(cluster.author_velocity(self._wall(), self.settings.window_s), 2)}
+
     def top(self, n: int | None = None) -> list[dict]:
         """Ranked clusters. Author hashes are never included (Bible D27); the example is the cluster's earliest post."""
         now, window, limit = self._wall(), self.settings.window_s, self.settings.example_text_chars
@@ -170,6 +183,7 @@ class FastClockWorker:
             out.append({
                 "cluster_id": cluster.id,
                 "size": cluster.size,
+                "distinct_accounts": len(cluster.accounts),
                 "authors_per_minute": round(cluster.author_velocity(now, window), 2),
                 "posts_per_minute": round(per_minute, 2),
                 "first_seen": datetime.fromtimestamp(cluster.first_seen, timezone.utc).isoformat(),

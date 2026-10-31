@@ -36,6 +36,11 @@ fastclock:
   latency_samples: 2000
   repeat_keys_kept: 20000
   example_text_chars: 200
+  members_kept: 400
+  member_text_chars: 300
+  trace_buckets: 12
+  variants_shown: 8
+  match_min_posts: 2
 extract:
   max_claims_per_post: 5
 

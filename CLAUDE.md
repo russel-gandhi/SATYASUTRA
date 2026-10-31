@@ -79,6 +79,10 @@ forensics\venv311\Scripts\python forensics\service.py --port 8100          # Tru
 - Not done: Telegram bot (needs a fresh token), escalation never fired live, TruFor false-alarm rate on real social-media images
   unknown, README with a real-vs-roadmap table. `tests/unit/test_trace_sse.py::test_leaving_mid_run...` failed once under full-suite load and
   passes alone (timing).
+- Origin and spread: clusters keep their earliest `members_kept` posts (in memory, forgotten when a cluster goes idle, not persisted);
+  `fastclock/trace.py` builds first post, spread timeline, wording versions with word diffs; `GET /fastclock/cluster/{id}`,
+  `GET /fastclock/match?text=` (a pasted claim matches a live cluster of at least `match_min_posts` posts); UI trace panel. Accounts are
+  anonymous numbers, Bluesky only, "first we saw" is not the true origin. Real clusters on the quiet stream are small (mostly bot templates).
 - AI-generated images: `forensics/service.py` also loads the Smaug detector (Abacus.AI, Apache 2.0, weights in git-ignored
   `forensics/models/smaug`, loaded through sentence-transformers with our own preprocessing; the repo's .py is not run) and returns `ai_score`.
   `media.py` labels SYNTHETIC at or above `smaug_ai_generated_score` (0.5). Measured on 40 Commons AI files vs 40 random files

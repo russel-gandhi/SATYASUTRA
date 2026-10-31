@@ -193,6 +193,21 @@ def create_app(
             raise HTTPException(status_code=503, detail="the fast-clock worker is not enabled (fastclock.worker_enabled in config/runtime.yaml)")
         return worker.stats()
 
+    @app.get("/fastclock/cluster/{cluster_id}")
+    def fastclock_cluster(cluster_id: int) -> dict:
+        if worker is None:
+            raise HTTPException(status_code=503, detail="the fast-clock worker is not enabled (fastclock.worker_enabled in config/runtime.yaml)")
+        found = worker.trace(cluster_id)
+        if found is None:
+            raise HTTPException(status_code=404, detail="no such live cluster: it may have gone idle and been forgotten")
+        return found
+
+    @app.get("/fastclock/match")
+    def fastclock_match(text: str = Query(min_length=1, max_length=cfg.runtime.verify.max_text_chars)) -> dict:
+        if worker is None:
+            raise HTTPException(status_code=503, detail="the fast-clock worker is not enabled (fastclock.worker_enabled in config/runtime.yaml)")
+        return {"match": worker.match(text)}
+
     @app.get("/fastclock/escalations")
     def fastclock_escalations(n: int = Query(default=20, ge=1, le=200)) -> dict:
         if app_escalator is None:

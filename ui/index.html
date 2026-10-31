@@ -101,6 +101,10 @@
       <h2>What is spreading now (live Bluesky stream)</h2>
       <div id="clusters" class="small">Loading...</div>
     </section>
+    <section style="margin-top:16px" id="traceSection" hidden>
+      <h2>Origin and spread</h2>
+      <div id="traceOut" class="small"></div>
+    </section>
   </div>
 </main>
 
@@ -148,16 +152,68 @@ async function refreshClusters() {
       n.append(el("span", "", c.authors_per_minute + " authors/min"), el("span", "", c.size + " posts"));
       if (c.example_url) { const a = el("a", "", "open post"); a.href = c.example_url; a.target = "_blank"; a.rel = "noopener"; n.append(a); }
       const use = el("a", "", "check this"); use.href = "#"; use.onclick = (e) => { e.preventDefault(); $("text").value = c.example_text; $("uri").value = ""; window.scrollTo({ top: 0, behavior: "smooth" }); };
-      n.append(use); row.append(n);
+      n.append(use);
+      const tr = el("a", "", "trace origin and spread"); tr.href = "#"; tr.onclick = (e) => { e.preventDefault(); showTrace(c.cluster_id); }; n.append(tr);
+      row.append(n);
       return row;
     }));
   } catch (e) { box.textContent = "Stream panel off: " + e.message; }
+}
+
+const SVG = "http://www.w3.org/2000/svg";
+function spreadChart(timeline) {
+  const w = 320, h = 90, top = Math.max(1, ...timeline.map((p) => p.posts));
+  const svg = document.createElementNS(SVG, "svg"); svg.setAttribute("viewBox", "0 0 " + w + " " + h); svg.setAttribute("width", "100%");
+  const line = (key, color) => {
+    const pts = timeline.map((p, i) => (i * w / Math.max(1, timeline.length - 1)).toFixed(1) + "," + (h - 4 - (p[key] / top) * (h - 8)).toFixed(1)).join(" ");
+    const pl = document.createElementNS(SVG, "polyline"); pl.setAttribute("points", pts); pl.setAttribute("fill", "none"); pl.setAttribute("stroke", color); pl.setAttribute("stroke-width", "2"); return pl;
+  };
+  svg.append(line("posts", "#6ea8fe"), line("accounts", "#f0b429"));
+  return svg;
+}
+
+function fmtSpan(s) { return s < 90 ? Math.round(s) + " s" : (s / 60).toFixed(1) + " min"; }
+
+async function showTrace(id) {
+  const sec = $("traceSection"), box = $("traceOut"); sec.hidden = false; box.textContent = "Loading...";
+  try {
+    const t = await api("/fastclock/cluster/" + id);
+    const parts = [];
+    if (t.first_post) {
+      const f = el("div", "claim"); f.append(el("div", "small", "First post we saw (account " + t.first_post.account + ", " + new Date(t.first_post.seen_at).toLocaleTimeString() + ")"), el("div", "q", t.first_post.text));
+      if (t.first_post.url) { const a = el("a", "", "open post"); a.href = t.first_post.url; a.target = "_blank"; a.rel = "noopener"; f.append(a); }
+      parts.push(f);
+    }
+    parts.push(el("div", "small", t.posts_seen + " posts from " + t.distinct_accounts_stored + " accounts over " + fmtSpan(t.span_s) + (t.stored_all_posts ? "" : " (only the earliest " + t.posts_stored + " posts are stored; accounts counted among those)")));
+    const legend = el("div", "small"); legend.append(Object.assign(el("span"), { textContent: "blue: posts, yellow: distinct accounts (cumulative)" })); parts.push(spreadChart(t.timeline), legend);
+    if (t.variants.length > 1) {
+      parts.push(el("div", "small", "Wording changes (" + t.variants_total + " distinct versions):"));
+      t.variants.forEach((v, i) => {
+        const d = el("div", "claim"); d.append(el("div", "small", "version " + (i + 1) + " - first seen +" + fmtSpan(v.first_seen_s) + ", " + v.posts + " post(s)"));
+        if (v.diff_from_previous.length) d.append(el("div", "small", v.diff_from_previous.map((o) => (o.op === "added" ? "+ " : "- ") + o.text).join("   ")));
+        else d.append(el("div", "q", v.text));
+        parts.push(d);
+      });
+    }
+    parts.push(el("div", "small", t.scope_note));
+    box.replaceChildren(...parts);
+  } catch (e) { box.textContent = "Trace unavailable: " + e.message; }
+}
+
+async function spreadLine(text, box) {
+  try {
+    const m = (await api("/fastclock/match?text=" + encodeURIComponent(text))).match;
+    if (!m) { box.textContent = "Not currently spreading on the Bluesky stream we watch (no matching cluster; this does not mean it is not spreading elsewhere)."; return; }
+    box.textContent = "Spreading now on Bluesky: " + m.posts + " near-identical posts from " + m.distinct_accounts + " accounts, " + m.authors_per_minute + " authors/min. ";
+    const a = el("a", "", "trace origin and spread"); a.href = "#"; a.onclick = (e) => { e.preventDefault(); showTrace(m.cluster_id); }; box.append(a);
+  } catch (_) { box.textContent = ""; }
 }
 
 function renderClaim(c) {
   const box = el("div", "claim");
   const head = el("div"); head.append(el("span", "badge " + c.label, c.label.replaceAll("_", " ")), " ", el("span", "small", "confidence: " + c.confidence_band));
   box.append(head, el("div", "q", c.text));
+  const spread = el("div", "small"); box.append(spread); spreadLine(c.text, spread);
   if (c.quote && c.quote !== c.text) box.append(el("div", "small", "original: " + c.quote));
   if (c.entities && c.entities.length) {
     const chips = el("div", "chips");
