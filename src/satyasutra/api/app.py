@@ -155,6 +155,25 @@ def create_app(
                 await worker.stop()
 
     app = FastAPI(title="SATYASUTRA", version=__version__, lifespan=lifespan)
+
+    class RevalidatePages:
+        """Pages and shared files are re-checked on every load (the browser still gets a cheap 304), so an edited page is never shown from a stale copy.
+        A plain ASGI wrapper that only touches response headers, so the event streams are not buffered."""
+        def __init__(self, inner):
+            self.inner = inner
+
+        async def __call__(self, scope, receive, send):
+            async def send_with_header(message):
+                if message["type"] == "http.response.start":
+                    headers = [(k, v) for k, v in message.get("headers", [])]
+                    kind = next((v for k, v in headers if k == b"content-type"), b"")
+                    if kind.startswith((b"text/html", b"text/css", b"text/javascript", b"application/javascript")):
+                        headers.append((b"cache-control", b"no-cache"))
+                    message = {**message, "headers": headers}
+                await send(message)
+            await self.inner(scope, receive, send_with_header if scope["type"] == "http" else send)
+
+    app.add_middleware(RevalidatePages)
     app.state.config = cfg
     app.state.ledger = ledger
     app.state.worker = worker
