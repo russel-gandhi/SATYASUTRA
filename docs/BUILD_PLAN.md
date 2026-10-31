@@ -145,6 +145,30 @@ headline numbers, E2 README, the ledger check, two rehearsals.
 
 [`SPEC_REPLY_SPREAD_EVAL.md`](SPEC_REPLY_SPREAD_EVAL.md) adds R1 human replies, R2 news-spread timeline, R3 Gemini load test and D1 the verdict dataset and harness. R3 runs first, D1 starts at once with a different person, and D1's first dev table is part of CP2 (22:00).
 
+## India fit (31 Oct, 16:35)
+
+Makes the prototype fit how Indians actually receive and act on forwards. About 11 hours in total, all small and mostly config or tests, so they can
+run in parallel with the packages above. Detail and reasoning: the "how can we fit it in the Indian context" discussion; the rules below are what binds.
+
+| ID | Package | Hours | Owner | Files | Done when |
+|---|---|---|---|---|---|
+| IN1 | **Languages measured, not assumed.** Add Hinglish (Hindi in English letters), Tamil, Bengali and Marathi claims to the verdict dataset (about 28 rows: true, changed-number, unknowable) and run them. Hinglish drafts can be written by the team; the other three need a reader to check them | 2 | dataset owner (D1) | `tests/eval/authored.yaml`, claim sheet | The claim sheet has one row per language with n and a range; the pitch names only languages that appear there |
+| IN2 | **Indian scam types and first-hour advice.** Intents for digital arrest, bank or KYC update, UPI collect-request and QR tricks, fake customer-care numbers, electricity-disconnection threats, part-time job or task scams, loan-app harassment and sextortion; each with plain Hindi and English advice and a source URL with a checked-on date | 1.5 | Verify-to-Act owner | `config/actions.yaml`, `act/plan.py` word lists moved to config | A forward of each type returns the right intent, the right routes and the evidence pack; routes stay marked unconfirmed until opened on an official site |
+| IN3 | **More official text.** Probe IMD, NDMA, the Election Commission, data.gov.in (with the key), the health ministry and a few state sites; add every one that answers our client as a Tier 1 feed behind the domain gate. Record the ones that refuse (403) and do not disguise the client | 2 | lane A | `config/runtime.yaml`, `config/policy.yaml`, `docs/probe_results.md` | The probe table shows the new sources; at least one is indexed; T and C rows can be built from it |
+| IN4 | **Regional-language fact-check search.** Search the Fact Check API with the original-language text as well as the English rendering, and read regional fact-checker feeds in their own language; compare with the earlier 0 hits in 4 for Hindi | 2 | lane A | `sources/factcheck.py` callers, config | Hit rate on the Hindi and Hinglish rows is measured and written down |
+| IN5 | **Sensitive-topic guard** (Bible D3). Communal, caste, religion-linked, election and political topic terms, in English and Hindi, force `UNVERIFIABLE_YET` with a "needs a human reviewer" flag and the calmer wording; the officials' view marks them | 1 | integrator (rules, app) with a config list from anyone | `config/` list, `claims/rules.py` or the agent's decide step | A communal rumour test never returns REFUTED or SUPPORTED from the system alone; the officials' view shows the flag |
+| IN6 | **Voice on Indian speech.** Compare Whisper small with a larger model on about 10 short Indian-accent Hindi and English clips recorded by the team with consent; keep what is clearly better and fits the GPU | 1.5 | lane B | `voice/`, `docs/` | A short table of the clips and the errors seen; the choice and its size are written down. Needs the user's approval to download a larger model |
+| IN7 | **Seasonal topics in the officials' view.** Festival, election, exam, cyclone, flood and heat terms in English and Hindi, ranked like the disaster words | 0.5 | integrator | `config/runtime.yaml` | The officials' view lists them first when a cluster matches |
+
+**Order:** IN2, IN5 and IN1 first (cheap and visible), then IN3 and IN4, then IN6, then IN7. Finish all by CP3 (Sun 14:00). **Cut order if short:** IN7, IN6,
+IN4, IN3. Never cut IN5: it is the guardrail that makes the demo safe on the topics judges are most likely to try.
+
+**Say and do not say (pitch and README).**
+- Say: built for Indian forwards, tested in the languages the claim sheet lists, on the official sources that answered our client, with Telegram working today and WhatsApp as the next channel.
+- Do not say: "for all of India", "supports 22 languages", anything about legal admissibility or legal clearance, or any statistic about forwards, scams or losses that the team has not re-read from its original source (Bible Q21). Data handling is stated as "designed to store nothing but the verdict and its ledger entry"; a lawyer has not reviewed it against India's data protection law.
+- WhatsApp: do not claim it. Offer the Telegram bot, and show a "share to the bot" route; WhatsApp business onboarding is on the roadmap slide.
+- Elders and low literacy: replies stay short, one action first. A spoken Hindi reply and Call Guard are stretch items.
+
 ## Status log
 
 Update at each checkpoint: time, who ran it, pass or fail, what was cut.
