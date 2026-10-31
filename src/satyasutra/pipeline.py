@@ -53,6 +53,8 @@ def verify_post(
         outcome = decide(claim, [*found.evidence, *(off.contrast if off else []), *(net.evidence if net else [])], config, judged=judgement.relations if judgement else None)
         if off and off.error:
             outcome.reasons.append(f"official-text check unavailable ({off.error}): no official evidence used")
+        if net and net.stale:
+            outcome.reasons.append(f"web coverage not counted as support: {net.stale}")
         if net and net.error:
             outcome.reasons.append(f"web news search unavailable ({net.error}): no web evidence used")
         if judgement and judgement.fallback:

@@ -16,6 +16,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
+import re
+
 import httpx
 
 from ..config import Config
@@ -49,6 +51,11 @@ class WebResult:
     supporting: list[str] = field(default_factory=list)  # distinct trusted outlets that report it as fact
     debunking: list[str] = field(default_factory=list)   # distinct trusted outlets or fact-checkers that debunk it
     error: str = ""
+    stale: str = ""                                       # why agreeing coverage was not allowed to support the claim (old news worded as new)
+
+
+def _worded_as_now(text: str, cfg: Config) -> bool:
+    return any(re.search(r"(?<!\w)" + re.escape(t.casefold()) + r"(?!\w)", text.casefold()) for t in cfg.runtime.report.recent_terms)
 
 
 def _clean(text: str) -> str:
@@ -121,6 +128,12 @@ def check_web(client: GeminiClient, cfg: Config, claim_text: str, http: httpx.Cl
     con_outlets = {_norm(h.outlet): h.outlet for h, t in con if t == TIER_TRUSTED}
     fact_check_debunk = any(is_fact_checker(h.outlet, cfg) for h, t in con if t == TIER_TRUSTED)
     support_ok = len(pro_outlets) >= s.min_outlets_support
+    if support_ok and _worded_as_now(claim_text, cfg):
+        newest = max((h.published_at for h, t in pro if t == TIER_TRUSTED and h.published_at), default=None)
+        if newest is None or (now - newest).days > cfg.runtime.report.stale_days:
+            support_ok = False                         # coverage of an old event cannot confirm "tonight": found by test row r06 (2016 demonetisation worded as new)
+            out.stale = ("the claim is worded as happening now, but the newest agreeing coverage is "
+                         + ("undated" if newest is None else f"dated {newest.date().isoformat()}") + ": it may be an old story shared as new, so it is not counted as support")
     debunk_ok = fact_check_debunk or len(con_outlets) >= s.min_outlets_debunk
     out.supporting = sorted(pro_outlets.values()) if support_ok else []
     out.debunking = sorted(con_outlets.values()) if debunk_ok else []
