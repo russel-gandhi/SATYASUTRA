@@ -110,9 +110,14 @@ def test_a_failed_extraction_is_an_error_event_with_the_class_only_and_writes_no
     assert "boom" not in events[-1].model_dump_json() and run.outcome is None and ledger.head() is None
 
 
-def test_a_model_at_its_quota_is_a_model_busy_event_so_the_page_can_say_try_again(tmp_path):
-    events, run, ledger = run_graph(tmp_path, Deps(extraction_status="failed", reason="QuotaExhausted: daily quota used up"))
+def test_a_model_at_its_request_limit_is_a_model_busy_event_so_the_page_can_say_try_again(tmp_path):
+    events, run, ledger = run_graph(tmp_path, Deps(extraction_status="failed", reason="RateLimited: HTTP 429, retry delay 30"))
     assert events[-1].kind == "error" and events[-1].data["type"] == "ModelBusy" and run.outcome is None and ledger.head() is None
+
+
+def test_a_used_up_daily_allowance_is_its_own_event_class_so_the_page_does_not_say_wait_a_minute(tmp_path):
+    events, run, ledger = run_graph(tmp_path, Deps(extraction_status="failed", reason="QuotaExhausted: daily quota used up"))
+    assert events[-1].kind == "error" and events[-1].data["type"] == "ModelDailyLimit" and run.outcome is None and ledger.head() is None
 
 
 def test_a_registry_outage_is_an_error_event_not_a_guess(tmp_path):

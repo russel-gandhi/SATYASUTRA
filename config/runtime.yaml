@@ -60,6 +60,8 @@ verify:
   cache_ttl_decided_s: 21600
   cache_ttl_undecided_s: 900
   judge_max_reviews: 10        # one Gemini call per claim covers up to this many reviews
+  busy_message: "The language model is at its request limit or unreachable right now, so nothing was checked and nothing was guessed. Please try again in about a minute."
+  daily_limit_message: "The language model's daily allowance for this service is used up, so nothing was checked and nothing was guessed. Waiting a minute will not help: try again after the allowance resets, or tell whoever runs this service."
 
 provenance:
   db_path: data/provenance.sqlite3

@@ -437,6 +437,8 @@ class VerifySettings(_Strict):
     cache_ttl_decided_s: float = Field(gt=0)     # how long a decided verdict (REFUTED, SUPPORTED, MISSING_CONTEXT) is served from cache
     cache_ttl_undecided_s: float = Field(gt=0)   # UNVERIFIABLE_YET and no-claim results expire sooner: new fact-checks appear
     judge_max_reviews: int = Field(gt=0)         # reviews per claim sent to the same-claim judge, in one call
+    busy_message: str                            # said when the model is at its request limit or unreachable: waiting helps
+    daily_limit_message: str                     # said when the key's daily allowance is used up: waiting a minute does not help
 
 
 class RuntimeFile(_Strict):

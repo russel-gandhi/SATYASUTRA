@@ -125,12 +125,25 @@ class TelegramBot:
             return None
         return plan if plan.get("intent") == "intimate_images" else None
 
+    def verify_failed(self, reply: httpx.Response) -> str:
+        """The API could not check the message. Say that, in the API's own words when it is the model at its limit; never say no claim was found."""
+        try:
+            detail = reply.json().get("detail")
+        except (ValueError, AttributeError):
+            detail = None
+        if reply.status_code == httpx.codes.SERVICE_UNAVAILABLE and isinstance(detail, str) and detail:
+            return detail
+        return self.s.messages["error"]
+
     def check_text(self, text: str, chat: int | None = None) -> str:
         plan0 = self.private_plan(text)
         if plan0:
             self.enter_help(chat)
             return self.help_reply(plan0) + "\n\n" + self.s.messages["guided_offer"]
-        body = self.local.post("/verify", json={"text": text}).json()
+        reply = self.local.post("/verify", json={"text": text})
+        if reply.status_code != httpx.codes.OK:
+            return self.verify_failed(reply)
+        body = reply.json()
         out = format_claims(body, self.s.labels, self.s.messages)
         for c in body.get("claims", []):
             if c["label"] == "UNVERIFIABLE_YET":                       # no fact-checker has covered it: say whether the news has

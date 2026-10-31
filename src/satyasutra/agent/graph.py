@@ -42,7 +42,12 @@ class ModelBusy(SourceError):
     """The language model is out of quota or unreachable on every configured model: the run stops and says so, it does not guess."""
 
 
+class ModelDailyLimit(ModelBusy):
+    """The key's daily allowance is used up. Waiting a minute does not help, so this is its own class and the pages say something different."""
+
+
 BUSY_REASONS = ("QuotaExhausted", "RateLimited", "Unreachable")
+DAILY_REASON = "QuotaExhausted"          # the client raises this only when the provider says the per-day allowance is used up
 
 
 class AgentState(TypedDict, total=False):
@@ -84,7 +89,7 @@ def build_claim_agent(
     def extract_node(state: AgentState) -> dict:
         ex = extract(state["post"])
         if ex.status == "failed" and ex.reason.startswith(BUSY_REASONS):
-            raise ModelBusy("gemini_llm", ex.reason)
+            raise (ModelDailyLimit if ex.reason.startswith(DAILY_REASON) else ModelBusy)("gemini_llm", ex.reason)
         if ex.status in ("blocked", "failed"):
             raise ExtractionFailed("gemini_llm", f"claim extraction {ex.status}: {ex.reason}")
         summary = f"{len(ex.claims)} checkable claim(s), {len(ex.non_claims)} not checkable ({ex.status})"
