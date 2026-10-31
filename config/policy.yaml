@@ -1,6 +1,8 @@
 # The gate: what the agent may touch and how much (Bible D16, D17). Plain data, enforced by plain code.
 allowed_domains:
   - pib.gov.in
+  - www.rbi.org.in
+  - www.sebi.gov.in
   - mausam.imd.gov.in
   - api.data.gov.in
   - factchecktools.googleapis.com

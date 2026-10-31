@@ -18,11 +18,29 @@ sources:
     tier: 4
     cache_ttl_s: 0
 
+  - id: rbi_press
+    role: official, press releases
+    description: Reserve Bank of India press-release RSS (full text in the feed)
+    probe_url: https://www.rbi.org.in/pressreleases_rss.xml
+    tier: 1
+    rate_limit_per_min: 6
+    cache_ttl_s: 900
+    note: probed 2026-10-31, 200 with our descriptive User-Agent; replaces PIB as the official-text source
+
+  - id: sebi_feed
+    role: official, circulars and press releases
+    description: SEBI RSS (titles only)
+    probe_url: https://www.sebi.gov.in/sebirss.xml
+    tier: 1
+    rate_limit_per_min: 6
+    cache_ttl_s: 900
+
   - id: pib
     role: official
     description: Press Information Bureau, Government of India
     probe_url: https://pib.gov.in/
     tier: 1
+    note: probed 2026-10-31, HTTP 403 for robots.txt and every page with our descriptive User-Agent (a bot wall); we do not disguise the client, so PIB is not used. Same for mohfw.gov.in, pmindia.gov.in, cybercrime.gov.in
     rate_limit_per_min: 30
     cache_ttl_s: 900
 

@@ -105,3 +105,22 @@ knowledge_graph:
   timeout_s: 15
   max_entities: 5
   name_max_chars: 80
+
+official:
+  db_path: data/official.sqlite3
+  timeout_s: 20
+  refresh_s: 900
+  max_items_per_feed: 30
+  max_passage_chars: 1500
+  max_results: 5
+  min_token_chars: 3
+  contrast_rel_tol: 0.0001
+  feeds:
+    - id: rbi_press
+      publisher: Reserve Bank of India
+      url: https://www.rbi.org.in/pressreleases_rss.xml
+      tier: 1
+    - id: sebi_feed
+      publisher: Securities and Exchange Board of India
+      url: https://www.sebi.gov.in/sebirss.xml
+      tier: 1

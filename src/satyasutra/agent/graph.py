@@ -1,9 +1,10 @@
 """The claim agent as a LangGraph: each step is a node, each tool use is reported, and the run can stop early.
 
-    read_post -> extract -> (no claim? stop) -> registry + ground (in parallel) -> judge -> decide -> done
+    read_post -> extract -> (no claim? stop) -> registry + official + ground (in parallel) -> judge -> decide -> done
 
   extract   Gemini reads the post and lists its checkable claims (quotes must appear verbatim).
   registry  the Google Fact Check API: what fact-checkers have said about similar claims.
+  official  Tier 1 official text (RBI, SEBI feeds): a different number for the same quantity is a contradiction (claims/contrast.py).
   ground    Gemini names the entities in each claim and Wikidata resolves them; context only, never evidence.
   judge     Gemini says whether each review covers the same claim, the opposite or a different one.
   decide    plain rules map rating and relation to a label; one ledger row per verdict.
@@ -20,7 +21,7 @@ from typing import Annotated, Any, Callable, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
-from ..claims import ExtractionResult, Grounded, Judgements
+from ..claims import ExtractionResult, Grounded, Judgements, OfficialResult
 from ..claims.rules import decide
 from ..config import Config
 from ..errors import SourceError
@@ -29,7 +30,7 @@ from ..pipeline import ClaimResult, VerifyOutcome, record_verdict
 from ..schemas import Post
 from ..sources import FactCheckResult
 
-NODES = ("read_post", "extract", "registry", "ground", "judge", "decide")
+NODES = ("read_post", "extract", "registry", "official", "ground", "judge", "decide")
 
 
 class ExtractionFailed(SourceError):
@@ -43,6 +44,7 @@ class AgentState(TypedDict, total=False):
     extraction: ExtractionResult
     found: dict[str, FactCheckResult]
     grounded: dict[str, Grounded]
+    official: dict[str, OfficialResult]
     judged: dict[str, Judgements]
     tool_calls: Annotated[list, operator.add]       # registry and ground run in parallel and both report tools, so writes are merged
 
@@ -63,6 +65,7 @@ def build_claim_agent(
     judge: Callable[[str, list], Judgements] | None,
     ground: Callable[[str], Grounded] | None,
     run: AgentRun,
+    official: Callable[[str], OfficialResult] | None = None,
 ) -> Any:
     def read_post(state: AgentState) -> dict:
         post = make_post(state["text"])
@@ -76,7 +79,7 @@ def build_claim_agent(
         return {"extraction": ex, "tool_calls": [{"name": "gemini: extract claims", "summary": summary}]}
 
     def after_extract(state: AgentState) -> list[str]:
-        return ["registry", "ground"] if state["extraction"].claims else [END]
+        return ["registry", *(["official"] if official else []), "ground"] if state["extraction"].claims else [END]
 
     def registry(state: AgentState) -> dict:
         found, calls = {}, []
@@ -84,6 +87,15 @@ def build_claim_agent(
             found[claim.id] = lookup(claim.text_en, claim.lang)
             calls.append({"name": "fact-check registry", "summary": f"{len(found[claim.id].evidence)} review(s) of similar claims"})
         return {"found": found, "tool_calls": calls}
+
+    def official_node(state: AgentState) -> dict:
+        results, calls = {}, []
+        for claim in state["extraction"].claims:
+            r = official(claim.text_en)
+            results[claim.id] = r
+            suffix = f" (failed: {r.error})" if r.error else ""
+            calls.append({"name": "official text (RBI, SEBI)", "summary": f"{len(r.passages)} passage(s) retrieved, {len(r.contrast)} contradiction(s){suffix}"})
+        return {"official": results, "tool_calls": calls}
 
     def ground_node(state: AgentState) -> dict:
         grounded, calls = {}, []
@@ -111,7 +123,10 @@ def build_claim_agent(
         for claim in ex.claims:
             found = state["found"][claim.id]
             j = state.get("judged", {}).get(claim.id)
-            outcome = decide(claim, found.evidence, cfg, judged=j.relations if j else None)
+            off = state.get("official", {}).get(claim.id)
+            outcome = decide(claim, [*found.evidence, *(off.contrast if off else [])], cfg, judged=j.relations if j else None)
+            if off and off.error:
+                outcome.reasons.append(f"official-text check unavailable ({off.error}): no official evidence used")
             if j and j.error:
                 outcome.reasons.append(f"same-claim judge unavailable ({j.error}): strict word-overlap rule used")
             seq = record_verdict(cfg, ledger, claim, outcome, ex, j)
@@ -124,13 +139,14 @@ def build_claim_agent(
     g.add_node("read_post", read_post)
     g.add_node("extract", extract_node)
     g.add_node("registry", registry)
+    g.add_node("official", official_node)
     g.add_node("ground", ground_node)
     g.add_node("judge", judge_node)
     g.add_node("decide", decide_node)
     g.add_edge(START, "read_post")
     g.add_edge("read_post", "extract")
-    g.add_conditional_edges("extract", after_extract, ["registry", "ground", END])
-    g.add_edge(["registry", "ground"], "judge")
+    g.add_conditional_edges("extract", after_extract, ["registry", "official", "ground", END])
+    g.add_edge(["registry", *(["official"] if official else []), "ground"], "judge")
     g.add_edge("judge", "decide")
     g.add_edge("decide", END)
     return g.compile()

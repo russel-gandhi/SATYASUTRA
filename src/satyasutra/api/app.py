@@ -28,7 +28,7 @@ from ..media import check_media, forensic_scores
 from ..video import check_video
 from ..provenance import ImageIndex
 from ..agent.graph import AgentRun, build_claim_agent
-from ..claims import ExtractionResult, Grounded, Judgements, extract_claims, ground_entities, judge_reviews
+from ..claims import ExtractionResult, Grounded, Judgements, OfficialResult, check_official, extract_claims, ground_entities, judge_reviews
 from ..errors import ConfigError, SourceError
 from ..ingest import author_salt, hash_author
 from ..ledger import LedgerStore, SQLiteLedgerStore
@@ -39,6 +39,7 @@ from ..schemas.core import sha256_text
 from ..sources import FactCheckClient, FactCheckResult, ProbeResult, probe_all
 from ..sources import WikidataClient
 from ..sources.bluesky import PostNotFound, fetch_post
+from ..sources.index import OfficialIndex
 from ..verdict_cache import VerdictCache, mark
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -70,6 +71,7 @@ def create_app(
     escalator: Escalator | None = None,
     judge: Callable[[str, list], Judgements] | None = None,
     ground: Callable[[str], Grounded] | None = None,
+    official: Callable[[str], OfficialResult] | None = None,
     analyse_image: Callable[[Config, bytes], dict] = forensic_scores,
     image_index: ImageIndex | None = None,
 ) -> FastAPI:
@@ -126,6 +128,11 @@ def create_app(
         return WikidataClient(cfg, TTLCache(_path(cfg.runtime.cache_db_path)))
 
     do_ground = ground or ((lambda text: ground_entities(gemini(), cfg, text, wikidata().search)) if extract is None else None)
+    @cache
+    def official_index() -> OfficialIndex:
+        return OfficialIndex(_path(cfg.runtime.official.db_path))
+
+    do_official = official or ((lambda text: check_official(gemini(), cfg, official_index(), text)) if extract is None else None)
     do_lookup = lookup or (lambda text, lang: factcheck().search(text, lang))
     do_fetch = fetch or (lambda uri: fetch_post(uri, cfg, salt))
 
@@ -259,7 +266,7 @@ def create_app(
         if not clean:
             raise HTTPException(status_code=422, detail="text must not be blank")
         job, run = uuid.uuid4().hex[:16], AgentRun()
-        graph = build_claim_agent(cfg, ledger, text_post, do_extract, do_lookup, do_judge, do_ground, run)
+        graph = build_claim_agent(cfg, ledger, text_post, do_extract, do_lookup, do_judge, do_ground, run, do_official)
 
         async def body():
             app.state.active_traces += 1

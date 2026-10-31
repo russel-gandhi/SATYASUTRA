@@ -79,6 +79,14 @@ forensics\venv311\Scripts\python forensics\service.py --port 8100          # Tru
 - Not done: Telegram bot (needs a fresh token), escalation never fired live, TruFor false-alarm rate on real social-media images
   unknown, README with a real-vs-roadmap table. `tests/unit/test_trace_sse.py::test_leaving_mid_run...` failed once under full-suite load and
   passes alone (timing).
+- Official text and contrast refutation (friend's map A1, A2): `sources/official.py` + `sources/index.py` fetch the RBI press-release and SEBI
+  RSS feeds (Tier 1, `runtime.official.feeds`, host gate `policy.allowed_domains`) into an SQLite FTS5 index (`data/official.sqlite3`, refreshed
+  when older than `refresh_s`). **PIB, MoHFW, PMIndia and cybercrime.gov.in answer 403 to our honest User-Agent (even robots.txt); we do not
+  disguise the client, so they are not used.** `claims/contrast.py`: Gemini only says same subject / same quantity and quotes the two number
+  spans; code requires both spans verbatim in their texts, both parse as one number, and the numbers differ beyond `contrast_rel_tol`; then
+  Evidence route `contrast` (role contradicts, tier of the passage) and `rules.decide` gives REFUTED, medium. A matching number never gives SUPPORTED.
+  Live check 2026-10-31: a claim with "50,000 Crore" against an RBI notice of "29,900 Crore" refuted; the correct number and an unrelated
+  number did not (one claim each, not a measured rate). Only the 10 latest RBI releases and 30 SEBI titles are indexed, so most claims retrieve nothing relevant.
 - Origin and spread: clusters keep their earliest `members_kept` posts (in memory, forgotten when a cluster goes idle, not persisted);
   `fastclock/trace.py` builds first post, spread timeline, wording versions with word diffs; `GET /fastclock/cluster/{id}`,
   `GET /fastclock/match?text=` (a pasted claim matches a live cluster of at least `match_min_posts` posts); UI trace panel. Accounts are

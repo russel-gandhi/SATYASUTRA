@@ -214,6 +214,26 @@ class ProvenanceSettings(_Strict):
     commons: CommonsSettings
 
 
+class OfficialFeed(_Strict):
+    id: str                                  # becomes the evidence source_id
+    publisher: str
+    url: str                                 # an RSS feed; its host must be in policy allowed_domains
+    tier: int = Field(ge=1, le=4)
+    lang: str = "en"
+
+
+class OfficialSettings(_Strict):
+    db_path: str                             # SQLite FTS5 index of official passages
+    feeds: list[OfficialFeed]
+    timeout_s: float = Field(gt=0)
+    refresh_s: float = Field(gt=0)           # the feeds are fetched again when the index is older than this
+    max_items_per_feed: int = Field(gt=0)
+    max_passage_chars: int = Field(gt=0)     # a passage is cut to this length before indexing
+    max_results: int = Field(gt=0)           # passages returned for one claim
+    min_token_chars: int = Field(gt=0)       # shorter query words are ignored
+    contrast_rel_tol: float = Field(ge=0)    # two numbers within this relative difference are the same (policy choice: rounding)
+
+
 class KnowledgeGraphSettings(_Strict):
     endpoint: str                            # Wikidata's MediaWiki API
     entity_url_template: str                 # a human page for an entity id, with {id}
@@ -262,6 +282,7 @@ class RuntimeFile(_Strict):
     escalation: EscalationSettings
     forensics: ForensicsSettings
     knowledge_graph: KnowledgeGraphSettings
+    official: OfficialSettings
 
 
 class Config(_Strict):

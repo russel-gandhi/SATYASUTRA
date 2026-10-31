@@ -87,7 +87,12 @@ def decide(
     for ev in evidence:
         rel = relevance(claim.text_en, ev.reviewed_claim) if ev.reviewed_claim else 0.0
         stance = classify_rating(ev.rating, config) if ev.rating else "unmapped"
-        if ev.route != "factcheck":
+        if ev.route == "contrast":
+            ok = ev.tier in TRUSTED_TIERS and ev.role == "contradicts"
+            assessments.append(Assessment(ev, 1.0, "refutes" if ok else "unmapped", ok,
+                                          f"official text from {ev.publisher or ev.source_id} gives a different number: {ev.contrast_claim}" if ok
+                                          else f"contrast evidence from tier {ev.tier} cannot decide"))
+        elif ev.route != "factcheck":
             assessments.append(Assessment(ev, rel, stance, False, f"route {ev.route!r} is not handled by v0 rules"))
         elif ev.tier not in TRUSTED_TIERS:
             assessments.append(Assessment(ev, rel, stance, False, f"tier {ev.tier} cannot decide (only tier 1 or 2)"))
@@ -131,7 +136,7 @@ def decide(
     elif refutes:
         label, deciders = "REFUTED", refutes
         cited = [_role(a, "contradicts") for a in refutes]
-        reasons.append("trusted review of the same claim rates it false")
+        reasons.append("trusted source contradicts the claim")
     else:
         if used:
             cited = [_role(a, "context") for a in used]
