@@ -257,6 +257,15 @@ class NewsSettings(_Strict):
     stopwords: list[str]
 
 
+class AudioSpoofSettings(_Strict):
+    model_path: str                          # the W2V2-AASIST ONNX file (git-ignored; see CLAUDE.md for the download and licence)
+    window_samples: int = Field(gt=0)        # the model reads exactly this many 16 kHz samples per window
+    max_windows: int = Field(gt=0)           # windows scored per clip, spread evenly across it
+    threshold: str                           # name of the cut in thresholds.yaml: windows scoring below it look synthetic
+    min_seconds: float = Field(gt=0)         # shorter clips are refused: one window of padding says nothing
+    providers: list[str]
+
+
 class VoiceSettings(_Strict):
     service_url: str                         # the GPU service (forensics/service.py); when it is down the clip is transcribed on the CPU, slowly
     service_timeout_s: float = Field(gt=0)
@@ -339,6 +348,7 @@ class RuntimeFile(_Strict):
     knowledge_graph: KnowledgeGraphSettings
     official: OfficialSettings
     voice: VoiceSettings
+    audio_spoof: AudioSpoofSettings
     news: NewsSettings
     telegram: TelegramSettings
     explain: ExplainSettings

@@ -42,6 +42,7 @@ from ..sources.bluesky import PostNotFound, fetch_post
 from ..act import build_pack, build_plan, load_actions
 from ..scam import check_links, load_domains
 from ..voice import Transcriber, Transcript, VoiceError
+from ..audio import SpoofDetector
 from ..sources.index import OfficialIndex
 from ..sources.news import check_news, refresh_news_if_stale
 from ..verdict_cache import VerdictCache, mark
@@ -83,6 +84,7 @@ def create_app(
     ground: Callable[[str], Grounded] | None = None,
     official: Callable[[str], OfficialResult] | None = None,
     transcribe: Callable[[bytes], Transcript] | None = None,
+    audio_check_fn: Callable[[bytes], object] | None = None,
     analyse_image: Callable[[Config, bytes], dict] = forensic_scores,
     image_index: ImageIndex | None = None,
 ) -> FastAPI:
@@ -252,6 +254,23 @@ def create_app(
                               "published_at": h.published_at.isoformat() if h.published_at else None} for h in r.hits],
                     "refreshed": refreshed}
         return await run_in_threadpool(run)
+
+    @cache
+    def spoof() -> SpoofDetector:
+        return SpoofDetector(cfg, ROOT)
+
+    @app.post("/audio/check")
+    async def audio_check(request: Request) -> dict:
+        """Raw audio bytes in; per-window scores from a pretrained anti-spoofing model. Experimental: with no calibrated cut it gives no label."""
+        data = await request.body()
+        if not data or len(data) > cfg.runtime.voice.max_bytes:
+            raise HTTPException(status_code=422, detail=f"send 1 to {cfg.runtime.voice.max_bytes} bytes of audio")
+        try:
+            r = await run_in_threadpool((audio_check_fn or spoof().check), data)
+        except VoiceError as exc:
+            raise HTTPException(status_code=422, detail=str(exc))
+        return {"label": r.label, "reasons": r.reasons, "scores": r.scores, "cut": None if r.cut != r.cut else r.cut, "seconds": r.seconds,
+                "lowest": r.lowest, "flagged_windows": r.flagged_windows, "note": r.note}
 
     @app.post("/act/plan")
     def act_plan(req: ActRequest) -> dict:

@@ -202,3 +202,12 @@ news:
     - {id: news_bbc_india, publisher: BBC News (India), url: "https://feeds.bbci.co.uk/news/world/asia/india/rss.xml", hosts: [bbc.com, bbc.co.uk]}
     - {id: news_mint, publisher: Mint, url: "https://www.livemint.com/rss/news", hosts: [livemint.com]}
     - {id: news_al_jazeera, publisher: Al Jazeera, url: "https://www.aljazeera.com/xml/rss/all.xml", hosts: [aljazeera.com]}
+
+audio_spoof:
+  model_path: models/w2v2-aasist/w2v2-aasist.onnx
+  window_samples: 64600
+  max_windows: 6
+  threshold: audio_bonafide_logit
+  min_seconds: 2
+  providers: [CPUExecutionProvider]
+

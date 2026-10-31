@@ -92,6 +92,10 @@ forensics\venv311\Scripts\python forensics\service.py --port 8100          # Tru
   was assassinated' matched a bridge-opening headline before). Two readings only, reported (links, with the caution that outlets also report rumours) or
   not found (with how far back we looked; a signal, not proof). It never changes a verdict. UI and the Telegram bot show it for UNVERIFIABLE_YET claims.
   `min_coverage` 0.6 is a display rule, not calibrated; checked on 8 live headlines and paraphrases, not on a labelled set. Outlets' terms of use were not read; only headlines and links are shown.
+- Audio authenticity (`audio/spoof.py`, `POST /audio/check`): W2V2-AASIST ONNX (MIT, 1.26 GB, `models/w2v2-aasist/`, git-ignored, from Hugging Face
+  SpeechAntiSpoofingBenchmarks/W2V2-AASIST) runs on CPU, 6 windows of 4 s. **It failed our test** (`docs/calibration/audio_2026-10-31.txt`): real recordings
+  and modern TTS (Gemini TTS) were not separated, so there is no cut in thresholds.yaml and the route returns scores with label INCONCLUSIVE and says so.
+  The test set was weak (old radio recordings as 'real', no Indian-language clones). Do not present voice authenticity as working.
 - Not done: (Telegram bot done, see above) (needs a fresh token), escalation never fired live, TruFor false-alarm rate on real social-media images
   unknown, README with a real-vs-roadmap table. `tests/unit/test_trace_sse.py::test_leaving_mid_run...` failed once under full-suite load and
   passes alone (timing).
