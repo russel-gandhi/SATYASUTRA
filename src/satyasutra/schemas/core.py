@@ -82,7 +82,7 @@ class Claim(_Model):
 
 class Evidence(_Model):
     role: Literal["supports", "contradicts", "context", "earlier_appearance"]
-    route: Literal["verifier", "factcheck", "contrast", "nli", "kg", "provenance", "detector"]
+    route: Literal["verifier", "factcheck", "contrast", "nli", "kg", "provenance", "detector", "web"]
     source_id: str
     url: str
     fetched_at: datetime

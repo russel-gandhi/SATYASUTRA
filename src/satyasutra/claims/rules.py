@@ -94,6 +94,11 @@ def _decide(
             assessments.append(Assessment(ev, 1.0, "refutes" if ok else "unmapped", ok,
                                           f"official text from {ev.publisher or ev.source_id} gives a different number: {ev.contrast_claim}" if ok
                                           else f"contrast evidence from tier {ev.tier} cannot decide"))
+        elif ev.route == "web":
+            ok = ev.tier in TRUSTED_TIERS and ev.role in ("supports", "contradicts")
+            what = "reports it as fact" if ev.role == "supports" else "debunks it"
+            assessments.append(Assessment(ev, 1.0, ("supports" if ev.role == "supports" else "refutes") if ok else "unmapped", ok,
+                                          f"{ev.publisher} {what} (news search)" if ok else f"{ev.publisher}: shown as context only (tier {ev.tier} or not enough outlets agree)"))
         elif ev.route != "factcheck":
             assessments.append(Assessment(ev, rel, stance, False, f"route {ev.route!r} is not handled by v0 rules"))
         elif ev.tier not in TRUSTED_TIERS:
@@ -134,7 +139,7 @@ def _decide(
     elif supports:
         label, deciders = "SUPPORTED", supports
         cited = [_role(a, "supports") for a in supports]
-        reasons.append("trusted review of the same claim rates it true")
+        reasons.append("trusted review of the same claim rates it true" if any(a.evidence.route != "web" for a in supports) else "several reputable outlets report it as fact")
     elif refutes:
         label, deciders = "REFUTED", refutes
         cited = [_role(a, "contradicts") for a in refutes]
@@ -155,6 +160,8 @@ def _decide(
 
     publishers = {a.evidence.publisher for a in deciders}
     band = "high" if len(publishers) >= rules.min_publishers_for_high else ("medium" if deciders else "low")
+    if band == "high" and deciders and all(a.evidence.route == "web" and a.stance == "supports" for a in deciders):
+        band = "medium"                                         # outlets copy each other and the wires: news-only support is never 'high'
 
     verdict = Verdict(
         id=sha256_text("|".join([claim.id, label, *sorted(e.passage_sha256 for e in cited)]))[:16],

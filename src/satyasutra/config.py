@@ -259,6 +259,22 @@ class NewsSettings(_Strict):
     stopwords: list[str]
 
 
+class WebSettings(_Strict):
+    endpoint: str                            # a news-search RSS feed: query in, headlines with outlet and date out
+    language: str
+    region: str
+    edition: str
+    timeout_s: float = Field(gt=0)
+    max_query_chars: int = Field(gt=0)
+    max_hits_read: int = Field(gt=0)         # headlines the judge reads per claim
+    max_cited: int = Field(gt=0)             # headlines shown as context when they do not decide
+    title_chars: int = Field(gt=0)
+    min_outlets_support: int = Field(gt=0)   # distinct reputable outlets that must report it as fact before it counts as support
+    min_outlets_debunk: int = Field(gt=0)    # distinct reputable outlets that must debunk it when none of them is a fact-checker
+    reputable_outlets: list[str]
+    fact_checkers: list[str]
+
+
 class AudioSpoofSettings(_Strict):
     service_url: str                         # the GPU service that runs the synthetic-speech classifier (POST /voiceclone)
     service_timeout_s: float = Field(gt=0)
@@ -377,6 +393,7 @@ class RuntimeFile(_Strict):
     notice: NoticeSettings
     officials: OfficialsSettings
     audio_spoof: AudioSpoofSettings
+    web: WebSettings
     news: NewsSettings
     telegram: TelegramSettings
     explain: ExplainSettings

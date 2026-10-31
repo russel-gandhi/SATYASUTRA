@@ -328,12 +328,14 @@ function renderClaim(c) {
   box.append(head, el("div", "q", "“" + c.text + "”"));
   if (c.quote && c.quote !== c.text) box.append(el("div", "small", "original: " + c.quote));
   box.append(el("div", "small", SURE[c.confidence_band] || ""));
-  if (advice) box.append(el("div", "advice", advice));
+  const viaNews = c.label === "SUPPORTED" && c.citations && c.citations.length && c.citations.every((e) => e.route === "web");
+  if (advice) box.append(el("div", "advice", viaNews ? "Several reputable news outlets report this as fact. News can repeat itself and can be wrong, so this is a good sign, not a guarantee." : advice));
 
   const found = el("ul", "found"); box.append(el("div", "sect", "What we found"), found);
   if (c.citations && c.citations.length) {
+    c.citations.filter((e) => e.route === "web").forEach((e) => { const li = el("li"); const a = el("a", "", e.publisher); a.href = e.url; a.target = "_blank"; a.rel = "noopener"; li.append(a, ": “" + e.reviewed_claim + "” " + (e.reviewed_at ? "(" + e.reviewed_at.slice(0, 10) + ") " : "") + (e.role === "supports" ? "– reports it as fact." : "– says it is false.")); found.append(li); });
     const groups = new Map();
-    c.citations.forEach((e) => { const k = (e.publisher || "") + "|" + (e.rating || ""); if (!groups.has(k)) groups.set(k, { e, n: 0 }); groups.get(k).n++; });
+    c.citations.filter((e) => e.route !== "web").forEach((e) => { const k = (e.publisher || "") + "|" + (e.rating || ""); if (!groups.has(k)) groups.set(k, { e, n: 0 }); groups.get(k).n++; });
     groups.forEach(({ e, n }) => { const li = el("li"); const a = el("a", "", e.publisher || "A fact-checker"); a.href = e.url; a.target = "_blank"; a.rel = "noopener"; li.append(a, " rated this claim " + (e.rating ? "“" + e.rating + "”" : "(see the link)") + (n > 1 ? " (" + n + " reviews)" : "") + "."); found.append(li); });
   } else found.append(el("li", "", "No fact-checker we search has covered this claim."));
   const news = el("li"); found.append(news); if (c.label === "UNVERIFIABLE_YET" || c.label === "NOT_A_CLAIM") newsLine(c.text, news); else news.remove();
