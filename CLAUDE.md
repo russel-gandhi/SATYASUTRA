@@ -96,6 +96,10 @@ forensics\venv311\Scripts\python forensics\service.py --port 8100          # Tru
   SpeechAntiSpoofingBenchmarks/W2V2-AASIST) runs on CPU, 6 windows of 4 s. **It failed our test** (`docs/calibration/audio_2026-10-31.txt`): real recordings
   and modern TTS (Gemini TTS) were not separated, so there is no cut in thresholds.yaml and the route returns scores with label INCONCLUSIVE and says so.
   The test set was weak (old radio recordings as 'real', no Indian-language clones). Do not present voice authenticity as working.
+- Correction cards (`card.py`, `config/cards.yaml`, `POST /card/spec`): text only (validated as CorrectionCard); the page draws a PNG on a canvas with the served
+  Noto Sans Devanagari (`/assets/fonts`, OFL) because Pillow here has no raqm. Only for REFUTED, SUPPORTED, MISSING_CONTEXT at medium or high confidence with an
+  https source; Hindi when the claim is Hindi (original quote shown). Never carries the original media. **The Hindi wording is ours and unreviewed by a native speaker.**
+- Video frames also get the AI-generated score; SYNTHETIC_SUSPECTED needs `forensics.video_ai_min_frames` (3) sampled frames over the cut (a policy choice, not calibrated).
 - Not done: (Telegram bot done, see above) (needs a fresh token), escalation never fired live, TruFor false-alarm rate on real social-media images
   unknown, README with a real-vs-roadmap table. `tests/unit/test_trace_sse.py::test_leaving_mid_run...` failed once under full-suite load and
   passes alone (timing).

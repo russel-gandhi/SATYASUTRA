@@ -16,6 +16,7 @@ from typing import Any, Callable
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, model_validator
 
 from .. import __version__
@@ -43,12 +44,17 @@ from ..act import build_pack, build_plan, load_actions
 from ..scam import check_links, load_domains
 from ..voice import Transcriber, Transcript, VoiceError
 from ..audio import SpoofDetector
+from ..card import build_card, load_cards
 from ..sources.index import OfficialIndex
 from ..sources.news import check_news, refresh_news_if_stale
 from ..verdict_cache import VerdictCache, mark
 
 ROOT = Path(__file__).resolve().parents[3]
 JOB_ID = r"^[A-Za-z0-9_-]+$"
+
+
+class CardRequest(BaseModel):
+    claim: dict
 
 
 class ActRequest(BaseModel):
@@ -172,6 +178,10 @@ def create_app(
         return Post(id=f"{settings.text_source_id}:{sha256_text(text)[:16]}", source_id=settings.text_source_id, url="",
                     author_hash=hash_author(salt, settings.text_source_id), text=text, posted_at=now, fetched_at=now)
 
+    fonts = ROOT / "assets" / "fonts"
+    if fonts.is_dir():                                                 # the Devanagari font for the correction card (OFL licence file sits beside it)
+        app.mount("/assets/fonts", StaticFiles(directory=fonts), name="fonts")
+
     @app.get("/", include_in_schema=False)
     def home() -> FileResponse:
         return FileResponse(ROOT / "ui" / "index.html", media_type="text/html")
@@ -272,6 +282,14 @@ def create_app(
         return {"label": r.label, "reasons": r.reasons, "scores": r.scores, "cut": None if r.cut != r.cut else r.cut, "seconds": r.seconds,
                 "lowest": r.lowest, "flagged_windows": r.flagged_windows, "note": r.note}
 
+    @app.post("/card/spec")
+    def card_spec(req: CardRequest) -> dict:
+        """The words of a shareable correction card for one decided claim (the page draws it). 409 when the verdict is not decided or not confident enough."""
+        card = build_card(req.claim, load_cards())
+        if card is None:
+            raise HTTPException(status_code=409, detail="a card is made only for a decided verdict (false, true or misleading) with medium or high confidence and a source link")
+        return card
+
     @app.post("/act/plan")
     def act_plan(req: ActRequest) -> dict:
         """The next steps for a forward, and a plain-text evidence pack the person takes to the reporting portal. Nothing is filed or sent."""
@@ -339,7 +357,7 @@ def create_app(
             raise HTTPException(status_code=503, detail=str(exc))
         return {
             "duration_s": result.duration_s, "label": result.label, "reasons": result.reasons, "forensics_available": result.forensics_available,
-            "frames": [{"index": f.index, "at_s": f.at_s, "score": f.score, "flagged": f.flagged, "thumb_jpeg_b64": f.thumb_jpeg_b64,
+            "frames": [{"index": f.index, "at_s": f.at_s, "score": f.score, "flagged": f.flagged, "ai_score": f.ai_score, "ai_flagged": f.ai_flagged, "thumb_jpeg_b64": f.thumb_jpeg_b64,
                         "matches": f.matches, "heatmap_png_b64": f.heatmap_png_b64, "note": f.note} for f in result.frames],
         }
 

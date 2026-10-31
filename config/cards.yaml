@@ -1,0 +1,35 @@
+# Correction cards (friend's map C2): what a shareable card says, in English and Hindi. A card is made only for a decided verdict with enough
+# confidence, carries the answer and a source link, and never the original image or video (Bible D47, I16).
+# The Hindi wording was written by us and has NOT been reviewed by a native Hindi speaker. Publisher ratings stay in the publisher's own words.
+eligible:
+  labels: [REFUTED, SUPPORTED, MISSING_CONTEXT]
+  bands: [medium, high]
+  quote_max_chars: 220                      # a long original quote is cut to this on the card
+
+languages:
+  en:
+    headline: {REFUTED: "FALSE", SUPPORTED: "TRUE", MISSING_CONTEXT: "MISLEADING: CONTEXT MISSING"}
+    sentence: "{publisher} checked this claim and rated it \"{rating}\"."
+    sentence_no_rating: "{publisher} checked this claim and found it {verdict}."
+    claim_label: "The claim"
+    source_label: "Source"
+    footer: "Share the correction, not the rumour."
+    ledger_label: "Checked by SATYASUTRA. Record #{seq}"
+    filename: "correction-card"
+  hi:
+    headline: {REFUTED: "झूठ", SUPPORTED: "सही", MISSING_CONTEXT: "अधूरी बात: संदर्भ गायब"}
+    sentence: "{publisher} ने इस दावे की जाँच की और इसे \"{rating}\" बताया।"
+    sentence_no_rating: "{publisher} ने इस दावे की जाँच की और इसे {verdict} पाया।"
+    claim_label: "दावा"
+    source_label: "स्रोत"
+    footer: "अफ़वाह नहीं, सच्चाई शेयर करें।"
+    ledger_label: "SATYASUTRA द्वारा जाँचा गया। रिकॉर्ड #{seq}"
+    filename: "correction-card-hi"
+  verdict_words:
+    en: {REFUTED: "false", SUPPORTED: "true", MISSING_CONTEXT: "missing context"}
+    hi: {REFUTED: "झूठ", SUPPORTED: "सही", MISSING_CONTEXT: "अधूरा"}
+
+colors:                                      # card background band per verdict (the page draws it; contrast against white text was checked by eye only)
+  REFUTED: "#b3261e"
+  SUPPORTED: "#1b6e3a"
+  MISSING_CONTEXT: "#9a5b00"

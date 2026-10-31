@@ -80,3 +80,14 @@ def test_route_returns_frames_with_heatmaps_and_rejects_bad_bodies(tmp_path):
     assert client.post("/video/check", content=b"").status_code == 422
     assert client.post("/video/check", content=b"nope").status_code == 422
     assert client.post("/video/check", content=b"0" * (c.runtime.forensics.max_video_bytes + 1)).status_code == 422
+
+
+def test_several_frames_over_the_ai_cut_make_the_video_synthetic_suspected_but_one_frame_does_not(tmp_path):
+    ai_cut = load_config(CONFIG).thresholds.thresholds[load_config(CONFIG).runtime.forensics.ai_threshold].value
+    def ai_scorer(ai_scores):
+        it = iter(ai_scores)
+        return lambda c, d: {"available": True, "score": 0.1, "ai_score": next(it), "heatmap_png_b64": "AAAA"}
+    many = check_video(cfg(video_frames=4), clip(tmp_path), ImageIndex(tmp_path / "i.sqlite3"), ai_scorer([ai_cut + 0.1, ai_cut + 0.2, ai_cut + 0.3, 0.0]))
+    assert many.label == "SYNTHETIC_SUSPECTED" and "3 of 4 sampled frames look AI-generated" in " ".join(many.reasons)
+    one = check_video(cfg(video_frames=4), clip(tmp_path), ImageIndex(tmp_path / "j.sqlite3"), ai_scorer([ai_cut + 0.1, 0.0, 0.0, 0.0]))
+    assert one.label == "INCONCLUSIVE" and "it takes 3 to raise a suspicion" in " ".join(one.reasons) and one.frames[0].ai_flagged

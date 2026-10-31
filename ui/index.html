@@ -260,6 +260,50 @@ async function newsLine(text, box) {
   } catch (_) { box.textContent = ""; }
 }
 
+let deva = null;
+function loadFont() {
+  if (!deva) { deva = new FontFace("NotoDeva", "url(/assets/fonts/NotoSansDevanagari.ttf)"); deva.load().then((f) => document.fonts.add(f)).catch(() => {}); }
+  return deva.loaded || Promise.resolve();
+}
+
+function wrap(ctx, text, maxW) {
+  const lines = []; let line = "";
+  text.split(/\s+/).forEach((w) => { const t = line ? line + " " + w : w; if (ctx.measureText(t).width > maxW && line) { lines.push(line); line = w; } else line = t; });
+  if (line) lines.push(line);
+  return lines;
+}
+
+async function drawCard(spec) {
+  await loadFont();
+  const W = 1080, pad = 64, font = (px, w) => (w || "") + " " + px + "px NotoDeva, system-ui, sans-serif";
+  const c = document.createElement("canvas"), ctx = c.getContext("2d"); c.width = W; c.height = 2000;
+  const blocks = [["claim_label", 30, "600"], ["claim", 44, ""], ["sentence", 38, ""], ["source", 30, ""]];
+  const measure = (text, px, w) => { ctx.font = font(px, w); return wrap(ctx, text, W - 2 * pad); };
+  const claimLines = measure(spec.claim, 44, ""), sentLines = measure(spec.sentence, 38, ""), srcLines = measure(spec.links[0].replace(/^https:\/\//, ""), 28, "");
+  const head = 190, height = head + 60 + 40 + claimLines.length * 58 + 50 + sentLines.length * 52 + 64 + 36 + srcLines.length * 40 + 60 + 50 + 80;
+  c.height = height; ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, height);
+  ctx.fillStyle = spec.color; ctx.fillRect(0, 0, W, head);
+  ctx.fillStyle = "#fff"; ctx.font = font(78, "700"); ctx.textBaseline = "middle"; ctx.fillText(spec.headline, pad, head / 2);
+  let y = head + 60; ctx.textBaseline = "alphabetic"; ctx.fillStyle = "#555"; ctx.font = font(28, "600"); ctx.fillText(spec.claim_label, pad, y);
+  y += 40; ctx.fillStyle = "#111"; ctx.font = font(44, ""); claimLines.forEach((l) => { y += 58; ctx.fillText(l, pad, y); });
+  y += 50; ctx.font = font(38, ""); sentLines.forEach((l) => { y += 52; ctx.fillText(l, pad, y); });
+  y += 64; ctx.fillStyle = "#555"; ctx.font = font(26, "600"); ctx.fillText(spec.source_label, pad, y);
+  ctx.fillStyle = "#0b57d0"; ctx.font = font(28, ""); srcLines.forEach((l) => { y += 40; ctx.fillText(l, pad, y); });
+  y += 60; ctx.fillStyle = "#111"; ctx.font = font(32, "700"); ctx.fillText(spec.footer, pad, y);
+  y += 50; ctx.fillStyle = "#777"; ctx.font = font(24, ""); ctx.fillText(spec.ledger, pad, y);
+  return c;
+}
+
+async function makeCard(claim, box) {
+  box.textContent = "Making the card...";
+  try {
+    const spec = await api("/card/spec", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ claim }) });
+    const canvas = await drawCard(spec); canvas.style.maxWidth = "100%"; canvas.style.border = "1px solid #8884"; canvas.style.borderRadius = "8px";
+    const dl = el("a", "", "Download the card (PNG)"); dl.href = "#"; dl.onclick = (e) => { e.preventDefault(); canvas.toBlob((b) => { const u = URL.createObjectURL(b), a = document.createElement("a"); a.href = u; a.download = spec.filename + ".png"; a.click(); setTimeout(() => URL.revokeObjectURL(u), 1000); }); };
+    box.replaceChildren(canvas, el("div"), dl, el("div", "small", "The card carries the answer and the source link, never the original image or video. " + (spec.lang === "hi" ? "The Hindi wording has not been reviewed by a native speaker." : "")));
+  } catch (e) { box.textContent = e.message; }
+}
+
 function renderClaim(c) {
   const box = el("div", "claim");
   const head = el("div"); head.append(el("span", "badge " + c.label, c.label.replaceAll("_", " ")), " ", el("span", "small", "confidence: " + c.confidence_band));
@@ -284,6 +328,9 @@ function renderClaim(c) {
     const u = el("ul");
     c.related.forEach((r) => { const li = el("li"); const a = el("a", "", (r.publisher || "source") + ": " + (r.rating || "")); a.href = r.url; a.target = "_blank"; a.rel = "noopener"; li.append(a, " ", el("span", "small", "match " + r.relevance + ". " + r.why_not_used)); u.append(li); });
     box.append(u);
+  }
+  if (["REFUTED", "SUPPORTED", "MISSING_CONTEXT"].includes(c.label) && ["medium", "high"].includes(c.confidence_band)) {
+    const cardBox = el("div", "small"); const b = el("button", "ghost toggle", "Make a shareable correction card"); b.onclick = () => makeCard(c, cardBox); box.append(b, cardBox);
   }
   if (c.explanation && c.explanation.method) box.append(explainClaim(c.explanation));
   const foot = el("div", "small"); const a = el("a", "", "ledger entry #" + c.ledger_seq); a.href = "/ledger/" + c.ledger_seq; a.target = "_blank"; foot.append(a);
@@ -389,7 +436,7 @@ async function checkVideo(f, out) {
       const box = el("div", "frame" + (fr.flagged ? " flag" : "")); const stage = el("div", "stage");
       if (fr.thumb_jpeg_b64) { const img = el("img"); img.src = "data:image/jpeg;base64," + fr.thumb_jpeg_b64; stage.append(img); }
       if (fr.heatmap_png_b64) { const h = el("img", "heat"); h.src = "data:image/png;base64," + fr.heatmap_png_b64; h.style.display = "none"; stage.append(h); heats.push(h); }
-      box.append(stage, el("div", "cap", fr.at_s.toFixed(1) + " s  " + (fr.score === null ? "no score" : "score " + fr.score.toFixed(2))));
+      box.append(stage, el("div", "cap", fr.at_s.toFixed(1) + " s  " + (fr.score === null ? "no score" : "edit " + fr.score.toFixed(2)) + (fr.ai_score != null ? ", AI " + fr.ai_score.toFixed(2) : "")));
       film.append(box);
     });
     out.append(film);

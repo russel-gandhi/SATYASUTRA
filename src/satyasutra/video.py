@@ -26,7 +26,8 @@ from .media import SCOPE_NOTE, forensic_scores
 from .provenance import BadImage, ImageIndex, fingerprint
 
 FFMPEG, FFPROBE = "ffmpeg", "ffprobe"
-VIDEO_SCOPE_NOTE = "Video deepfakes (face swaps, AI-generated video) are not detected: only editing inside the sampled frames is."
+VIDEO_SCOPE_NOTE = ("Video deepfakes are not detected as video: face swaps are not detected at all, and AI-generated video is only suspected when several sampled "
+                    "frames look AI-generated as still images.")
 COMPRESSION_NOTE = ("Video compression hides editing traces: in our test (scripts/video_live.py) a spliced frame that scored 1.00 as a still image scored 0.27 "
                     "after H.264 encoding, so a clean result here is weak evidence.")
 THUMB_QUALITY = 70
@@ -39,6 +40,8 @@ class FrameResult:
     score: float | None
     flagged: bool
     thumb_jpeg_b64: str
+    ai_score: float | None = None
+    ai_flagged: bool = False
     matches: list[dict] = field(default_factory=list)
     heatmap_png_b64: str | None = None
     note: str = ""
@@ -89,6 +92,7 @@ def _thumb(data: bytes, width: int) -> str:
 def check_video(cfg: Config, data: bytes, index: ImageIndex, analyse: Callable[[Config, bytes], dict] = forensic_scores) -> VideoResult:
     s = cfg.runtime.forensics
     cut_entry = cfg.thresholds.thresholds.get(s.threshold)
+    ai_entry = cfg.thresholds.thresholds.get(s.ai_threshold)
     match_cut = cfg.thresholds.thresholds["image_match_pdq_distance"].value
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         path = Path(tmp) / "upload"
@@ -109,8 +113,10 @@ def check_video(cfg: Config, data: bytes, index: ImageIndex, analyse: Callable[[
                 hits = index.nearest(fingerprint(jpg), match_cut, cfg.runtime.provenance.match_limit)
             except BadImage:
                 hits = []
+            ai = forensics.get("ai_score") if forensics.get("available") else None
             frames.append(FrameResult(
                 i, round(at, 2), score, bool(cut_entry and score is not None and score >= cut_entry.value), _thumb(jpg, s.thumb_width),
+                ai, bool(ai_entry and ai is not None and ai >= ai_entry.value),
                 [{"distance": h.distance, "publisher": h.source.publisher, "title": h.source.title, "article_url": h.source.article_url} for h in hits],
                 forensics.get("heatmap_png_b64"), "" if forensics.get("available") else forensics.get("reason", "forensics unavailable"),
             ))
@@ -130,6 +136,15 @@ def check_video(cfg: Config, data: bytes, index: ImageIndex, analyse: Callable[[
     else:
         best = max(scored, key=lambda f: f.score)
         reasons.append(f"none of {len(scored)} sampled frames reaches the cut {cut_entry.value} (highest {best.score:.2f}): no editing found in those frames, which does not prove the video is genuine")
+    ai_flagged = [f for f in frames if f.ai_flagged]
+    ai_scored = [f for f in frames if f.ai_score is not None]
+    if ai_scored and ai_entry is not None:
+        if len(ai_flagged) >= s.video_ai_min_frames:
+            label = "SYNTHETIC_SUSPECTED"
+            reasons.append(f"{len(ai_flagged)} of {len(ai_scored)} sampled frames look AI-generated as still images (cut {ai_entry.value}); that is a suspicion about the video, not a finding")
+        else:
+            reasons.append(f"{len(ai_flagged)} of {len(ai_scored)} sampled frames are over the AI-generated cut {ai_entry.value} (it takes {s.video_ai_min_frames} to raise a suspicion): "
+                           "no sign of AI generation found in those frames, which does not prove the video is real")
     reasons += [SCOPE_NOTE, VIDEO_SCOPE_NOTE, COMPRESSION_NOTE]
     seen = {m["article_url"] for f in frames for m in f.matches}
     reasons.append(f"frames appeared in {len(seen)} fact-checker article(s): a lead about history, not a verdict on any claim" if seen
