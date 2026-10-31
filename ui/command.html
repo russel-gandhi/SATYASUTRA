@@ -23,6 +23,15 @@
   .cb { width: 34px; background: var(--accent); border-radius: 6px 6px 0 0; } .cv { font-weight: 700; font-size: 13px; }
   .brow { grid-template-columns: minmax(70px, 120px) 1fr 30px; } .brow > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .bar { height: 10px; min-width: 6px; }
   .it .badge { display: inline-block; width: auto; } .it .title { margin-top: 2px; } .foot { margin-top: 16px; }
+  .main.full { max-width: none; padding: 14px 16px 16px; }
+  .gstage { position: relative; height: calc(100vh - 190px); min-height: 460px; margin-top: 8px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: radial-gradient(900px 500px at 50% 40%, var(--accent-soft), var(--bg)); }
+  .ghost { position: absolute; inset: 0; } svg.g { width: 100%; height: 100%; border: 0; border-radius: 0; background: transparent; display: block; cursor: grab; }
+  svg.g text { display: none; paint-order: stroke; stroke: var(--bg); stroke-width: 3px; font-size: 12px; } svg.g g.k-claim text, svg.g g:hover text { display: block; }
+  .gfilt { position: absolute; top: 10px; left: 10px; display: flex; gap: 6px; flex-wrap: wrap; z-index: 2; max-width: calc(100% - 340px); }
+  .gfilt .chip { background: var(--panel); }
+  .gside { position: absolute; top: 10px; right: 10px; width: 310px; max-height: calc(100% - 20px); overflow: auto; z-index: 2; }
+  .glegend { position: absolute; bottom: 8px; left: 12px; z-index: 2; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; }
+  @media (max-width: 860px) { .gside { position: static; width: auto; } .gfilt { max-width: none; } }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", "Noto Sans Devanagari", "Noto Sans Kannada", sans-serif; }
   .shell { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: calc(100vh - 60px); }
@@ -147,14 +156,15 @@ const VIEWS = {
   async graph(v) {
     const g = await jget("/intel/graph");
     if (!g.nodes.length) { v.append(card("Evidence graph", el("div", "small", "No investigations yet. Check a claim and it appears here."))); return; }
-    v.append(el("div", "small", g.note + " Drag a node, click it for details."));
-    const kinds = [...new Set(g.nodes.map((n) => n.kind))], on = new Set(kinds), side = el("div", "card");
-    const wrap = el("div", "gwrap"), left = el("div"), filt = el("div", "row"), host = el("div");
-    kinds.forEach((k) => { const l = el("label", "chip"), c = Object.assign(el("input"), { type: "checkbox", checked: true }); c.onchange = () => { c.checked ? on.add(k) : on.delete(k); host.replaceChildren(forceGraph(g, on, (n) => showNode(side, n, g))); }; l.append(c, " " + k); filt.append(l); });
-    host.append(forceGraph(g, on, (n) => showNode(side, n, g)));
-    side.append(el("div", "small", "Click a node to see its source, metadata and relationships."));
-    left.append(filt, host, legend()); wrap.append(left, side); v.append(wrap);
+    const kinds = [...new Set(g.nodes.map((n) => n.kind))], on = new Set(kinds), side = el("div", "card gside"), stage = el("div", "gstage"), filt = el("div", "gfilt"), host = el("div", "ghost");
+    const draw = () => host.replaceChildren(forceGraph(g, on, (n) => showNode(side, n, g)));
+    kinds.forEach((k) => { const l = el("label", "chip"), c = Object.assign(el("input"), { type: "checkbox", checked: true }); c.onchange = () => { c.checked ? on.add(k) : on.delete(k); draw(); }; l.append(c, " " + k); filt.append(l); });
+    draw();
+    side.append(el("div", "small", "Click a node to see its source, metadata and relationships. Scroll to zoom, drag the background to move, drag a node to pull it."));
+    const lg = legend(); lg.classList.add("glegend");
+    stage.append(host, filt, side, lg); v.append(el("div", "small", g.note), stage);
   },
+
 
   async media(v) {
     const m = (await jget("/intel/media")).items;
@@ -236,27 +246,31 @@ function showNode(side, n, g) {
 }
 
 function forceGraph(g, on, pick) {
-  const W = 760, H = 560, ns = "http://www.w3.org/2000/svg", svg = document.createElementNS(ns, "svg");
-  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("class", "g");
+  const W = 1400, H = Math.round(W * Math.max(0.45, Math.min(0.8, (innerHeight - 190) / Math.max(400, innerWidth - 290)))), ns = "http://www.w3.org/2000/svg", svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("class", "g"); svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
   const nodes = g.nodes.filter((n) => on.has(n.kind)).map((n, i) => ({ ...n, x: W / 2 + 200 * Math.cos(i), y: H / 2 + 200 * Math.sin(i), vx: 0, vy: 0 }));
   const idx = Object.fromEntries(nodes.map((n, i) => [n.id, i])), edges = g.edges.filter((e) => e.from in idx && e.to in idx);
   for (let it = 0; it < 300; it++) {
-    for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) { const a = nodes[i], b = nodes[j]; let dx = a.x - b.x, dy = a.y - b.y, d2 = dx * dx + dy * dy + 0.01, f = 2600 / d2, d = Math.sqrt(d2); a.vx += (dx / d) * f; a.vy += (dy / d) * f; b.vx -= (dx / d) * f; b.vy -= (dy / d) * f; }
-    edges.forEach((e) => { const a = nodes[idx[e.from]], b = nodes[idx[e.to]]; const dx = b.x - a.x, dy = b.y - a.y, d = Math.sqrt(dx * dx + dy * dy) + 0.01, f = (d - 90) * 0.02; a.vx += (dx / d) * f; a.vy += (dy / d) * f; b.vx -= (dx / d) * f; b.vy -= (dy / d) * f; });
+    for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) { const a = nodes[i], b = nodes[j]; let dx = a.x - b.x, dy = a.y - b.y, d2 = dx * dx + dy * dy + 0.01, f = 9000 / d2, d = Math.sqrt(d2); a.vx += (dx / d) * f; a.vy += (dy / d) * f; b.vx -= (dx / d) * f; b.vy -= (dy / d) * f; }
+    edges.forEach((e) => { const a = nodes[idx[e.from]], b = nodes[idx[e.to]]; const dx = b.x - a.x, dy = b.y - a.y, d = Math.sqrt(dx * dx + dy * dy) + 0.01, f = (d - 130) * 0.02; a.vx += (dx / d) * f; a.vy += (dy / d) * f; b.vx -= (dx / d) * f; b.vy -= (dy / d) * f; });
     nodes.forEach((n) => { n.vx += (W / 2 - n.x) * 0.004; n.vy += (H / 2 - n.y) * 0.004; n.x = Math.max(30, Math.min(W - 30, n.x + n.vx * 0.5)); n.y = Math.max(20, Math.min(H - 20, n.y + n.vy * 0.5)); n.vx *= 0.6; n.vy *= 0.6; });
   }
   const mk = (t, a, x) => { const e = document.createElementNS(ns, t); Object.entries(a || {}).forEach(([k, v]) => e.setAttribute(k, v)); if (x != null) e.textContent = x; return e; };
   const lines = edges.map((e) => { const l = mk("line", { stroke: EDGE_COLOR[e.relation] || "#8b95ab", "stroke-width": e.relation === "supports" || e.relation === "contradicts" ? 2 : 1, opacity: 0.8 }); svg.append(l); return [l, e]; });
-  const gs = nodes.map((n) => { const gr = mk("g", { style: "cursor:pointer" }); gr.append(mk("circle", { r: n.kind === "claim" ? 12 : 8, fill: KIND_COLOR[n.kind] || "#8b95ab", stroke: "#0b0f17", "stroke-width": 1.5 }), mk("text", { x: 12, y: 4 }, n.label.slice(0, 26))); gr.append(mk("title", {}, n.label)); gr.onclick = () => pick(n);
-    gr.onmousedown = (ev) => { ev.preventDefault(); const move = (m) => { const r = svg.getBoundingClientRect(); n.x = ((m.clientX - r.left) / r.width) * W; n.y = ((m.clientY - r.top) / r.height) * H; place(); }; const up = () => { window.removeEventListener("mousemove", move); window.removeEventListener("mouseup", up); }; window.addEventListener("mousemove", move); window.addEventListener("mouseup", up); };
+  const gs = nodes.map((n) => { const gr = mk("g", { style: "cursor:pointer", class: "k-" + n.kind }); gr.append(mk("circle", { r: n.kind === "claim" ? 12 : 8, fill: KIND_COLOR[n.kind] || "#8b95ab", stroke: "#0b0f17", "stroke-width": 1.5 }), mk("text", { x: 14, y: 4 }, n.label.slice(0, n.kind === "claim" ? 60 : 40))); gr.append(mk("title", {}, n.label)); gr.onclick = () => pick(n);
+    gr.onmousedown = (ev) => { ev.preventDefault(); const move = (m) => { const r = svg.getBoundingClientRect(); n.x = vb[0] + ((m.clientX - r.left) / r.width) * vb[2]; n.y = vb[1] + ((m.clientY - r.top) / r.height) * vb[3]; place(); }; const up = () => { window.removeEventListener("mousemove", move); window.removeEventListener("mouseup", up); }; window.addEventListener("mousemove", move); window.addEventListener("mouseup", up); };
     svg.append(gr); return gr; });
   function place() { lines.forEach(([l, e]) => { const a = nodes[idx[e.from]], b = nodes[idx[e.to]]; l.setAttribute("x1", a.x); l.setAttribute("y1", a.y); l.setAttribute("x2", b.x); l.setAttribute("y2", b.y); }); gs.forEach((gr, i) => gr.setAttribute("transform", `translate(${nodes[i].x},${nodes[i].y})`)); }
+  let vb = [0, 0, W, H];
+  const setVb = () => svg.setAttribute("viewBox", vb.map((x) => x.toFixed(1)).join(" "));
+  svg.addEventListener("wheel", (ev) => { ev.preventDefault(); const r = svg.getBoundingClientRect(), k = ev.deltaY < 0 ? 0.85 : 1.18, mx = vb[0] + ((ev.clientX - r.left) / r.width) * vb[2], my = vb[1] + ((ev.clientY - r.top) / r.height) * vb[3]; vb = [mx - (mx - vb[0]) * k, my - (my - vb[1]) * k, vb[2] * k, vb[3] * k]; setVb(); }, { passive: false });
+  svg.addEventListener("mousedown", (ev) => { if (ev.target !== svg) return; const x0 = ev.clientX, y0 = ev.clientY, o = [...vb], r = svg.getBoundingClientRect(); const move = (m) => { vb = [o[0] - ((m.clientX - x0) / r.width) * o[2], o[1] - ((m.clientY - y0) / r.height) * o[3], o[2], o[3]]; setVb(); }; const up = () => { window.removeEventListener("mousemove", move); window.removeEventListener("mouseup", up); }; window.addEventListener("mousemove", move); window.addEventListener("mouseup", up); });
   place(); return svg;
 }
 
 const TABS = [["overview", "Intelligence overview"], ["graph", "Evidence graph explorer"], ["media", "Media forensics lab"], ["claims", "Claim intelligence"], ["registry", "Bharat registry"], ["workspace", "Investigation workspace"]];
 async function show(k) {
-  [...$("tabs").children].forEach((b) => b.classList.toggle("on", b.dataset.k === k)); const cur = TABS.find((x) => x[0] === k); if (cur) $("vtitle").textContent = cur[1];
+  [...$("tabs").children].forEach((b) => b.classList.toggle("on", b.dataset.k === k)); document.querySelector(".main").classList.toggle("full", k === "graph"); const cur = TABS.find((x) => x[0] === k); if (cur) $("vtitle").textContent = cur[1];
   const v = $("view"); v.replaceChildren(el("div", "small", "Loading...")); location.hash = k;
   const fresh = el("div");
   try { await VIEWS[k](fresh); } catch (e) { fresh.replaceChildren(el("div", "small", "Could not load: " + e.message)); }
