@@ -320,6 +320,7 @@ function renderClaim(c) {
   if (c.entities && c.entities.length) {
     const chips = el("div", "chips");
     c.entities.forEach((e) => { const a = el("a", "chip", e.label + (e.description ? " - " + e.description : "")); a.href = e.url; a.target = "_blank"; a.rel = "noopener"; a.title = "Wikidata " + e.id + " (context only)"; chips.append(a); });
+    c.entities.filter((e) => e.died).forEach((e) => box.append(el("div", "small", "Wikidata lists a date of death for " + e.label + ": " + e.died + (e.died_references ? " (the entry cites " + e.died_references + " source" + (e.died_references > 1 ? "s" : "") + ")" : " (no source cited)") + ". Wikidata is edited by volunteers and can be wrong or vandalised, so this is context, not a check of the claim.")));
     box.append(chips);
   }
   if (c.reasons && c.reasons.length) { const u = el("ul"); c.reasons.forEach((r) => u.append(el("li", "", r))); box.append(u); }
@@ -471,10 +472,16 @@ async function checkImage() {
     out.append(stage);
     if (heat) { const b = el("button", "ghost toggle", "Hide heatmap"); b.onclick = () => { heat.style.display = heat.style.display === "none" ? "" : "none"; b.textContent = heat.style.display === "none" ? "Show heatmap" : "Hide heatmap"; }; out.append(b); }
     const card = el("div", "claim"); const head = el("div");
-    head.append(el("span", "badge " + body.label, body.label.replaceAll("_", " ")));
+    const clean = body.label === "INCONCLUSIVE" && body.forensics.available && !body.matches.length;
+    head.append(el("span", "badge " + (clean ? "SUPPORTED" : body.label), clean ? "NO SIGN OF EDITING OR AI" : body.label.replaceAll("_", " ")));
     if (body.forensics.available) head.append(" ", el("span", "small", "edit score " + body.forensics.score.toFixed(2) + (body.forensics.ai_score != null ? ", AI-generated score " + body.forensics.ai_score.toFixed(2) : "") + " (" + body.forensics.device + ", " + body.forensics.seconds + " s)"));
     card.append(head);
-    const ul = el("ul"); body.reasons.forEach((x) => ul.append(el("li", "", x))); card.append(ul);
+    const ul = el("ul"); body.reasons.forEach((x) => ul.append(el("li", "", x)));
+    if (clean) {
+      card.append(el("div", "", "Both detectors came back clean and it is not a known debunked image, so it most likely is what it looks like."),
+                  el("div", "small", "That is not a guarantee. In our tests the edit detector missed about 4 in 10 spliced photos after sharing and the AI detector missed about 1 in 10 AI images, and neither detects face swaps. If it matters, ask where the photo first appeared."));
+      const d = el("details"); d.append(el("summary", "small", "What each check found"), ul); card.append(d);
+    } else card.append(ul);
     if (body.matches.length) {
       card.append(el("div", "small", "Seen in fact-checks"));
       const m = el("ul");

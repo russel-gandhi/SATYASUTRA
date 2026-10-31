@@ -106,6 +106,9 @@ knowledge_graph:
   timeout_s: 15
   max_entities: 5
   name_max_chars: 80
+  death_property: P570
+  death_terms: [dead, died, death, dies, "passed away", "passes away", "no more", killed, assassinated, murdered, demise, deceased, "last breath", "rip",
+                मृत, मर, मौत, निधन, देहांत, "नहीं रहे", हत्या]
 
 official:
   db_path: data/official.sqlite3

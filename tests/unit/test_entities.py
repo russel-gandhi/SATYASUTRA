@@ -117,3 +117,10 @@ def test_the_wikidata_client_handles_no_hit_bad_shapes_and_outages(tmp_path):
         except Exception as exc:
             assert type(exc).__name__ == name
     assert json.dumps({}) == "{}"
+
+
+def test_death_words_are_matched_as_whole_words_in_english_and_hindi():
+    from satyasutra.claims.entities import mentions_death
+    terms = load_config().runtime.knowledge_graph.death_terms
+    assert mentions_death("Nana Patekar is dead", terms) and mentions_death("he passed away this morning", terms) and mentions_death("अभिनेता का निधन हो गया", terms)
+    assert not mentions_death("the deadline is tomorrow", terms) and not mentions_death("a lovely sunny day", terms)
