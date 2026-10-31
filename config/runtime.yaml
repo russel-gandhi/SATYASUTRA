@@ -50,6 +50,7 @@ verify:
   # The Fact Check lookup keeps its own cache (sources.yaml, 600 s), so a verdict can be up to the TTL plus that old.
   cache_ttl_decided_s: 21600
   cache_ttl_undecided_s: 900
+  judge_max_reviews: 10        # one Gemini call per claim covers up to this many reviews
 
 provenance:
   db_path: data/provenance.sqlite3

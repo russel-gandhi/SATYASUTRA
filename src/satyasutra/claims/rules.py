@@ -70,7 +70,16 @@ class RuleOutcome:
     unmapped_ratings: list[str] = field(default_factory=list)
 
 
-def decide(claim: Claim, evidence: list[Evidence], config: Config, now: Callable[[], datetime] = lambda: datetime.now(timezone.utc)) -> RuleOutcome:
+def decide(
+    claim: Claim,
+    evidence: list[Evidence],
+    config: Config,
+    now: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
+    judged: dict[str, str] | None = None,
+) -> RuleOutcome:
+    """`judged` maps a review's passage hash to the same-claim judge's relation (same, opposite or different).
+    A review the judge covered is decided by that relation; any other review keeps the strict word-overlap test."""
+    judged = judged or {}
     rules = config.policy.verdict_rules
     cut = config.thresholds.thresholds["factcheck_relevance"].value
     assessments: list[Assessment] = []
@@ -82,6 +91,12 @@ def decide(claim: Claim, evidence: list[Evidence], config: Config, now: Callable
             assessments.append(Assessment(ev, rel, stance, False, f"route {ev.route!r} is not handled by v0 rules"))
         elif ev.tier not in TRUSTED_TIERS:
             assessments.append(Assessment(ev, rel, stance, False, f"tier {ev.tier} cannot decide (only tier 1 or 2)"))
+        elif ev.passage_sha256 in judged:
+            relation = judged[ev.passage_sha256]
+            if relation == "same":
+                assessments.append(Assessment(ev, rel, stance, True, f"judged the same claim, rated {ev.rating!r} -> {stance}"))
+            else:
+                assessments.append(Assessment(ev, rel, stance, False, f"judged to review {'the opposite' if relation == 'opposite' else 'a different'} claim"))
         elif rel < cut:
             assessments.append(Assessment(ev, rel, stance, False, f"reviews a different claim (relevance {rel:.2f} below {cut})"))
         elif is_negated(claim.text_en, rules.negations) != is_negated(ev.reviewed_claim, rules.negations):

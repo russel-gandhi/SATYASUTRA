@@ -14,3 +14,4 @@ config/sources.local.yaml
 !.env.example
 *.env.txt
 forensics/
+serve.log

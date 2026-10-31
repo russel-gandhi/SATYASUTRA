@@ -21,7 +21,7 @@ from ..envfile import load_env_file
 from ..agent import format_sse, trace_events
 from ..cache import TTLCache
 from ..fastclock import Cluster, Escalator, FastClock, FastClockWorker
-from ..claims import ExtractionResult, extract_claims
+from ..claims import ExtractionResult, Judgements, extract_claims, judge_reviews
 from ..errors import ConfigError, SourceError
 from ..ingest import author_salt, hash_author
 from ..ledger import LedgerStore, SQLiteLedgerStore
@@ -60,6 +60,7 @@ def create_app(
     verdict_cache: VerdictCache | None = None,
     worker: FastClockWorker | None = None,
     escalator: Escalator | None = None,
+    judge: Callable[[str, list], Judgements] | None = None,
 ) -> FastAPI:
     load_env_file(ROOT / ".env")
     cfg = config or load_config()
@@ -107,6 +108,8 @@ def create_app(
         return verdict_cache or VerdictCache(TTLCache(_path(cfg.runtime.cache_db_path)), cfg, __version__, scope=str(getattr(ledger, "path", "")))
 
     do_extract = extract or (lambda post: extract_claims(gemini(), cfg, post))
+    # The real judge needs Gemini, so it is on only when the real extractor is: callers that inject their own extract stay offline.
+    do_judge = judge or ((lambda text, found: judge_reviews(gemini(), cfg, text, found)) if extract is None else None)
     do_lookup = lookup or (lambda text, lang: factcheck().search(text, lang))
     do_fetch = fetch or (lambda uri: fetch_post(uri, cfg, salt))
 
@@ -218,7 +221,7 @@ def create_app(
         return mark(cached)
 
     def _run(post: Post) -> dict:
-        done = verify_post(post, cfg, ledger, do_extract, do_lookup)
+        done = verify_post(post, cfg, ledger, do_extract, do_lookup, do_judge)
         ex = done.extraction
         if ex.status in ("blocked", "failed"):
             raise HTTPException(status_code=502, detail=f"claim extraction {ex.status}: {ex.reason}")
