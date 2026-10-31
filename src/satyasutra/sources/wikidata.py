@@ -82,9 +82,9 @@ class WikidataClient:
         return entity
 
     def _first(self, name: str, body: object) -> Entity | None:
-        if not isinstance(body, dict) or not isinstance(body.get("search", []), list):
+        results = body.get("search") if isinstance(body, dict) else None
+        if not isinstance(results, list):
             raise SchemaChanged(SOURCE_ID, "response has no 'search' list")
-        results = body["search"]
         if not results:
             return None
         top = results[0]

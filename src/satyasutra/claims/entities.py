@@ -17,7 +17,15 @@ from .extract import load_prompt
 
 PROMPT = "entities.txt"
 CLAIM_OPEN, CLAIM_CLOSE = "<<<CLAIM", "CLAIM>>>"
-SCHEMA = {"type": "OBJECT", "properties": {"entities": {"type": "ARRAY", "items": {"type": "STRING"}}}, "required": ["entities"]}
+SCHEMA = {
+    "type": "OBJECT",
+    "properties": {"entities": {"type": "ARRAY", "items": {
+        "type": "OBJECT",
+        "properties": {"name": {"type": "STRING"}, "search": {"type": "STRING"}},
+        "required": ["name", "search"],
+    }}},
+    "required": ["entities"],
+}
 
 
 @dataclass
@@ -42,18 +50,21 @@ def ground_entities(client: GeminiClient, config: Config, claim_text: str, looku
         return out
     seen: set[str] = set()
     for raw in names:
-        name = " ".join(raw.split()) if isinstance(raw, str) else ""
+        item = raw if isinstance(raw, dict) else {}
+        name = " ".join(str(item.get("name", "")).split())
+        search = " ".join(str(item.get("search", "")).split()) or name       # a fuller name for the lookup, to tell "UPI" from a town called Upi
         if not name or name.casefold() in seen or name.casefold() not in safe.casefold():
             continue                                        # empty, repeated, or not in the claim: the model may not add entities
         if len(seen) >= settings.max_entities:
             break
         seen.add(name.casefold())
         try:
-            found = lookup(name)
+            found = lookup(search)
         except SourceError as exc:
             out.error = type(exc).__name__
             continue
         if found:
+            found.name = name                                        # shown under the words the claim used
             out.entities.append(found)
         else:
             out.unmatched.append(name)
