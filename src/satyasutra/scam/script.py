@@ -51,6 +51,7 @@ class ScamScript(_Strict):
     amber_on: list[str]
     types: dict[str, list[str]]
     states: dict[str, Text]
+    advice: dict[str, Text]
 
 
 def load_script(path: Path | None = None) -> ScamScript:

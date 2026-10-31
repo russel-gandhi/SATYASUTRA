@@ -389,7 +389,7 @@ def create_app(
 
     def guard_reply(call, text: str, session_id: str) -> dict:
         v = call.add(text)
-        return {"state": v.state, "signals": v.signals, "scam_type": v.scam_type, "message": guard_rules.states[v.state].model_dump(),
+        return {"state": v.state, "signals": v.signals, "scam_type": v.scam_type, "message": guard_rules.states[v.state].model_dump(), "advice": guard_rules.advice[v.scam_type].model_dump() if v.state == "scam" and v.scam_type in guard_rules.advice else None,
                 "heard": call.tail, "note": "Script words only; it cannot know who is calling. It never says a call is safe. Nothing is recorded or stored."}
 
     @app.post("/guard/chunk")
@@ -561,6 +561,11 @@ def create_app(
     @app.get("/command", include_in_schema=False)
     def command_page() -> FileResponse:
         return FileResponse(ROOT / "ui" / "command.html", media_type="text/html")
+
+    @app.get("/help", include_in_schema=False)
+    def help_page() -> FileResponse:
+        """Quiet page for someone whose private pictures are being shared: steps only, no history, no upload, one-tap exit."""
+        return FileResponse(ROOT / "ui" / "help.html", media_type="text/html", headers={"Cache-Control": "no-store"})
 
     @app.get("/about", include_in_schema=False)
     def about_page() -> FileResponse:
@@ -771,7 +776,7 @@ def create_app(
     def _run(post: Post) -> dict:
         done = verify_post(post, cfg, ledger, do_extract, do_lookup, do_judge, do_web, do_official)
         if done.extraction.status == "failed" and done.extraction.reason.startswith(BUSY_REASONS):
-            raise HTTPException(status_code=503, detail="The language model is at its rate limit or unreachable right now, so nothing was checked and nothing was guessed. Please try again in about a minute.")
+            raise HTTPException(status_code=503, detail="The language model is at its rate limit or unreachable right now, so nothing was checked and nothing was guessed. If it is the per-minute limit, try again shortly; if it is the daily allowance, it resets later and waiting a minute will not help.")
         if done.extraction.status in ("blocked", "failed"):
             raise HTTPException(status_code=502, detail=f"claim extraction {done.extraction.status}: {done.extraction.reason}")
         return verdict_body(post, done)

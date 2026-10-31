@@ -191,3 +191,10 @@ states:
   listening: {en: "Listening. Nothing alarming heard so far.", hi: "सुन रहा हूँ। अब तक कुछ चिंताजनक नहीं सुना।"}
   careful: {en: "Be careful. Some things said on this call are common in scams.", hi: "सावधान रहिए। इस कॉल की कुछ बातें ठगी में आम हैं।"}
   scam: {en: "This looks like a scam. Hang up. Do not share any code or send money.", hi: "यह ठगी लगती है। फ़ोन काट दीजिए। कोई कोड न बताएं, पैसे न भेजें।"}
+# One plain line per scam type, shown under a red alert. Hindi lines are OUR drafts, not reviewed by a native speaker (SG7).
+advice:
+  digital_arrest: {en: "No police or court arrests anyone over a phone or video call, and none takes money to clear a case. Hang up and call 112 or go to your local police station yourself.", hi: "कोई पुलिस या अदालत फ़ोन या वीडियो कॉल पर गिरफ़्तारी नहीं करती और न केस निपटाने के लिए पैसे माँगती है। फ़ोन काटिए और 112 पर कॉल कीजिए या खुद थाने जाइए।"}
+  family_emergency: {en: "Hang up and call your relative on the number you already have. Do not send money until you have spoken to them.", hi: "फ़ोन काटिए और अपने रिश्तेदार को उनके पुराने नंबर पर खुद कॉल कीजिए। उनसे बात होने तक पैसे न भेजें।"}
+  bank_or_code_request: {en: "A bank never asks for your OTP, PIN or card number on a call. Hang up and call the number on the back of your card.", hi: "बैंक कॉल पर कभी ओटीपी, पिन या कार्ड नंबर नहीं माँगता। फ़ोन काटिए और कार्ड के पीछे छपे नंबर पर कॉल कीजिए।"}
+  remote_access_scam: {en: "Do not install any app or share your screen for someone who called you. Hang up. If you already did, turn off the internet and call your bank.", hi: "फ़ोन करने वाले के कहने पर कोई ऐप इंस्टॉल न करें, स्क्रीन शेयर न करें। फ़ोन काटिए। कर चुके हों तो इंटरनेट बंद करके बैंक को कॉल कीजिए।"}
+  payment_demand: {en: "Do not pay anyone who calls demanding money in a hurry. Check the bill on the official app or site yourself.", hi: "जल्दी में पैसे माँगने वाले फ़ोन पर किसी को भुगतान न करें। बिल खुद आधिकारिक ऐप या साइट पर देखिए।"}

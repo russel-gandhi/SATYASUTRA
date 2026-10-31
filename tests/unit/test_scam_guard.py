@@ -90,3 +90,9 @@ def test_the_endpoint_writes_nothing_to_disk_or_any_record(tmp_path, monkeypatch
     assert c.delete(f"/guard/{SID}").json() == {"ended": True}
     assert c.post("/guard/text", json={"session": SID, "text": "hello there"}).json()["state"] == "listening"
     assert c.post("/guard/chunk", content=b"", headers={"x-session": SID}).status_code == 422
+
+
+def test_every_scam_type_has_advice_in_both_languages():
+    rules = load_script()
+    assert set(rules.types) <= set(rules.advice)
+    assert all(a.en.strip() and a.hi.strip() for a in rules.advice.values())

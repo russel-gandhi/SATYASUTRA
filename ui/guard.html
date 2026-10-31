@@ -69,7 +69,7 @@ const T = {
   en: { title: "Is this call a scam?", start: "Start listening", ch: "Before you start", hang: "Hang up", money: "I already sent money or shared a code", stop: "Stop listening", send: "Check", ph: "Or type what the caller says",
         consent: ["Put the call on speaker and keep this page open.", "This page listens through your phone's microphone only while the button is on, in short pieces.", "Nothing is recorded or kept. The sound is turned into words, checked, and thrown away.", "The other person is not told. We cannot say whether listening to a call this way is allowed where you are. Your choice.", "It can miss scams and it can be wrong. It will never tell you a call is safe."],
         fine: "Call guard looks at the words of a call for how scams are built. It does not know who is calling. If money has left your account, call 1930 now.",
-        mic: "The microphone could not be opened. Allow it in the browser, or type the words instead.", busy: "The checker is busy or offline. Nothing was kept. Try again in a minute." },
+        mic: "The microphone could not be opened. Allow it in the browser, or type the words instead.", busy: "The checker is busy or offline. Nothing was kept. Try again shortly; if it keeps failing, the daily limit may be used up." },
   hi: { title: "क्या यह कॉल ठगी है?", start: "सुनना शुरू करें", ch: "शुरू करने से पहले", hang: "फ़ोन काटें", money: "मैं पैसे भेज चुका/चुकी हूँ या कोड बता दिया", stop: "सुनना बंद करें", send: "जाँचें", ph: "या कॉल करने वाले की बात यहाँ लिखें",
         consent: ["कॉल को स्पीकर पर रखिए और यह पेज खुला रखिए।", "यह पेज बटन चालू होने पर ही, छोटे-छोटे हिस्सों में, फ़ोन के माइक्रोफ़ोन से सुनता है।", "कुछ भी रिकॉर्ड या सेव नहीं होता। आवाज़ को शब्दों में बदलकर जाँचा जाता है और फिर हटा दिया जाता है।", "सामने वाले को पता नहीं चलता। इस तरह कॉल सुनना आपकी जगह पर ठीक है या नहीं, हम नहीं कह सकते। फ़ैसला आपका है।", "यह ठगी चूक सकता है और गलत भी हो सकता है। यह कभी नहीं कहेगा कि कॉल सुरक्षित है।"],
         fine: "यह पेज कॉल के शब्दों में ठगी के तरीके देखता है। यह नहीं जानता कि कॉल कौन कर रहा है। पैसे निकल गए हों तो अभी 1930 पर कॉल करें।",
@@ -93,7 +93,7 @@ $("l-en").onclick = () => { lang = "en"; paint(); }; $("l-hi").onclick = () => {
 function show(out) {
   $("live").classList.remove("hide"); $("consent").classList.add("hide");
   document.body.className = "s-" + out.state;
-  $("state").textContent = out.message[lang]; $("heard").textContent = out.heard ? "… " + out.heard : "";
+  $("state").textContent = out.message[lang] + (out.advice ? " " + out.advice[lang] : ""); $("heard").textContent = out.heard ? "… " + out.heard : "";
   if (out.state === "scam" && lastState !== "scam") {
     if (navigator.vibrate) navigator.vibrate([400, 150, 400, 150, 600]);
     if (window.speechSynthesis) { const u = new SpeechSynthesisUtterance(out.message[lang]); u.lang = lang === "hi" ? "hi-IN" : "en-IN"; speechSynthesis.speak(u); }

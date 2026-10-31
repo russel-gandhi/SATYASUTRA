@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Help</title>
+<link rel="stylesheet" href="/static/jv.css">
+<style>
+  .wrap { max-width: 560px; margin: 0 auto; padding: 18px 16px 40px; }
+  h1 { font-size: 24px; margin: 10px 0 6px; }
+  .lang { display: flex; gap: 8px; margin: 8px 0; }
+  .lang button { border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 999px; padding: 6px 16px; font-size: 14px; cursor: pointer; }
+  .lang button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; margin-top: 12px; }
+  .card b { display: block; margin-bottom: 4px; }
+  .card p { margin: 4px 0; }
+  .exit { display: block; width: 100%; font-size: 18px; padding: 14px; border-radius: 14px; margin-top: 16px; }
+  .fine { color: var(--mute); font-size: 13px; margin-top: 16px; }
+  .err { color: var(--bad); font-weight: 600; margin-top: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 id="t-title">You are not in trouble. Here is what to do.</h1>
+  <div class="lang" role="group" aria-label="Language"><button id="l-en" aria-pressed="true">English</button><button id="l-hi" aria-pressed="false">हिंदी</button></div>
+  <p id="t-lead">This is about private pictures or videos being shared, or threatened to be shared, without your say. Nothing you do on this page is saved, and you do not need to upload anything.</p>
+  <div id="routes"></div>
+  <button class="btn ghost exit" id="exit">Close this page now</button>
+  <div class="err" id="err" role="alert"></div>
+  <p class="fine" id="t-fine">This page gives guidance only. It does not take, store or check pictures, it files nothing for you, and it keeps no history. A private or incognito window leaves no trace in the browser either.</p>
+</div>
+<script>
+const T = {
+  en: { title: "You are not in trouble. Here is what to do.", lead: "This is about private pictures or videos being shared, or threatened to be shared, without your say. Nothing you do on this page is saved, and you do not need to upload anything.",
+        exit: "Close this page now", fine: "This page gives guidance only. It does not take, store or check pictures, it files nothing for you, and it keeps no history. A private or incognito window leaves no trace in the browser either.",
+        err: "The steps could not be loaded. If you are in danger right now, call 112." },
+  hi: { title: "आप किसी मुसीबत में नहीं हैं। ये करें।", lead: "यह निजी तस्वीरों या वीडियो के आपकी मर्ज़ी के बिना फैलाए जाने, या फैलाने की धमकी के बारे में है। इस पेज पर आप जो करते हैं वह सेव नहीं होता, और कुछ अपलोड करने की ज़रूरत नहीं है।",
+        exit: "यह पेज अभी बंद करें", fine: "यह पेज सिर्फ़ जानकारी देता है। यह तस्वीरें न लेता है, न रखता है, न जाँचता है, आपकी ओर से कोई शिकायत दर्ज नहीं करता और कोई इतिहास नहीं रखता। प्राइवेट या इन्कॉग्निटो विंडो ब्राउज़र में भी निशान नहीं छोड़ती।",
+        err: "ये कदम लोड नहीं हो सके। अगर आप अभी खतरे में हैं तो 112 पर कॉल करें।" },
+};
+const $ = (id) => document.getElementById(id);
+let lang = "en", plan = null;
+function paint() {
+  const t = T[lang];
+  document.documentElement.lang = lang;
+  $("t-title").textContent = t.title; $("t-lead").textContent = t.lead; $("exit").textContent = t.exit; $("t-fine").textContent = t.fine;
+  $("l-en").setAttribute("aria-pressed", lang === "en"); $("l-hi").setAttribute("aria-pressed", lang === "hi");
+  const box = $("routes"); box.replaceChildren();
+  if (!plan) return;
+  plan.routes.forEach((r) => {
+    const card = document.createElement("div"); card.className = "card";
+    const b = document.createElement("b"); b.textContent = r.title + (r.contact ? " (" + r.contact + ")" : "");
+    const p = document.createElement("p"); p.textContent = r.detail; card.append(b, p);
+    if (r.url && /^https:\/\//.test(r.url)) { const a = document.createElement("a"); a.href = r.url; a.rel = "noreferrer noopener"; a.textContent = r.url; card.append(a); }
+    box.append(card);
+  });
+}
+$("l-en").onclick = () => { lang = "en"; paint(); }; $("l-hi").onclick = () => { lang = "hi"; paint(); };
+$("exit").onclick = () => { location.replace("about:blank"); };
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") location.replace("about:blank"); });
+(async () => {
+  try {
+    const r = await fetch("/act/plan", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text: "someone is threatening to share my private photos", labels: [], ledger_seqs: [] }) });
+    if (!r.ok) throw new Error(r.status);
+    plan = await r.json();
+  } catch (e) { $("err").textContent = T[lang].err; }
+  paint();
+})();
+</script>
+</body>
+</html>
