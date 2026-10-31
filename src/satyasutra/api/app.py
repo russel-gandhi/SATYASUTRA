@@ -14,10 +14,11 @@ from pathlib import Path
 from typing import Any, Callable
 
 from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import Path as Path_
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 from .. import __version__
 from ..config import Config, config_dir, load_config
@@ -42,15 +43,18 @@ from ..sources import WikidataClient
 from ..sources.bluesky import PostNotFound, fetch_post
 from ..act import build_pack, build_plan, load_actions
 from ..scam import check_links, load_domains
-from ..voice import Transcriber, Transcript, VoiceError
+from ..voice import Transcriber, Transcript, VoiceError, second_opinion
 from ..audio import SpoofDetector
 from ..card import build_card, load_cards
-from ..notice import NoticeError, check_notice
+from ..inputs import InputError, fetch_page, image_metadata, image_thumb, pdf_text
+from ..notice import NoticeError, analyse_text, check_notice
 from ..officials import build_view
 from ..sources.index import OfficialIndex
 from ..sources.news import check_news, refresh_news_if_stale
 from ..sources.official import refresh_if_stale
 from ..verdict_cache import VerdictCache, mark
+from ..records import RecordStore
+from ..report import build_report
 
 ROOT = Path(__file__).resolve().parents[3]
 JOB_ID = r"^[A-Za-z0-9_-]+$"
@@ -64,6 +68,15 @@ class ActRequest(BaseModel):
     text: str
     ledger_seqs: list[int] = []
     labels: list[str] = []
+
+
+class ReportRequest(BaseModel):
+    record_ids: list[str] = Field(min_length=1)
+    lang: str = "en"
+
+
+class UrlRequest(BaseModel):
+    url: str = Field(min_length=1, max_length=2000)
 
 
 class VerifyRequest(BaseModel):
@@ -240,12 +253,42 @@ def create_app(
         def run() -> dict:
             refresh_if_stale(cfg, official_index())
             r = check_notice(gemini(), official_index(), data, cfg)
-            return {"text": r.text, "issuer": r.issuer, "urls": r.urls, "phone_numbers": r.phone_numbers, "asks_for": r.asks_for, "findings": r.findings,
-                    "official_match": r.official_match, "plan": r.plan,
+            out = {"text": r.text, "issuer": r.issuer, "urls": r.urls, "phone_numbers": r.phone_numbers, "asks_for": r.asks_for, "findings": r.findings,
+                   "official_match": r.official_match, "plan": r.plan}
+            return {**out, "record_id": keep("notice", {**out, "name": request.headers.get("x-filename", "")[:120]}),
                     "note": "The text was read from the image by a language model and can contain errors. These findings are not a verdict: nothing here says the notice is genuine or fake."}
         try:
             return await run_in_threadpool(run)
         except NoticeError as exc:
+            raise HTTPException(status_code=422, detail=str(exc))
+
+    def analysed(text: str, name: str, kind: str, extra: dict | None = None) -> dict:
+        refresh_if_stale(cfg, official_index())
+        r = analyse_text(official_index(), {"text": text, "issuer": "", "urls": [], "phone_numbers": [], "asks_for": []}, cfg,
+                         empty="No readable text was found, so nothing could be checked. Some sites build their text with scripts that we do not run.", issuer_check=kind != "page")
+        out = {"text": r.text, "findings": r.findings, "official_match": r.official_match, "plan": r.plan, "name": name, **(extra or {})}
+        return {**out, "record_id": keep(kind, out),
+                "note": "These findings come from the text as we read it, with word lists and the official-domain list. They are not a verdict: nothing here says the document is genuine or fake."}
+
+    @app.post("/url/check")
+    async def url_check(req: UrlRequest) -> dict:
+        """Fetch a public web page (http/https only, public addresses only) and run the notice analysis on its text. The UI then sends the text to the claim agent."""
+        try:
+            page = await run_in_threadpool(fetch_page, cfg, req.url)
+            return await run_in_threadpool(analysed, page.text, page.title or page.url, "page", {"url": page.url, "kind": page.kind})
+        except InputError as exc:
+            raise HTTPException(status_code=422, detail=str(exc))
+
+    @app.post("/doc/check")
+    async def doc_check(request: Request) -> dict:
+        """Raw PDF bytes (a circular, a forwarded notice). Its text is read with a PDF reader, then analysed like a notice and sent to the claim agent by the UI."""
+        data = await request.body()
+        if not data or len(data) > cfg.runtime.inputs.max_bytes:
+            raise HTTPException(status_code=422, detail=f"send 1 to {cfg.runtime.inputs.max_bytes} bytes of PDF in the request body")
+        try:
+            text = (await run_in_threadpool(pdf_text, data, cfg))[: cfg.runtime.inputs.max_text_chars]
+            return await run_in_threadpool(analysed, text, request.headers.get("x-filename", "")[:120], "doc", {"kind": "pdf"})
+        except InputError as exc:
             raise HTTPException(status_code=422, detail=str(exc))
 
     @app.get("/officials/data")
@@ -279,11 +322,36 @@ def create_app(
         data = await request.body()
         try:
             t = await run_in_threadpool((transcribe or speech().transcribe), data)
+            if t.language_uncertain and transcribe is None:
+                t = await run_in_threadpool(second_opinion, t, data, gemini(), cfg)
         except VoiceError as exc:
             raise HTTPException(status_code=422, detail=str(exc))
-        return {"text": t.text, "language": t.language, "language_prob": t.language_prob, "language_uncertain": t.language_uncertain,
-                "duration_s": t.duration_s, "seconds": t.seconds, "model": t.model,
+        out = {"text": t.text, "language": t.language, "language_prob": t.language_prob, "language_uncertain": t.language_uncertain,
+               "duration_s": t.duration_s, "seconds": t.seconds, "model": t.model, "alternate": t.alternate}
+        return {**out, "record_id": keep("voice", out),
                 "note": "This is a machine transcript and can contain errors in names and numbers. It reads the words only; it does not tell whether the voice is real or cloned."}
+
+    @app.post("/report/build")
+    def report_build(req: ReportRequest) -> dict:
+        """Build and keep a Trust Report from records this server produced. Client-supplied evidence is never accepted: only record ids."""
+        if len(req.record_ids) > cfg.runtime.report.max_records_per_report:
+            raise HTTPException(status_code=422, detail=f"at most {cfg.runtime.report.max_records_per_report} records per report")
+        found = [store().get_record(i) for i in dict.fromkeys(req.record_ids)]
+        if not all(found):
+            raise HTTPException(status_code=404, detail="a record was not found: check the submission again")
+        rid = store().add_report(build_report(found, cfg, req.lang))
+        return {"id": rid, "url": f"/report/{rid}", "json": f"/report/{rid}.json"}
+
+    @app.get("/report/{rid}.json")
+    def report_json(rid: str = Path_(pattern="^[0-9a-f]{16}$")) -> dict:
+        r = store().get_report(rid)
+        if r is None:
+            raise HTTPException(status_code=404, detail="no such report")
+        return r
+
+    @app.get("/report/{rid}", include_in_schema=False)
+    def report_page(rid: str = Path_(pattern="^[0-9a-f]{16}$")) -> FileResponse:
+        return FileResponse(ROOT / "ui" / "report.html", media_type="text/html")
 
     @app.get("/news/check")
     async def news_check(text: str = Query(min_length=1, max_length=cfg.runtime.verify.max_text_chars)) -> dict:
@@ -313,8 +381,9 @@ def create_app(
             r = await run_in_threadpool((audio_check_fn or spoof().check), data)
         except VoiceError as exc:
             raise HTTPException(status_code=422, detail=str(exc))
-        return {"label": r.label, "reasons": r.reasons, "scores": r.scores, "cut": None if r.cut != r.cut else r.cut, "seconds": r.seconds,
-                "lowest": r.lowest, "flagged_windows": r.flagged_windows, "note": r.note}
+        out = {"label": r.label, "reasons": r.reasons, "scores": r.scores, "cut": None if r.cut != r.cut else r.cut, "seconds": r.seconds,
+               "lowest": r.lowest, "flagged_windows": r.flagged_windows, "note": r.note}
+        return {**out, "record_id": keep("audio", out)}
 
     @app.post("/card/spec")
     def card_spec(req: CardRequest) -> dict:
@@ -358,6 +427,16 @@ def create_app(
         return {**app_escalator.stats(), "recent": app_escalator.recent(n)}
 
     @cache
+    def store() -> RecordStore:
+        return RecordStore(_path(cfg.runtime.report.db_path))
+
+    def keep(kind: str, body: dict) -> str | None:
+        try:
+            return store().add_record(kind, body, cfg.runtime.report.max_record_bytes)
+        except (ValueError, OSError):
+            return None
+
+    @cache
     def images() -> ImageIndex:
         return image_index or ImageIndex(_path(cfg.runtime.provenance.db_path))
 
@@ -373,8 +452,11 @@ def create_app(
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=f"not an image: {exc}")
         heatmap = result.forensics.pop("heatmap_png_b64", None)
-        return {"width": result.width, "height": result.height, "label": result.label, "reasons": result.reasons,
-                "matches": result.matches, "forensics": result.forensics, "heatmap_png_b64": heatmap, "explanation": result.explanation}
+        metadata = image_metadata(data, cfg)
+        out = {"width": result.width, "height": result.height, "label": result.label, "reasons": result.reasons,
+               "matches": result.matches, "forensics": result.forensics, "explanation": result.explanation, "metadata": metadata}
+        record = keep("media", {"name": request.headers.get("x-filename", "")[:120], "result": out, "thumb": image_thumb(data, cfg.runtime.report.thumb_px), "metadata": metadata})
+        return {**out, "heatmap_png_b64": heatmap, "record_id": record}
 
     @app.post("/video/check")
     async def video_check(request: Request) -> dict:
@@ -389,7 +471,11 @@ def create_app(
             raise HTTPException(status_code=422, detail=str(exc))
         except RuntimeError as exc:
             raise HTTPException(status_code=503, detail=str(exc))
+        summary = {"duration_s": result.duration_s, "label": result.label, "reasons": result.reasons, "forensics_available": result.forensics_available,
+                   "frames": [{"index": f.index, "at_s": f.at_s, "score": f.score, "flagged": f.flagged, "ai_score": f.ai_score, "ai_flagged": f.ai_flagged, "matches": f.matches} for f in result.frames]}
+        video_record = keep("video", {"name": request.headers.get("x-filename", "")[:120], "result": summary})
         return {
+            "record_id": video_record,
             "duration_s": result.duration_s, "label": result.label, "reasons": result.reasons, "forensics_available": result.forensics_available,
             "frames": [{"index": f.index, "at_s": f.at_s, "score": f.score, "flagged": f.flagged, "ai_score": f.ai_score, "ai_flagged": f.ai_flagged, "thumb_jpeg_b64": f.thumb_jpeg_b64,
                         "matches": f.matches, "heatmap_png_b64": f.heatmap_png_b64, "note": f.note} for f in result.frames],
@@ -410,7 +496,9 @@ def create_app(
                 async for event in trace_events(graph, {"job": job, "text": clean}, job, cfg.runtime.trace):
                     yield format_sse(event)
                 if run.outcome is not None:
-                    yield f"event: result\ndata: {json.dumps(verdict_body(run.outcome.post, run.outcome, run.grounded))}\n\n"
+                    shown = verdict_body(run.outcome.post, run.outcome, run.grounded)
+                    shown["record_id"] = keep("claims", {"text": clean, "body": shown, "spread": None})
+                    yield f"event: result\ndata: {json.dumps(shown)}\n\n"
             finally:
                 app.state.active_traces -= 1
 

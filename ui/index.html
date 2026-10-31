@@ -94,12 +94,20 @@
       <div id="links"></div>
       <div id="out"></div>
       <div id="act"></div>
+      <div id="rep"></div>
     </section>
     <section style="margin-top:16px">
       <h2>Check a notice or a message screenshot</h2>
       <input type="file" id="notice" accept="image/*">
       <div class="small" style="margin-top:6px">A language model copies the text from the picture; then links, scam wording and the issuer's claim are checked in code. It says what it found, not whether the notice is genuine.</div>
       <div id="noticeOut"></div>
+    </section>
+    <section style="margin-top:16px">
+      <h2>Check a web page or a PDF circular</h2>
+      <div class="row"><input type="text" id="pageUrl" placeholder="Paste a public web page address (https://...)"><button class="ghost" id="pageGo">Read page</button></div>
+      <input type="file" id="pdf" accept="application/pdf" style="margin-top:6px">
+      <div class="small" style="margin-top:6px">We read the text (only public pages; we never get past a login or a block), check its links and wording in code, then you can send its text to the claim check.</div>
+      <div id="docOut"></div>
     </section>
     <section style="margin-top:16px">
       <h2>Check an image or video</h2>
@@ -370,6 +378,20 @@ function showResult(body, out) {
   body.claims.forEach((c) => out.append(renderClaim(c)));
 }
 
+const RECS = {};
+const safeName = (f) => f.name.replace(/[^\x20-\x7e]/g, "_").slice(0, 100);
+function offerReport(kind, id) {
+  if (!id) return;
+  RECS[kind] = id;
+  const box = $("rep"); box.replaceChildren();
+  const n = Object.keys(RECS).length;
+  const card = el("div", "claim"); card.append(el("div", "small", "Trust report: one page with the verdict, the evidence, the sources, the graph and the limits, as a shareable link. It covers " + n + " submission" + (n > 1 ? "s" : "") + " from this session (" + Object.keys(RECS).join(", ") + ")."));
+  const mk = (lang, label) => { const b = el("button", "ghost toggle", label); b.onclick = async () => { b.disabled = true; try { const r = await api("/report/build", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ record_ids: Object.values(RECS), lang }) }); window.open(r.url, "_blank"); } catch (e) { card.append(el("div", "err", "Could not build the report: " + e.message)); } b.disabled = false; }; return b; };
+  const clear = el("button", "ghost toggle", "Start a new report"); clear.onclick = () => { Object.keys(RECS).forEach((k) => delete RECS[k]); box.replaceChildren(); };
+  card.append(mk("en", "Build trust report"), " ", mk("hi", "रिपोर्ट हिन्दी में"), " ", clear);
+  box.append(card);
+}
+
 function streamAgent(text) {
   return new Promise((resolve) => {
     const trace = $("trace"), out = $("out");
@@ -386,7 +408,7 @@ function streamAgent(text) {
     es.addEventListener("tool_call", (m) => { const e = JSON.parse(m.data); add("tool", e.data.name, e.data.summary); });
     es.addEventListener("node_finished", (m) => { const e = JSON.parse(m.data); if (open[e.node]) { open[e.node].classList.remove("run"); open[e.node].append(" " + e.elapsed_ms + " ms"); } });
     es.addEventListener("error", (m) => { if (m.data) { const e = JSON.parse(m.data); add("", "failed", (e.node || "") + " " + e.data.type); out.replaceChildren(el("div", "err", e.data.type === "ModelBusy" ? "The language model is at its free-tier limit or unreachable right now. Nothing was checked and nothing was guessed. Please try again in about a minute." : "The run stopped at " + (e.node || "a step") + " (" + e.data.type + "). No verdict was guessed.")); finish(); } else if (!gotResult) { finish(); } });
-    es.addEventListener("result", (m) => { gotResult = true; const b = JSON.parse(m.data); showResult(b, out); showActions(text, b); });
+    es.addEventListener("result", (m) => { gotResult = true; const b = JSON.parse(m.data); showResult(b, out); showActions(text, b); offerReport("claims", b.record_id); });
     es.addEventListener("run_finished", () => { setTimeout(finish, 300); });
   });
 }
@@ -457,8 +479,9 @@ async function chain() {
 async function checkVideo(f, out) {
   out.append(el("div", "small", "Sampling frames and running TruFor on each. This can take a little while."));
   try {
-    const r = await fetch("/video/check", { method: "POST", body: f });
+    const r = await fetch("/video/check", { method: "POST", headers: { "x-filename": safeName(f) }, body: f });
     const body = await r.json();
+    offerReport("video", body.record_id);
     if (!r.ok) throw new Error(typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail));
     out.replaceChildren();
     const film = el("div", "film"); const heats = [];
@@ -485,8 +508,9 @@ async function checkImage() {
   if (f.type.startsWith("video/")) return checkVideo(f, out);
   out.append(el("div", "small", "Analysing " + f.name + " ..."));
   try {
-    const r = await fetch("/media/check", { method: "POST", body: f });
+    const r = await fetch("/media/check", { method: "POST", headers: { "x-filename": safeName(f) }, body: f });
     const body = await r.json();
+    offerReport("image", body.record_id);
     if (!r.ok) throw new Error(typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail));
     out.replaceChildren();
     const stage = el("div", "stage"); const img = el("img"); img.src = URL.createObjectURL(f); stage.append(img);
@@ -523,13 +547,14 @@ async function checkVoice() {
   try {
     const t = await api("/voice/transcribe", { method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: await f.arrayBuffer() });
     box.replaceChildren(el("div", "", "Transcript (" + t.language + ", " + Math.round(t.language_prob * 100) + "% sure of the language, " + t.seconds + " s): " + t.text));
+    offerReport("voice", t.record_id);
     if (t.language_uncertain) box.append(el("div", "", "The language is uncertain, so the words may be wrong. Check the text before verifying."));
     box.append(el("div", "", t.note));
     try {
       const a = await api("/audio/check", { method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: await f.arrayBuffer() });
       const suspect = a.label === "SYNTHETIC_SUSPECTED";
       const v = el("div", suspect ? "err" : "", (suspect ? "Voice: possibly synthetic or cloned. " : "Voice: no sign of synthetic speech found (this does not prove it is a real voice). ") + a.reasons.join(" "));
-      box.append(v, el("div", "small", a.note));
+      box.append(v, el("div", "small", a.note)); offerReport("audio", a.record_id);
     } catch (e) { box.append(el("div", "small", "Voice check not run: " + e.message)); }
     $("text").value = t.text; $("uri").value = "";
     if (t.text.trim()) verify();
@@ -548,11 +573,32 @@ async function checkNotice() {
     const ul = el("ul"); n.findings.forEach((x) => { const li = el("li", x.level === "red_flag" ? "err" : "", (x.level === "red_flag" ? "Red flag: " : "") + x.text); ul.append(li); }); card.append(ul);
     if (n.text) { const b = el("button", "ghost toggle", "Check the claims in this text"); b.onclick = () => { $("text").value = n.text; $("uri").value = ""; verify(); window.scrollTo({ top: 0, behavior: "smooth" }); }; card.append(b); }
     card.append(el("div", "small", n.note));
-    box.append(card);
+    box.append(card); offerReport("notice", n.record_id);
     if (n.plan && n.plan.intent !== "none") showActions(n.text, { claims: [] });
   } catch (e) { box.replaceChildren(el("div", "err", "Could not check the notice: " + e.message)); }
 }
 
+function showDoc(n, kind) {
+  const box = $("docOut"); box.replaceChildren();
+  const card = el("div", "claim");
+  card.append(el("div", "small", "Read from " + (n.url || n.name || "the file") + ":"), el("div", "q", n.text ? n.text.slice(0, 600) + (n.text.length > 600 ? " ..." : "") : "(no readable text)"));
+  const ul = el("ul"); n.findings.forEach((x) => ul.append(el("li", x.level === "red_flag" ? "err" : "", (x.level === "red_flag" ? "Red flag: " : "") + x.text))); card.append(ul);
+  if (n.text) { const b = el("button", "ghost toggle", "Check the claims in this text"); b.onclick = () => { $("text").value = n.text.slice(0, 2000); $("uri").value = ""; verify(); window.scrollTo({ top: 0, behavior: "smooth" }); }; card.append(b); }
+  card.append(el("div", "small", n.note)); box.append(card); offerReport(kind, n.record_id);
+}
+async function checkPage() {
+  const u = $("pageUrl").value.trim(); if (!u) return;
+  $("docOut").textContent = "Reading the page...";
+  try { showDoc(await api("/url/check", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: u }) }), "page"); }
+  catch (e) { $("docOut").replaceChildren(el("div", "err", "Could not read the page: " + e.message)); }
+}
+async function checkPdf() {
+  const f = $("pdf").files[0]; if (!f) return;
+  $("docOut").textContent = "Reading the PDF...";
+  try { showDoc(await api("/doc/check", { method: "POST", headers: { "Content-Type": "application/octet-stream", "x-filename": safeName(f) }, body: await f.arrayBuffer() }), "document"); }
+  catch (e) { $("docOut").replaceChildren(el("div", "err", "Could not read the PDF: " + e.message)); }
+}
+$("pageGo").onclick = checkPage; $("pdf").onchange = checkPdf;
 $("notice").onchange = checkNotice;
 $("audio").onchange = checkVoice;
 $("file").onchange = checkImage;

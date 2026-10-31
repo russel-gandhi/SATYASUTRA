@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trust Report</title>
+<style>
+  :root { --bg: #0b0f17; --panel: #121826; --line: #232c3f; --text: #e8ecf5; --mute: #8b95ab; --accent: #7aa2ff; --ok: #3ecf8e; --bad: #ff6b6b; --warn: #f5b84b; --idle: #6b7690; }
+  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --bg: #f4f6fb; --panel: #fff; --line: #dde2ee; --text: #131a2a; --mute: #5d6885; --accent: #2f5bd8; --idle: #7b86a3; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.55 system-ui, -apple-system, "Segoe UI", "Noto Sans Devanagari", "Noto Sans Kannada", sans-serif; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 20px 16px 60px; }
+  h1 { margin: 0; font-size: 20px; letter-spacing: .12em; } h2 { margin: 26px 0 8px; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--mute); }
+  .top { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: baseline; justify-content: space-between; }
+  .bar { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+  button, a.btn { background: transparent; color: var(--accent); border: 1px solid var(--line); border-radius: 8px; padding: 7px 14px; font: inherit; font-weight: 600; cursor: pointer; text-decoration: none; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-top: 12px; }
+  .verdict { font-size: 30px; font-weight: 800; line-height: 1.1; } .ok { color: var(--ok); } .bad { color: var(--bad); } .warn { color: var(--warn); } .idle { color: var(--idle); }
+  .q { font-size: 17px; margin: 6px 0; } .small { font-size: 13px; color: var(--mute); } .chip { display: inline-block; border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; font-size: 12px; margin: 2px 4px 2px 0; color: var(--mute); text-decoration: none; }
+  ul { margin: 6px 0; padding-left: 20px; } li { margin: 4px 0; } a { color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; } td, th { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--line); vertical-align: top; } th { color: var(--mute); font-weight: 600; }
+  .t1, .t2 { color: var(--ok); } .t3, .t4 { color: var(--idle); }
+  .warnbox { border: 1px solid var(--warn); border-radius: 8px; padding: 8px 10px; margin: 8px 0; }
+  svg text { font: 12px system-ui, "Segoe UI", "Noto Sans Devanagari", sans-serif; fill: var(--text); } svg .legend text { fill: var(--mute); }
+  .graphbox { overflow-x: auto; } img.thumb { max-width: 220px; border-radius: 8px; border: 1px solid var(--line); }
+  @media print { .bar, .noprint { display: none !important; } body { background: #fff; color: #000; } .card { break-inside: avoid; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><h1 id="title">TRUST REPORT</h1><div class="small" id="when"></div></div>
+  <div class="bar noprint">
+    <button id="copy">Copy link</button><button id="print">Save as PDF / print</button><a class="btn" id="json" target="_blank">Download JSON</a>
+    <button id="lang">हिन्दी में देखें</button><a class="btn" href="/">Back to the checker</a>
+  </div>
+  <div id="root"><div class="small">Loading...</div></div>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+const rid = location.pathname.split("/").pop();
+const L = {
+  en: { title: "TRUST REPORT", s1: "1. What was submitted", s2: "2. Language and entities", s3: "3. Media forensic findings", s4: "4. Supporting evidence", s5: "5. Contradicting evidence", s6: "6. Sources and their credibility",
+        s7: "7. Contextual inconsistencies", s8: "8. Evidence graph", s9: "9. Verdict", s10: "10. Confidence and limitations", none: "None found.", conf: "confidence", why: "How the verdict was reached",
+        legend: { supports: "supports", contradicts: "contradicts", context: "context only", mentions: "mentions", same_image_as: "same image", spreading_as: "spreading as", related_not_used: "related, not used", records: "records", submitted_with: "submitted with" },
+        published: "Generated", ledger: "Tamper-evident ledger entry", nonclaim: "no context problems found", orig: "Original wording", lang: "हिन्दी में देखें" },
+  hi: { title: "भरोसा रिपोर्ट", s1: "1. क्या जमा किया गया", s2: "2. भाषा और नाम", s3: "3. मीडिया की फ़ॉरेंसिक जाँच", s4: "4. समर्थन में सबूत", s5: "5. विरोध में सबूत", s6: "6. स्रोत और उनकी विश्वसनीयता",
+        s7: "7. संदर्भ में गड़बड़ियाँ", s8: "8. सबूतों का ग्राफ़", s9: "9. फ़ैसला", s10: "10. भरोसा और सीमाएँ", none: "कुछ नहीं मिला।", conf: "भरोसा", why: "फ़ैसला कैसे हुआ",
+        legend: { supports: "समर्थन", contradicts: "विरोध", context: "सिर्फ़ संदर्भ", mentions: "ज़िक्र", same_image_as: "वही तस्वीर", spreading_as: "इस रूप में फैल रहा", related_not_used: "संबंधित, उपयोग नहीं", records: "दर्ज", submitted_with: "साथ जमा" },
+        published: "बनाई गई", ledger: "छेड़छाड़-रोधी लेजर प्रविष्टि", nonclaim: "संदर्भ में कोई समस्या नहीं मिली", orig: "मूल शब्द", lang: "View in English" },
+};
+const TONE = { SUPPORTED: "ok", REFUTED: "bad", MISSING_CONTEXT: "warn", UNVERIFIABLE_YET: "idle", NOT_A_CLAIM: "idle" };
+const BAND = { high: { en: "high", hi: "उच्च" }, medium: { en: "medium", hi: "मध्यम" }, low: { en: "low", hi: "कम" } };
+const EDGE_COLOR = { supports: "#3ecf8e", contradicts: "#ff6b6b", context: "#8b95ab", mentions: "#8b95ab", same_image_as: "#f5b84b", spreading_as: "#b07aff", related_not_used: "#8b95ab", records: "#8b95ab", submitted_with: "#7aa2ff" };
+const NODE_COLOR = { claim: "#7aa2ff", entity: "#8b95ab", factcheck: "#3ecf8e", news: "#3ecf8e", official: "#3ecf8e", media: "#f5b84b", cluster: "#b07aff", registry: "#8b95ab", source: "#8b95ab", provenance: "#f5b84b" };
+
+function wrapText(s, n) { const out = []; let line = ""; s.split(" ").forEach((w) => { if ((line + " " + w).trim().length > n && line) { out.push(line); line = w; } else line = (line + " " + w).trim(); }); if (line) out.push(line); return out.slice(0, 3); }
+
+function drawGraph(g, t) {
+  const W = 900, colX = { left: 20, mid: 360, right: 700 }, nw = 180, nh = 46, gap = 14;
+  const claims = g.nodes.filter((n) => n.kind === "claim"), media = g.nodes.filter((n) => ["media", "cluster"].includes(n.kind));
+  const rel = (id) => g.edges.find((e) => e.to === id || e.from === id);
+  const sources = g.nodes.filter((n) => ["factcheck", "news", "official", "source", "provenance"].includes(n.kind) && !(media.length && g.edges.some((e) => e.from !== undefined && e.relation === "same_image_as" && e.to === n.id && false)));
+  const entities = g.nodes.filter((n) => ["entity", "registry"].includes(n.kind));
+  const order = { supports: 0, contradicts: 1, context: 2, related_not_used: 3 };
+  const rank = (n) => { const e = g.edges.find((x) => x.from === n.id && x.to.startsWith("claim:")); return e ? (order[e.relation] ?? 4) : 5; };
+  sources.sort((a, b) => rank(a) - rank(b));
+  const pos = {};
+  const place = (list, x, y0) => list.forEach((n, i) => { pos[n.id] = { x, y: y0 + i * (nh + gap) }; });
+  place(media, colX.left, 20); place(claims, colX.mid, 20 + Math.max(0, (Math.max(sources.length, 1) * (nh + gap) - claims.length * (nh + gap)) / 2));
+  place(sources, colX.right, 20);
+  const bottom = 20 + Math.max(sources.length, media.length, claims.length) * (nh + gap) + 30;
+  entities.forEach((n, i) => { pos[n.id] = { x: 20 + (i % 4) * 220, y: bottom + Math.floor(i / 4) * (nh + gap) }; });
+  const H = bottom + Math.ceil(entities.length / 4) * (nh + gap) + 60;
+  const ns = "http://www.w3.org/2000/svg", svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("width", "100%"); svg.style.minWidth = "640px";
+  const mk = (tag, attrs, text) => { const e = document.createElementNS(ns, tag); Object.entries(attrs || {}).forEach(([k, v]) => e.setAttribute(k, v)); if (text != null) e.textContent = text; return e; };
+  g.edges.forEach((e) => {
+    const a = pos[e.from], b = pos[e.to]; if (!a || !b) return;
+    const x1 = a.x + nw, y1 = a.y + nh / 2, x2 = b.x, y2 = b.y + nh / 2;
+    const leftward = a.x > b.x, sx = leftward ? a.x : x1, tx = leftward ? b.x + nw : x2;
+    const mid = (sx + tx) / 2, p = mk("path", { d: `M${sx},${y1} C${mid},${y1} ${mid},${y2} ${tx},${y2}`, fill: "none", stroke: EDGE_COLOR[e.relation] || "#8b95ab", "stroke-width": e.relation === "supports" || e.relation === "contradicts" ? 2.2 : 1.2, "stroke-dasharray": ["context", "related_not_used", "mentions"].includes(e.relation) ? "4 3" : "" });
+    p.append(mk("title", {}, `${t.legend[e.relation] || e.relation}${e.rating ? ": " + e.rating : ""}`)); svg.append(p);
+  });
+  g.nodes.forEach((n) => {
+    const p = pos[n.id]; if (!p) return;
+    const grp = mk("g", {}); if (n.url) { grp.style.cursor = "pointer"; grp.addEventListener("click", () => window.open(n.url, "_blank", "noopener")); }
+    grp.append(mk("rect", { x: p.x, y: p.y, width: nw, height: nh, rx: 8, fill: "none", stroke: NODE_COLOR[n.kind] || "#8b95ab", "stroke-width": n.kind === "claim" ? 2.4 : 1.4 }));
+    wrapText(n.label, 28).forEach((ln, i, arr) => grp.append(mk("text", { x: p.x + 8, y: p.y + (nh / 2) + (i - (arr.length - 1) / 2) * 13 + 4 }, ln)));
+    grp.append(mk("title", {}, n.label + (n.tier ? ` (tier ${n.tier})` : ""))); svg.append(grp);
+  });
+  const legend = mk("g", { class: "legend" });
+  Object.entries(t.legend).forEach(([k, v], i) => { const x = 20 + (i % 5) * 170, y = H - 36 + Math.floor(i / 5) * 16; legend.append(mk("line", { x1: x, y1: y - 4, x2: x + 22, y2: y - 4, stroke: EDGE_COLOR[k] || "#8b95ab", "stroke-width": 2 }), mk("text", { x: x + 28, y }, v)); });
+  svg.append(legend);
+  const box = el("div", "graphbox"); box.append(svg, el("div", "small", g.note)); return box;
+}
+
+function evidenceList(items, t) {
+  if (!items.length) return el("div", "small", t.none);
+  const ul = el("ul");
+  items.forEach((x) => { const li = el("li"); const a = el("a", "", x.publisher || "source"); a.href = x.url; a.target = "_blank"; a.rel = "noopener"; li.append(a, ": " + (x.reviewed_claim ? "“" + x.reviewed_claim + "”" : x.rating || "") + (x.reviewed_at ? " (" + x.reviewed_at.slice(0, 10) + ")" : "")); ul.append(li); });
+  return ul;
+}
+
+function render(r) {
+  const t = L[r.lang] || L.en; document.documentElement.lang = r.lang; $("title").textContent = t.title; $("lang").textContent = t.lang;
+  $("when").textContent = t.published + " " + r.generated_at.slice(0, 16).replace("T", " ") + " UTC · " + rid; $("json").href = "/report/" + rid + ".json";
+  const root = $("root"); root.replaceChildren();
+  const sec = r.sections, add = (h, ...nodes) => { root.append(el("h2", "", h)); const c = el("div", "card"); nodes.forEach((n) => c.append(n)); root.append(c); return c; };
+  // verdict first, in plain words
+  sec.claims.forEach((c) => {
+    const c0 = el("div", "card"); c0.append(el("div", "verdict " + (TONE[c.verdict] || "idle"), c.verdict_name), el("div", "q", "“" + c.text + "”"), el("div", "small", t.conf + ": " + (BAND[c.confidence] || {})[r.lang]));
+    root.append(c0);
+  });
+  const s1 = add(t.s1); sec.submitted.forEach((s) => { const d = el("div", "q"); if (s.thumb) { const i = el("img", "thumb"); i.src = "data:image/jpeg;base64," + s.thumb; d.append(i, el("div", "small", s.name || s.kind)); } else d.textContent = (s.text || s.name || s.kind); s1.append(d); });
+  const s2 = add(t.s2); sec.claims.forEach((c) => { s2.append(el("div", "small", (c.language || "?").toUpperCase() + (c.translated ? " → EN" : "") + (c.original && c.original !== c.text ? " · " + t.orig + ": " + c.original : ""))); c.entities.forEach((e) => { const a = el("a", "chip", e.label + (e.description ? " – " + e.description : "")); a.href = e.url; a.target = "_blank"; s2.append(a); }); });
+  const s3 = add(t.s3); if (!sec.media.length) s3.append(el("div", "small", t.none)); sec.media.forEach((m) => {
+    if (m.thumb) { const i = el("img", "thumb"); i.src = "data:image/jpeg;base64," + m.thumb; s3.append(i); }
+    s3.append(el("div", "q", (m.kind || "") + ": " + (m.label || "").replaceAll("_", " "))); const ul = el("ul"); (m.reasons || []).forEach((x) => ul.append(el("li", "", x))); s3.append(ul);
+    (m.metadata || []).forEach((x) => s3.append(el("div", "small", x.text))); m.matches.forEach((x) => { const a = el("a", "", x.publisher + ": " + x.title); a.href = x.article_url; a.target = "_blank"; s3.append(a, el("br")); });
+  });
+  const sup = add(t.s4), con = add(t.s5); sec.claims.forEach((c) => { sup.append(evidenceList(c.supporting, t)); con.append(evidenceList(c.contradicting, t)); });
+  const s6 = add(t.s6); const tb = el("table"); tb.innerHTML = ""; const th = el("tr"); ["", "", "", ""].forEach(() => th.append(el("th")));
+  sec.claims.forEach((c) => c.sources.forEach((x) => { const tr = el("tr"); const a = el("a", "", x.publisher || "source"); a.href = x.url; a.target = "_blank"; const td0 = el("td"); td0.append(a); tr.append(td0, el("td", "t" + x.tier, x.tier_name), el("td", "", x.role), el("td", "small", x.date)); tb.append(tr); }));
+  s6.append(tb.children.length ? tb : el("div", "small", t.none));
+  const s7 = add(t.s7); if (!sec.context.length) s7.append(el("div", "small", t.nonclaim)); sec.context.forEach((f) => s7.append(el("div", "warnbox", f.text)));
+  const s8 = add(t.s8); s8.append(drawGraph(r.graph, t));
+  const s9 = add(t.s9); sec.claims.forEach((c) => { s9.append(el("div", "verdict " + (TONE[c.verdict] || "idle"), c.verdict_name)); const d = el("details"); d.append(el("summary", "small", t.why)); const ul = el("ul"); c.reasons.forEach((x) => ul.append(el("li", "", x))); d.append(ul); s9.append(d);
+    if (c.ledger_seq != null) { const a = el("a", "small", t.ledger + " #" + c.ledger_seq); a.href = "/ledger/" + c.ledger_seq; a.target = "_blank"; s9.append(a); } });
+  const s10 = add(t.s10); const ul = el("ul"); r.limitations.forEach((x) => ul.append(el("li", "", x))); s10.append(ul);
+}
+
+async function load() {
+  try { const r = await (await fetch("/report/" + rid + ".json")).json(); window.__r = r; render(r); } catch (e) { $("root").textContent = "Could not load this report."; }
+}
+$("copy").onclick = () => { navigator.clipboard.writeText(location.href).then(() => { $("copy").textContent = "Copied"; setTimeout(() => ($("copy").textContent = "Copy link"), 1500); }); };
+$("print").onclick = () => window.print();
+$("lang").onclick = async () => {
+  const r = window.__r, next = r.lang === "en" ? "hi" : "en";
+  const b = await (await fetch("/report/build", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ record_ids: r.records, lang: next }) })).json();
+  if (b.url) location.href = b.url;
+};
+load();
+</script>
+</body>
+</html>

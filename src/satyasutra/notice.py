@@ -79,12 +79,17 @@ def claims_official_issuer(issuer: str, text: str, cfg: Config) -> bool:
 
 
 def check_notice(client: GeminiClient, index: OfficialIndex, data: bytes, cfg: Config) -> NoticeResult:
-    s = cfg.runtime.notice
-    read = read_notice(client, data, cfg)
+    return analyse_text(index, read_notice(client, data, cfg), cfg)
+
+
+def analyse_text(index: OfficialIndex, read: dict, cfg: Config, empty: str = "No readable text was found in the image, so nothing could be checked.",
+                 issuer_check: bool = True) -> NoticeResult:
+    """The code-only half: `read` holds text, issuer, urls, phone_numbers, asks_for from whatever copied the text (vision, a PDF reader, a page).
+    A web page that merely mentions an institution is not a notice from it, so pages skip the issuer check."""
     text = read["text"].strip()
     r = NoticeResult(text, read["issuer"], read["urls"], read["phone_numbers"], read["asks_for"])
     if not text:
-        r.findings.append({"kind": "unreadable", "level": "note", "text": "No readable text was found in the image, so nothing could be checked."})
+        r.findings.append({"kind": "unreadable", "level": "note", "text": empty})
         return r
     scan = " ".join([text, *read["urls"]])
     links = check_links(scan)
@@ -103,7 +108,7 @@ def check_notice(client: GeminiClient, index: OfficialIndex, data: bytes, cfg: C
         r.findings.append({"kind": "wording", "level": "red_flag", "text": f"It looks like a scam attempt: {plan.why}."})
     if read["asks_for"]:
         r.findings.append({"kind": "asks", "level": "note", "text": "It asks the reader to: " + "; ".join(read["asks_for"][:4]) + "."})
-    if claims_official_issuer(read["issuer"], text, cfg):
+    if issuer_check and claims_official_issuer(read["issuer"], text, cfg):
         match = _official_match(index, text, cfg)
         if match:
             r.official_match = match

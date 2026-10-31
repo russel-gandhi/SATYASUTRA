@@ -8,9 +8,11 @@ This module reads speech only. It does not tell whether a voice is real or clone
 
 from __future__ import annotations
 
+import io
 import shutil
 import subprocess
 import time
+import wave
 from dataclasses import dataclass
 from pathlib import Path
 from threading import Lock
@@ -33,6 +35,7 @@ class Transcript:
     duration_s: float
     seconds: float                      # how long transcription took
     model: str
+    alternate: str = ""                 # the first reading, kept when a second opinion replaced the text
 
 
 def decode(data: bytes, timeout_s: float) -> np.ndarray:
@@ -53,6 +56,34 @@ def decode(data: bytes, timeout_s: float) -> np.ndarray:
 
 class VoiceError(ValueError):
     """The audio could not be read or is outside the limits; the message is safe to show."""
+
+
+LISTEN_PROMPT = "listen.txt"
+LISTEN_SCHEMA = {"type": "OBJECT", "properties": {"text": {"type": "STRING"}, "language": {"type": "STRING"}}, "required": ["text", "language"]}
+PCM_BYTES = 2
+
+
+def _wav(audio: np.ndarray) -> bytes:
+    buf = io.BytesIO()
+    pcm = (np.clip(audio, -1.0, 1.0) * np.iinfo(np.int16).max).astype("<i2")
+    with wave.open(buf, "wb") as w:
+        w.setnchannels(1); w.setsampwidth(PCM_BYTES); w.setframerate(SAMPLE_RATE); w.writeframes(pcm.tobytes())
+    return buf.getvalue()
+
+
+def second_opinion(t: Transcript, data: bytes, client, cfg: Config) -> Transcript:
+    """Whisper-small is weak on Kannada and other Indian languages (a Kannada sentence came back in Tamil script at 0.36 language probability), so when it is
+    unsure a second reading by Gemini replaces the text. Both readings stay visible: Whisper's is kept as `alternate`. Failure keeps Whisper's reading."""
+    from ..claims.extract import load_prompt
+    from ..errors import SourceError
+    try:
+        reply = client.generate_json(load_prompt(LISTEN_PROMPT), LISTEN_SCHEMA, images=[("audio/wav", _wav(decode(data, cfg.runtime.voice.decode_timeout_s)))])
+    except (SourceError, VoiceError):
+        return t
+    heard, lang = str(reply.data.get("text", "")).strip(), str(reply.data.get("language", "")).strip().lower()
+    if not heard:
+        return t
+    return Transcript(heard, lang or t.language, t.language_prob, True, t.duration_s, t.seconds, f"{client.model} (second opinion; {t.model} was unsure of the language)", alternate=t.text)
 
 
 class Transcriber:
