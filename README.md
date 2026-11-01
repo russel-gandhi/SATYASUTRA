@@ -14,6 +14,8 @@
 
 Hackathon Theme 1, Civic Pulse (problem statement 4) &nbsp;|&nbsp; this repository, FORGE, is where it was built
 
+### [Live demo](https://vercel-bice-six-85.vercel.app/) &nbsp;·&nbsp; [Demo video](https://www.youtube.com/watch?v=Ui2GTXgsvSg) &nbsp;·&nbsp; [Slide deck](https://app.slidespeak.co/presentation/cmvxxi6w2012n08lia09hzp1s/share) &nbsp;·&nbsp; [Telegram bot](#telegram-bot)
+
 [The problem](#the-problem) &nbsp;·&nbsp; [What it does](#what-it-does) &nbsp;·&nbsp; [Status](#status-at-a-glance) &nbsp;·&nbsp; [How it decides](#how-a-claim-is-decided) &nbsp;·&nbsp; [Accuracy](#how-well-does-it-work) &nbsp;·&nbsp; [Run it](#run-it) &nbsp;·&nbsp; [Limits](#known-limits)
 
 </div>
@@ -41,6 +43,15 @@ pictures are being shared or threatened.
 > **Read this first.** This is a hackathon prototype. Section [How well does it work?](#how-well-does-it-work) gives the measured numbers,
 > including a held-out test where one of our rules **failed** its own pass criteria. Section [Known limits](#known-limits) lists what we did not test.
 > Nothing here is claimed beyond what those sections say.
+
+### Links
+
+| | |
+|---|---|
+| Live deployment | https://vercel-bice-six-85.vercel.app/ (up only while the host machine, the API and the tunnel are running; see [Deploying it](#deploying-it)) |
+| Demo video | https://www.youtube.com/watch?v=Ui2GTXgsvSg |
+| Slide deck | https://app.slidespeak.co/presentation/cmvxxi6w2012n08lia09hzp1s/share |
+| Telegram bot | see [Telegram bot](#telegram-bot) for how to reach it and run your own |
 
 ### At a glance
 
@@ -72,11 +83,12 @@ pictures are being shared or threatened.
 9. [Run it](#run-it)
 10. [Deploying it](#deploying-it)
 11. [Using the website](#using-the-website)
-12. [API](#api)
-13. [Repository layout](#repository-layout)
-14. [Known limits](#known-limits)
-15. [Roadmap](#roadmap)
-16. [Credits and licences](#credits-and-licences)
+12. [Telegram bot](#telegram-bot)
+13. [API](#api)
+14. [Repository layout](#repository-layout)
+15. [Known limits](#known-limits)
+16. [Roadmap](#roadmap)
+17. [Credits and licences](#credits-and-licences)
 
 ---
 
@@ -329,7 +341,44 @@ Open http://127.0.0.1:8000/. The home page links to one page per check, and the 
 4. **My investigations:** your history, kept in your browser; delete any item.
 5. **What is spreading** and **Command centre:** the investigator views.
 
-On Telegram, send text, a voice note or a photo to the bot; send `/help_me` (Hindi `/madad`) for the guided support flow and `/forget` to clear it. `/ladder [minor]` lists who to approach, `/ask <question>` answers from the official documents, and `/draft <kind>` makes a letter.
+## Telegram bot
+
+The bot brings the same checks to Telegram, where a lot of forwarded misinformation actually travels. It holds no logic of its own: it
+long-polls Telegram, sends what it receives to the running API (`/verify`, `/voice/transcribe`, `/media/check`, `/act/plan`, `/raksha/*`) and
+formats the answer. It never replies with a verdict it did not get from the API. Code: [`scripts/telegram_bot.py`](scripts/telegram_bot.py) and
+[`src/satyasutra/bot/`](src/satyasutra/bot/).
+
+### Using it
+
+Open the bot in Telegram (search for its username, or ask the team for the link) and press **Start**. Then:
+
+| Send | You get |
+|---|---|
+| any text, e.g. a forwarded message | the claims found, the verdict for each with sources (or "cannot tell"), news coverage for unverified claims, and what to do next |
+| a voice note | the transcript and language, then the same claim check |
+| a photo | tamper, AI-generated and debunked-image signals (never "authentic") |
+| `/help_me` (Hindi: `/madad`) | Raksha, the guided support flow for someone whose private pictures are threatened or shared; nothing in it is fact-checked or stored |
+| `/forget` | clears the Raksha conversation |
+| `/ladder` or `/ladder minor` | who to approach, in order, with the official source for each rung |
+| `/ask <question>` | an answer quoted only from the official documents, or a refusal when they do not cover it |
+| `/draft complaint`, `/draft followup`, `/draft escalation` | a letter built from the fields you type (`/draft complaint name=...; account=...`); no model is used |
+
+> [!NOTE]
+> The bot answers only while the machine running it, the API and the bot process are up, the same as the live deployment. Telegram keeps its own copy of
+> the chat; our server does not store Telegram requests.
+
+### Running your own
+
+1. Create a bot with [@BotFather](https://t.me/BotFather) (`/newbot`) and copy the token.
+2. Put it in the git-ignored `.env` as `TELEGRAM_BOT_TOKEN` (never commit it or paste it anywhere public).
+3. Start the API, then the bot:
+
+```powershell
+.\.venv\Scripts\python scripts\serve.py --port 8000
+.\.venv\Scripts\python scripts\telegram_bot.py
+```
+
+The bot calls the API at `http://127.0.0.1:8000` on the same machine, so it does not need the public tunnel.
 
 ## API
 
