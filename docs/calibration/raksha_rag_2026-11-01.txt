@@ -1,0 +1,36 @@
+Raksha grounded guide, 2026-11-01: 25 questions (14 answerable, 11 not), 0 errors
+retrieval: an expected document in the retrieved passages for 14/14
+grounded (at least one quoted sentence): 12/14
+correct (a sentence holds an expected word): 12/14
+refused when no document answers: 11/11
+quotes verbatim: every sentence shown passed the verbatim and figure checks (enforced in code, so this is not a measured rate)
+
+ok   retrieved=Y grounded=Y  How long do I have to appeal to the Grievance Appellate Committee?
+ok   retrieved=Y grounded=Y  How can I track the status of my appeal on the GAC platform?
+ok   retrieved=Y grounded=Y  Who can I approach for further queries about my complaint on the cybercrime portal?
+ok   retrieved=Y grounded=Y  How do I check the status of my complaint on the National Cybercrime Reporting Portal?
+ok   retrieved=Y grounded=Y  Can I report a crime against women or children anonymously on the cybercrime portal?
+ok   retrieved=Y grounded=Y  Does StopNCII upload my image?
+ok   retrieved=Y grounded=Y  Is Take It Down for images taken before I was 18?
+ok   retrieved=Y grounded=Y  What kind of matters does CPGRAMS not take up?
+ok   retrieved=Y grounded=Y  Is there a fee for filing a grievance on CPGRAMS?
+ok   retrieved=Y grounded=Y  What does NALSA provide?
+ok   retrieved=Y grounded=Y  Does the Grievance Appellate Committee handle cybercrime cases?
+MISS  retrieved=Y grounded=N  Who is on the Grievance Appellate Committee?
+MISS  retrieved=Y grounded=N  मैं साइबर क्राइम पोर्टल पर शिकायत की स्थिति कैसे देखूँ?
+ok   retrieved=Y grounded=Y  GAC में अपील कितने दिन में करनी होती है?
+ok   refused=Y (retrieved 3)  What is the weather in Delhi today?
+ok   refused=Y (retrieved 1)  Will the police arrest the person who leaked my photos?
+ok   refused=Y (retrieved 3)  How much compensation will I get?
+ok   refused=Y (retrieved 5)  Which section of the IT Act punishes sharing intimate images?
+ok   refused=Y (retrieved 5)  What is the fine for sharing someone's intimate images?
+ok   refused=Y (retrieved 0)  How do I file my income tax return?
+ok   refused=Y (retrieved 1)  Can you remove the photos from Instagram for me?
+ok   refused=Y (retrieved 0)  How do I renew my passport?
+ok   refused=Y (retrieved 4)  How many hours does a platform have to remove intimate images after a complaint?
+ok   refused=Y (retrieved 1)  Which lawyer should I hire in Delhi?
+ok   refused=Y (retrieved 3)  आज दिल्ली का मौसम कैसा है?
+
+misses:
+- Who is on the Grievance Appellate Committee?
+- मैं साइबर क्राइम पोर्टल पर शिकायत की स्थिति कैसे देखूँ?

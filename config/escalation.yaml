@@ -1,0 +1,94 @@
+# Raksha escalation ladder (plan RR4), Delhi first. Each rung cites one or more passages of the official documents we hold (data/raksha_corpus),
+# with a quote copied from the passage; the quote is checked against the index every time the ladder is served, and a rung whose quote is not found
+# there is shown as "source not confirmed". Nothing here is a deadline of ours: a wait time is shown only when a document states it, otherwise the
+# rung says that no time limit is stated. The Hindi is OUR draft, not reviewed by a native speaker; reviewed_by stays empty until someone does.
+# Not covered by any document we hold (so no rung): the National and State Commissions for Women, a court petition, the text of the IT Rules
+# and of the statutes (those hosts block our client; the PDFs must be downloaded by hand and added).
+reviewed_by: ""
+reviewed_on: ""
+state: Delhi
+not_covered:
+  en: "The documents we hold do not cover women's commissions or a court petition, and they do not include the text of the IT Rules or the criminal laws. A lawyer or legal-aid service can tell you about those."
+  hi: "हमारे पास मौजूद दस्तावेज़ों में महिला आयोग या अदालत में याचिका की जानकारी नहीं है, और उनमें आईटी नियमों या आपराधिक कानूनों का पाठ भी नहीं है। इनके बारे में कोई वकील या कानूनी सहायता सेवा बता सकती है।"
+no_time_limit:
+  en: "No time limit is stated in the documents we have."
+  hi: "हमारे पास मौजूद दस्तावेज़ों में कोई समय-सीमा नहीं बताई गई है।"
+starts:
+  adult: [stopncii, report_portal, platform_officer]
+  minor: [take_it_down, report_portal, platform_officer]
+  unsure: [take_it_down, report_portal, platform_officer]     # unsure is treated as under 18, as in the flow
+rungs:
+  stopncii:
+    title: {en: "Block your images from spreading (adults)", hi: "अपनी तस्वीरों को फैलने से रोकें (वयस्क)"}
+    how: {en: "StopNCII.org makes a fingerprint (a hash) of your image on your own device and shares only that with participating companies. Your image is not uploaded.", hi: "StopNCII.org आपकी तस्वीर का फ़िंगरप्रिंट (हैश) आपके अपने डिवाइस पर बनाता है और सिर्फ़ वही भागीदार कंपनियों को देता है। आपकी तस्वीर अपलोड नहीं होती।"}
+    wait: not_stated
+    next: []
+    sources:
+      - {passage: "stopncii_home:1:2", quote: "StopNCII.org is a free tool designed to support victims of Non-Consensual Intimate Image (NCII) abuse."}
+  take_it_down:
+    title: {en: "Block images taken before you were 18", hi: "18 साल से पहले ली गई तस्वीरों को रोकें"}
+    how: {en: "Take It Down, run by NCMEC, hashes the image on your device and passes the hash to participating platforms. It works only on platforms that have agreed to take part.", hi: "NCMEC की Take It Down सेवा आपके डिवाइस पर तस्वीर का हैश बनाती है और भागीदार प्लेटफ़ॉर्म को देती है। यह सिर्फ़ उन्हीं प्लेटफ़ॉर्म पर काम करती है जो इसमें शामिल हैं।"}
+    wait: not_stated
+    next: []
+    sources:
+      - {passage: "takeitdown_home:1:1", quote: "Take It Down will work on public or unencrypted online platforms that have agreed to participate."}
+      - {passage: "takeitdown_home:1:3", quote: "Please do NOT send, share, or download any image or video in order to submit to Take It Down."}
+  report_portal:
+    title: {en: "Report on the National Cybercrime Reporting Portal", hi: "राष्ट्रीय साइबर अपराध रिपोर्टिंग पोर्टल पर शिकायत करें"}
+    how: {en: "Go to cybercrime.gov.in yourself. There is an option for crime related to women or children and another for other cybercrimes. Keep the acknowledgement number: it tracks your complaint. We do not file anything for you.", hi: "cybercrime.gov.in पर आप खुद जाएँ। महिलाओं या बच्चों से जुड़े अपराध का अलग विकल्प है, और दूसरे साइबर अपराधों का अलग। पावती संख्या संभालकर रखें: उसी से शिकायत की स्थिति देखी जाती है। हम आपकी ओर से कुछ दर्ज नहीं करते।"}
+    attach: {en: "Links, screenshots that show the name or number and the date, and dates and times, as in your summary.", hi: "लिंक, ऐसे स्क्रीनशॉट जिनमें नाम या नंबर और तारीख दिखे, और तारीख-समय, जैसा आपके सारांश में है।"}
+    wait: not_stated
+    next: [police_station]
+    sources:
+      - {passage: "i4c_faq:1:5", quote: "Report Crime related to Women/ Child"}
+      - {passage: "i4c_faq:1:9", quote: "The complainant will receive an acknowledgement number which can be used to track the progress of the complaint"}
+  police_station:
+    title: {en: "Go to the police station or the State Nodal Officer for the portal", hi: "थाने या पोर्टल के राज्य नोडल अधिकारी के पास जाएँ"}
+    how: {en: "The I4C FAQ says that for further queries about a complaint the concerned police station or the State/UT Nodal Officer for the portal may be approached (it says this in its answer about the 1930 helpline; it does not say it only applies there). In Delhi, 112 is the emergency number listed by Delhi Police.", hi: "I4C के सवाल-जवाब में कहा गया है कि शिकायत के बारे में आगे पूछताछ के लिए संबंधित थाने या राज्य/केंद्र शासित प्रदेश के नोडल अधिकारी से संपर्क किया जा सकता है (यह 1930 हेल्पलाइन वाले जवाब में लिखा है; यह नहीं लिखा कि सिर्फ़ वहीं लागू है)। दिल्ली में दिल्ली पुलिस 112 को आपातकालीन नंबर बताती है।"}
+    wait: not_stated
+    next: [senior_officer]
+    sources:
+      - {passage: "i4c_faq:1:10", quote: "the concerned Police Station and/or the State/UT Nodal Officer for NCRP may be approached"}
+      - {passage: "delhi_police_contacts:1:1", quote: "Emergency Response Support System 112"}
+  senior_officer:
+    title: {en: "Write to a senior Delhi Police officer", hi: "दिल्ली पुलिस के वरिष्ठ अधिकारी को लिखें"}
+    how: {en: "Delhi Police lists its Joint Commissioners with an email and phone on its contacts page. The documents we hold do not say this is a required step; this is the page that lists who they are. The email is written on the page as shown in the quote ([at] is @, [dot] is a full stop).", hi: "दिल्ली पुलिस अपने संपर्क पेज पर संयुक्त आयुक्तों के ईमेल और फ़ोन देती है। हमारे दस्तावेज़ यह नहीं कहते कि यह ज़रूरी कदम है; यह वह पेज है जहाँ अधिकारियों की सूची है। ईमेल पेज पर उद्धरण में दिखाए ढंग से लिखा है ([at] यानी @, [dot] यानी .)।"}
+    attach: {en: "Your acknowledgement number, the dates you reported, and who you reported to.", hi: "आपकी पावती संख्या, शिकायत की तारीखें, और आपने किसे शिकायत की।"}
+    wait: not_stated
+    next: [cpgrams]
+    sources:
+      - {passage: "delhi_police_contacts:1:5", quote: "Jt. CP/SPUWAC & SPUNER jtcp[dot]spuwac[at]delhipolice[dot]gov[dot]in 011-20865513"}
+  cpgrams:
+    title: {en: "Lodge a grievance on CPGRAMS", hi: "CPGRAMS पर शिकायत दर्ज करें"}
+    how: {en: "CPGRAMS takes grievances against public authorities about service delivery. It does not take court-related (sub judice) matters. Grievances sent by email are not attended to; lodge it on the portal. You get a registration ID to track it.", hi: "CPGRAMS सरकारी अधिकारियों की सेवा से जुड़ी शिकायतें लेता है। अदालत में चल रहे (विचाराधीन) मामले नहीं लेता। ईमेल से भेजी शिकायत पर ध्यान नहीं दिया जाता; पोर्टल पर दर्ज करें। ट्रैक करने के लिए पंजीकरण आईडी मिलती है।"}
+    wait: not_stated
+    next: [legal_aid]
+    sources:
+      - {passage: "cpgrams_home:1:2", quote: "lodge their grievances to the public authorities on any subject related to service delivery"}
+      - {passage: "cpgrams_home:1:3", quote: "The status of the grievance filed in CPGRAMS can be tracked with the unique registration ID"}
+  platform_officer:
+    title: {en: "Complain to the platform's Grievance Officer", hi: "प्लेटफ़ॉर्म के शिकायत अधिकारी से शिकायत करें"}
+    how: {en: "Use the platform's own report and grievance route first. The Grievance Appellate Committee says its appeal is only for people who have already contacted the platform's Grievance Officer. The time the platform must take is in the IT Rules text, which we do not hold yet.", hi: "पहले प्लेटफ़ॉर्म का अपना रिपोर्ट और शिकायत रास्ता इस्तेमाल करें। शिकायत अपील समिति कहती है कि उसकी अपील उन्हीं के लिए है जो प्लेटफ़ॉर्म के शिकायत अधिकारी से पहले संपर्क कर चुके हैं। प्लेटफ़ॉर्म को कितना समय लगना चाहिए, यह आईटी नियमों के पाठ में है, जो अभी हमारे पास नहीं है।"}
+    attach: {en: "The links, the date you reported, and the platform's reply if any.", hi: "लिंक, रिपोर्ट करने की तारीख, और प्लेटफ़ॉर्म का जवाब अगर आया हो।"}
+    wait: not_stated
+    next: [gac_appeal]
+    sources:
+      - {passage: "gac_home:1:2", quote: "Submit your grievance ONLY if the Grievance Officer (GO) of the relevant intermediary has been contacted"}
+  gac_appeal:
+    title: {en: "Appeal to the Grievance Appellate Committee", hi: "शिकायत अपील समिति में अपील करें"}
+    how: {en: "gac.gov.in is an online appeal against the platform's decision. The GAC does not handle financial fraud or cybercrime cases: it deals with the platform's decision, not the crime itself.", hi: "gac.gov.in प्लेटफ़ॉर्म के फ़ैसले के खिलाफ़ ऑनलाइन अपील है। GAC वित्तीय धोखाधड़ी या साइबर अपराध के मामले नहीं देखती: वह प्लेटफ़ॉर्म के फ़ैसले को देखती है, अपराध को नहीं।"}
+    attach: {en: "Your complaint to the Grievance Officer, the Officer's decision, the Officer's contact details, the platform's link, and your reasons.", hi: "शिकायत अधिकारी को आपकी शिकायत, अधिकारी का फ़ैसला, अधिकारी का संपर्क, प्लेटफ़ॉर्म का लिंक, और आपके कारण।"}
+    wait: documented
+    wait_text: {en: "The GAC says to appeal within 30 days of the Grievance Officer's decision, or when there is no response within 30 days, and it says it endeavours to resolve an appeal within 30 calendar days.", hi: "GAC कहती है कि शिकायत अधिकारी के फ़ैसले के 30 दिन के भीतर, या 30 दिन में कोई जवाब न आने पर अपील करें, और वह अपील का निपटारा 30 कैलेंडर दिन में करने का प्रयास करती है।"}
+    next: [legal_aid]
+    sources:
+      - {passage: "gac_home:1:2", quote: "or on Non receipt of any response from the intermediary within 30 days"}
+      - {passage: "gac_attachment_2:3:2", quote: "make an endeavor to resolve the appeal finally within thirty calendar days"}
+      - {passage: "gac_home:1:3", quote: "GAC does not handle financial fraud or cybercrime cases"}
+  legal_aid:
+    title: {en: "Ask for free legal help", hi: "मुफ़्त कानूनी मदद माँगें"}
+    how: {en: "NALSA says it provides free legal services to the weaker sections of society. The documents we hold do not say who qualifies in your case, so ask them.", hi: "NALSA कहती है कि वह समाज के कमज़ोर वर्गों को मुफ़्त कानूनी सेवाएँ देती है। हमारे दस्तावेज़ यह नहीं बताते कि आपके मामले में कौन पात्र है, इसलिए उनसे पूछिए।"}
+    wait: not_stated
+    next: []
+    sources:
+      - {passage: "nalsa_home:1:2", quote: "to provide free Legal Services to the weaker sections of the society"}

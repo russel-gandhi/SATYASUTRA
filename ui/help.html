@@ -18,6 +18,19 @@
   .exit { display: block; width: 100%; font-size: 18px; padding: 14px; border-radius: 14px; margin-top: 16px; }
   .fine { color: var(--mute); font-size: 13px; margin-top: 16px; }
   .err { color: var(--bad); font-weight: 600; margin-top: 12px; }
+  h2 { font-size: 19px; margin: 26px 0 4px; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+  .chips button { border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 999px; padding: 6px 14px; font-size: 14px; cursor: pointer; }
+  .chips button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .rung { border-left: 4px solid var(--line); }
+  .rung.start { border-left-color: var(--accent); }
+  .mute { color: var(--mute); font-size: 14px; }
+  .quote { border-left: 3px solid var(--line); margin: 6px 0; padding: 2px 10px; font-size: 14px; color: var(--mute); }
+  .quote.bad { border-left-color: var(--bad); }
+  textarea, input[type=text], select { width: 100%; box-sizing: border-box; font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--text); margin: 4px 0; }
+  .go { padding: 10px 18px; border-radius: 10px; font-size: 16px; margin-top: 6px; }
+  pre.draft { white-space: pre-wrap; word-break: break-word; font: inherit; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+  .alert { background: var(--panel); border: 2px solid var(--bad); border-radius: 12px; padding: 12px 14px; font-weight: 600; margin-top: 10px; }
 </style>
 </head>
 <body>
@@ -26,6 +39,26 @@
   <div class="lang" role="group" aria-label="Language"><button id="l-en" aria-pressed="true">English</button><button id="l-hi" aria-pressed="false">हिंदी</button></div>
   <p id="t-lead">This is about private pictures or videos being shared, or threatened to be shared, without your say. Nothing you do on this page is saved, and you do not need to upload anything.</p>
   <div id="routes"></div>
+
+  <h2 id="t-ladder">Who to approach, in order</h2>
+  <p class="mute" id="t-ladder-lead">Each step shows what the official documents say, with the quote. Where a document gives no time limit, we say so.</p>
+  <div class="chips" role="group" aria-label="Age"><button id="a-adult" aria-pressed="false">18 or older</button><button id="a-minor" aria-pressed="false">Under 18</button><button id="a-unsure" aria-pressed="true">Not sure</button></div>
+  <div id="ladder"></div>
+
+  <h2 id="t-ask">Ask a question</h2>
+  <p class="mute" id="t-ask-lead">Answers come only from the official documents we hold and show their quote. If it is not there, we say so instead of guessing.</p>
+  <textarea id="q" rows="2" maxlength="1000" aria-label="Your question"></textarea>
+  <button class="btn go" id="askgo">Ask</button>
+  <div id="answer" aria-live="polite"></div>
+
+  <h2 id="t-draft">Draft a letter</h2>
+  <p class="mute" id="t-draft-lead">Fill what you can. The letter uses only what you type and fixed wording. You send it yourself; nothing is saved or sent from here.</p>
+  <select id="d-kind" aria-label="Kind of letter"><option value="complaint">Complaint</option><option value="followup">Follow-up</option><option value="escalation">Escalation letter</option></select>
+  <select id="d-what" aria-label="What happened"><option value="threatened">Someone is threatening to share</option><option value="shared" selected>Shared already</option><option value="faked">Changed or faked</option></select>
+  <div id="d-fields"></div>
+  <button class="btn go" id="draftgo">Make the draft</button>
+  <pre class="draft" id="draftout" hidden></pre>
+  <button class="btn ghost go" id="copy" hidden>Copy</button>
   <button class="btn ghost exit" id="exit">Close this page now</button>
   <div class="err" id="err" role="alert"></div>
   <p class="fine" id="t-fine">This page gives guidance only. It does not take, store or check pictures, it files nothing for you, and it keeps no history. A private or incognito window leaves no trace in the browser either.</p>
@@ -34,18 +67,40 @@
 const T = {
   en: { title: "You are not in trouble. Here is what to do.", lead: "This is about private pictures or videos being shared, or threatened to be shared, without your say. Nothing you do on this page is saved, and you do not need to upload anything.",
         exit: "Close this page now", fine: "This page gives guidance only. It does not take, store or check pictures, it files nothing for you, and it keeps no history. A private or incognito window leaves no trace in the browser either.",
-        err: "The steps could not be loaded. If you are in danger right now, call 112." },
+        err: "The steps could not be loaded. If you are in danger right now, call 112.",
+        ladder: "Who to approach, in order", ladderLead: "Each step shows what the official documents say, with the quote. Where a document gives no time limit, we say so.",
+        ask: "Ask a question", askLead: "Answers come only from the official documents we hold and show their quote. If it is not there, we say so instead of guessing.", askBtn: "Ask",
+        draft: "Draft a letter", draftLead: "Fill what you can. The letter uses only what you type and fixed wording. You send it yourself; nothing is saved or sent from here.", draftBtn: "Make the draft", copy: "Copy", copied: "Copied",
+        ages: ["18 or older", "Under 18", "Not sure"], kinds: ["Complaint", "Follow-up", "Escalation letter"], whats: ["Someone is threatening to share", "Shared already", "Changed or faked"],
+        fields: { name: "Your name or an alias", authority: "Who the letter is to (office or officer)", platform: "Where it is happening", account: "Name, username or number of the person", links: "Links (text only)", dates: "Dates and times", ack_no: "Acknowledgement number", reported_on: "Date you first reported", demand: "What they are demanding or threatening" },
+        start: "Start here", bring: "Bring", wait: "Time", unconfirmed: "Source not confirmed right now", retrieved: "fetched", busy: "Could not answer right now. Try again shortly." },
   hi: { title: "आप किसी मुसीबत में नहीं हैं। ये करें।", lead: "यह निजी तस्वीरों या वीडियो के आपकी मर्ज़ी के बिना फैलाए जाने, या फैलाने की धमकी के बारे में है। इस पेज पर आप जो करते हैं वह सेव नहीं होता, और कुछ अपलोड करने की ज़रूरत नहीं है।",
         exit: "यह पेज अभी बंद करें", fine: "यह पेज सिर्फ़ जानकारी देता है। यह तस्वीरें न लेता है, न रखता है, न जाँचता है, आपकी ओर से कोई शिकायत दर्ज नहीं करता और कोई इतिहास नहीं रखता। प्राइवेट या इन्कॉग्निटो विंडो ब्राउज़र में भी निशान नहीं छोड़ती।",
-        err: "ये कदम लोड नहीं हो सके। अगर आप अभी खतरे में हैं तो 112 पर कॉल करें।" },
+        err: "ये कदम लोड नहीं हो सके। अगर आप अभी खतरे में हैं तो 112 पर कॉल करें।",
+        ladder: "किसके पास जाएँ, किस क्रम में", ladderLead: "हर कदम में सरकारी दस्तावेज़ों की बात उद्धरण के साथ है। जहाँ दस्तावेज़ समय-सीमा नहीं देता, हम वह बता देते हैं।",
+        ask: "सवाल पूछें", askLead: "जवाब सिर्फ़ हमारे पास मौजूद सरकारी दस्तावेज़ों से आते हैं और उनका उद्धरण दिखाते हैं। वहाँ न हो तो हम अंदाज़ा नहीं लगाते।", askBtn: "पूछें",
+        draft: "पत्र का मसौदा", draftLead: "जितना हो सके भरें। पत्र में सिर्फ़ आपका लिखा और तय शब्द आते हैं। आप इसे खुद भेजें; यहाँ से कुछ सेव या भेजा नहीं जाता।", draftBtn: "मसौदा बनाएँ", copy: "कॉपी करें", copied: "कॉपी हो गया",
+        ages: ["18 या ज़्यादा", "18 से कम", "पक्का नहीं"], kinds: ["शिकायत", "अनुवर्ती पत्र", "वरिष्ठ अधिकारी को पत्र"], whats: ["कोई फैलाने की धमकी दे रहा है", "पहले ही फैल चुकी हैं", "बदली या नकली बनाई गईं"],
+        fields: { name: "आपका नाम या कोई उपनाम", authority: "पत्र किसे है (कार्यालय या अधिकारी)", platform: "यह कहाँ हो रहा है", account: "करने वाले का नाम, यूज़रनेम या नंबर", links: "लिंक (सिर्फ़ टेक्स्ट)", dates: "तारीख और समय", ack_no: "पावती संख्या", reported_on: "पहली शिकायत की तारीख", demand: "वे क्या माँग रहे हैं या क्या धमकी दे रहे हैं" },
+        start: "यहाँ से शुरू करें", bring: "साथ रखें", wait: "समय", unconfirmed: "स्रोत अभी पुष्ट नहीं हुआ", retrieved: "लिया गया", busy: "अभी जवाब नहीं दे पाए। थोड़ी देर बाद कोशिश करें।" },
 };
 const $ = (id) => document.getElementById(id);
-let lang = "en", plan = null;
+let lang = "en", plan = null, age = "unsure", ladder = null;
+const FIELD_KEYS = ["name", "authority", "platform", "account", "links", "dates", "ack_no", "reported_on", "demand"];
+const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; };
+const safeUrl = (u) => (u && /^https:[/][/]/.test(u) ? u : "");
 function paint() {
   const t = T[lang];
   document.documentElement.lang = lang;
   $("t-title").textContent = t.title; $("t-lead").textContent = t.lead; $("exit").textContent = t.exit; $("t-fine").textContent = t.fine;
   $("l-en").setAttribute("aria-pressed", lang === "en"); $("l-hi").setAttribute("aria-pressed", lang === "hi");
+  $("t-ladder").textContent = t.ladder; $("t-ladder-lead").textContent = t.ladderLead; $("t-ask").textContent = t.ask; $("t-ask-lead").textContent = t.askLead; $("askgo").textContent = t.askBtn;
+  $("t-draft").textContent = t.draft; $("t-draft-lead").textContent = t.draftLead; $("draftgo").textContent = t.draftBtn; $("copy").textContent = t.copy;
+  ["adult", "minor", "unsure"].forEach((a, i) => { $("a-" + a).textContent = t.ages[i]; $("a-" + a).setAttribute("aria-pressed", age === a); });
+  [...$("d-kind").options].forEach((o, i) => { o.textContent = t.kinds[i]; }); [...$("d-what").options].forEach((o, i) => { o.textContent = t.whats[i]; });
+  const keep = {}; document.querySelectorAll("#d-fields input").forEach((i) => { keep[i.dataset.k] = i.value; });
+  $("d-fields").replaceChildren(); FIELD_KEYS.forEach((k) => { const i = el("input"); i.type = "text"; i.dataset.k = k; i.maxLength = 300; i.placeholder = t.fields[k]; i.setAttribute("aria-label", t.fields[k]); i.value = keep[k] || ""; $("d-fields").append(i); });
+  paintLadder();
   const box = $("routes"); box.replaceChildren();
   if (!plan) return;
   plan.routes.forEach((r) => {
@@ -56,7 +111,60 @@ function paint() {
     box.append(card);
   });
 }
-$("l-en").onclick = () => { lang = "en"; paint(); }; $("l-hi").onclick = () => { lang = "hi"; paint(); };
+$("l-en").onclick = () => { lang = "en"; paint(); loadLadder(); }; $("l-hi").onclick = () => { lang = "hi"; paint(); loadLadder(); };
+["adult", "minor", "unsure"].forEach((a) => { $("a-" + a).onclick = () => { age = a; paint(); loadLadder(); }; });
+
+function paintLadder() {
+  const box = $("ladder"); box.replaceChildren();
+  if (!ladder) return;
+  const t = T[lang];
+  ladder.rungs.forEach((r) => {
+    const card = el("div", "card rung" + (r.start ? " start" : ""));
+    card.append(el("b", "", (r.start ? t.start + ": " : "") + r.title), el("p", "", r.how));
+    if (r.attach) card.append(el("p", "", t.bring + ": " + r.attach));
+    card.append(el("p", "mute", t.wait + ": " + r.wait));
+    r.sources.forEach((s) => {
+      const q = el("div", "quote" + (s.confirmed ? "" : " bad"), "\u201c" + s.quote + "\u201d");
+      const meta = el("div", "mute", s.confirmed ? "" : t.unconfirmed + ". ");
+      if (s.title) { meta.append((s.publisher || "") + ", " + s.title + ", " + t.retrieved + " " + s.retrieved_on + " "); const u = safeUrl(s.url); if (u) { const a = el("a", "", u); a.href = u; a.rel = "noreferrer noopener"; meta.append(a); } }
+      q.append(meta); card.append(q);
+    });
+    box.append(card);
+  });
+  box.append(el("p", "mute", ladder.not_covered));
+}
+async function loadLadder() {
+  try { const r = await fetch("/raksha/ladder?age=" + age + "&lang=" + lang); if (!r.ok) throw new Error(r.status); ladder = await r.json(); } catch (e) { ladder = null; }
+  paintLadder();
+}
+
+$("askgo").onclick = async () => {
+  const q = $("q").value.trim(); const out = $("answer"); out.replaceChildren(); if (!q) return;
+  try {
+    const r = await fetch("/raksha/ask", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text: q, lang }) });
+    if (!r.ok) throw new Error(r.status);
+    const a = await r.json();
+    if (a.danger) { out.append(el("div", "alert", a.message)); return; }
+    if (a.refused) { out.append(el("p", "", a.refusal)); }
+    (a.sentences || []).forEach((s) => {
+      const card = el("div", "card"); card.append(el("p", "", s.text)); const quote = el("div", "quote", "\u201c" + s.quote + "\u201d");
+      const meta = el("div", "mute", s.source.publisher + ", " + s.source.title + ", " + T[lang].retrieved + " " + s.source.retrieved_on + " "); const u = safeUrl(s.source.url);
+      if (u) { const l = el("a", "", u); l.href = u; l.rel = "noreferrer noopener"; meta.append(l); }
+      quote.append(meta); card.append(quote); out.append(card);
+    });
+    if (a.note) out.append(el("p", "mute", a.note));
+  } catch (e) { out.append(el("p", "err", T[lang].busy)); }
+};
+
+$("draftgo").onclick = async () => {
+  const fields = {}; document.querySelectorAll("#d-fields input").forEach((i) => { if (i.value.trim()) fields[i.dataset.k] = i.value; });
+  try {
+    const r = await fetch("/raksha/draft", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ kind: $("d-kind").value, lang, age, what: $("d-what").value, fields }) });
+    if (!r.ok) throw new Error(r.status);
+    const d = await r.json(); $("draftout").textContent = d.text; $("draftout").hidden = false; $("copy").hidden = false;
+  } catch (e) { $("draftout").textContent = T[lang].busy; $("draftout").hidden = false; }
+};
+$("copy").onclick = async () => { try { await navigator.clipboard.writeText($("draftout").textContent); $("copy").textContent = T[lang].copied; } catch (e) { /* the text is selectable on the page */ } };
 // A page cannot open about:blank (browsers block it). Close the tab if the browser allows it, otherwise replace this page, so Back does not return to it, with an ordinary page.
 const leave = () => { document.body.replaceChildren(); window.close(); setTimeout(() => location.replace("https://www.google.com/"), 150); };
 $("exit").onclick = leave;
@@ -68,6 +176,7 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape") leave(); }
     plan = await r.json();
   } catch (e) { $("err").textContent = T[lang].err; }
   paint();
+  loadLadder();
 })();
 </script>
 </body>

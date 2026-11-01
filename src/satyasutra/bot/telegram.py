@@ -147,6 +147,39 @@ class TelegramBot:
             out += "\n" + self.s.messages["act_notice"]
         return out
 
+    def guide(self, text: str) -> str:
+        """The grounded guide through the local API: /ladder, /ask, /draft. A question goes only to /raksha/ask, never to the fact-check path (no ledger row)."""
+        cmd, _, rest = text.partition(" ")
+        cmd, rest = cmd.split("@")[0], rest.strip()
+        try:
+            if cmd == "/ladder":
+                v = self.local.get("/raksha/ladder", params={"age": rest or "unsure", "lang": "en"}).json()
+                lines = [self.s.messages["ladder_intro"]]
+                for i, r in enumerate(v["rungs"], start=1):
+                    lines.append(f"{i}. {r['title']}\n{r['how']}\n{r['wait']}")
+                    lines += [f"   “{q['quote']}” ({q['url']})" + ("" if q["confirmed"] else " [source not confirmed]") for q in r["sources"] if q.get("url")]
+                return "\n\n".join([*lines, v["not_covered"]])
+            if cmd == "/ask":
+                if not rest:
+                    return self.s.messages["ask_usage"]
+                a = self.local.post("/raksha/ask", json={"text": rest, "lang": "en"}).json()
+                if a.get("danger"):
+                    return a["message"]
+                if a.get("refused"):
+                    return a["refusal"]
+                parts = [f"{s['text']}\n“{s['quote']}”\n{s['source']['publisher']}, fetched {s['source']['retrieved_on']}: {s['source']['url']}" for s in a["sentences"]]
+                return "\n\n".join([*parts, a["note"]])
+            kind, _, tail = rest.partition(" ")
+            if kind not in ("complaint", "followup", "escalation"):
+                return self.s.messages["draft_usage"]
+            fields = {k.strip(): v.strip() for k, _, v in (p.partition("=") for p in tail.split(";")) if k.strip() and v.strip()}
+            r = self.local.post("/raksha/draft", json={"kind": kind, "lang": "en", "age": "unsure", "what": "shared", "fields": fields})
+            if r.status_code == httpx.codes.OK:
+                return r.json()["text"]
+            return f"{r.json().get('detail', '')}\n\n{self.s.messages['draft_usage']}"
+        except (httpx.HTTPError, ValueError, KeyError):
+            return self.s.messages["raksha_busy"]
+
     def handle(self, msg: dict) -> str:
         chat = (msg.get("chat") or {}).get("id")
         text = msg.get("text") or ""
@@ -154,6 +187,8 @@ class TelegramBot:
             self.help_until.pop(chat, None)
             self.raksha.pop(chat, None)
             return self.s.messages["forgot"]
+        if text.startswith(("/ladder", "/ask", "/draft")):
+            return self.guide(text)
         if text.startswith(("/help_me", "/madad")):
             self.enter_help(chat)
             self.raksha[chat], first = begin(self.flow, "hi" if text.startswith("/madad") else "en")

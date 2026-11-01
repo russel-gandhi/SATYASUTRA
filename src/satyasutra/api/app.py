@@ -44,6 +44,11 @@ from ..sources import WikidataClient
 from ..sources.bluesky import PostNotFound, fetch_post
 from ..act import build_pack, build_plan, is_intimate, load_actions
 from ..scam import check_links, load_domains
+from ..raksha.ask import answer_question, public as raksha_public
+from ..raksha.corpus import CorpusIndex, load_rag
+from ..raksha.drafts import load_drafts, render as render_draft
+from ..raksha.flow import load_flow
+from ..raksha.ladder import AGES as RAKSHA_AGES, load_ladder, view as ladder_view
 from ..scam.script import load_script
 from ..scam.session import SessionFull, Sessions
 from ..voice import Transcriber, Transcript, VoiceError, second_opinion
@@ -107,6 +112,19 @@ class GuardText(BaseModel):
     text: str = Field(min_length=1)
 
 
+class RakshaAsk(BaseModel):
+    text: str = Field(min_length=1, max_length=1000)
+    lang: str = Field(default="en", pattern="^(en|hi)$")
+
+
+class RakshaDraft(BaseModel):
+    kind: str = Field(pattern="^(complaint|followup|escalation)$")
+    lang: str = Field(default="en", pattern="^(en|hi)$")
+    age: str = Field(default="unsure", pattern="^(adult|minor|unsure)$")
+    what: str = Field(default="shared", pattern="^(threatened|shared|faked)$")
+    fields: dict[str, str] = Field(default_factory=dict, max_length=12)
+
+
 class VerifyRequest(BaseModel):
     text: str | None = None
     uri: str | None = None
@@ -138,6 +156,7 @@ def create_app(
     audio_check_fn: Callable[[bytes], object] | None = None,
     analyse_image: Callable[[Config, bytes], dict] = forensic_scores,
     image_index: ImageIndex | None = None,
+    raksha_ask: Callable[[str, str], dict] | None = None,
 ) -> FastAPI:
     load_env_file(ROOT / ".env")
     cfg = config or load_config()
@@ -571,6 +590,38 @@ def create_app(
     def help_page() -> FileResponse:
         """Quiet page for someone whose private pictures are being shared: steps only, no history, no upload, one-tap exit."""
         return FileResponse(ROOT / "ui" / "help.html", media_type="text/html", headers={"Cache-Control": "no-store"})
+
+    @app.get("/raksha/ladder")
+    def raksha_ladder(age: str = Query(default="unsure"), lang: str = Query(default="en", pattern="^(en|hi)$")) -> dict:
+        """Who to approach next, each step tied to a quoted official passage that is re-checked against the index on every call. Nothing is stored."""
+        return ladder_view(load_ladder(), CorpusIndex(load_rag()), age if age in RAKSHA_AGES else "unsure", lang)
+
+    @app.post("/raksha/ask")
+    async def raksha_ask_route(req: RakshaAsk) -> dict:
+        """A question answered only from the official documents, each sentence with its quote. Out of scope is refused; danger words get the 112 text first."""
+        rag, flow = load_rag(), load_flow()
+        def run() -> dict:
+            if raksha_ask is not None:
+                return raksha_ask(req.text, req.lang)
+            index = CorpusIndex(rag)
+            if not index.ready():
+                raise HTTPException(status_code=503, detail="the Raksha document index is not built yet: run scripts/raksha_corpus.py build")
+            return raksha_public(answer_question(gemini(), index, rag, req.text, req.lang), rag, req.lang, flow.messages["danger"].model_dump()[req.lang])
+        try:
+            return await run_in_threadpool(run)
+        except ConfigError as exc:
+            raise HTTPException(status_code=503, detail=str(exc))
+        except SourceError:
+            raise HTTPException(status_code=503, detail="The language model is at its limit right now, so nothing was answered and nothing was guessed. Try again shortly.")
+
+    @app.post("/raksha/draft")
+    def raksha_draft(req: RakshaDraft) -> dict:
+        """A letter filled from the fields you typed and fixed wording only: no model, nothing stored, nothing sent."""
+        try:
+            text = render_draft(load_drafts(), req.kind, req.lang, req.fields, req.age, req.what)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc))
+        return {"kind": req.kind, "lang": req.lang, "text": text}
 
     @app.get("/news/check")
     async def news_check(text: str = Query(min_length=1, max_length=cfg.runtime.verify.max_text_chars)) -> dict:

@@ -198,6 +198,10 @@ telegram:
     help_images_refused: "I am in help mode, so I did not download that file and did not look at it. Please do not send private images to anyone but the official services above. Send /forget to leave help mode."
     forgot: "Done. I am out of help mode and I keep nothing from this chat. Telegram itself still keeps the chat on its servers: you can delete it from your side."
     error: "Something went wrong while checking that. Nothing was recorded, please try again."
+    ladder_intro: "Who to approach, in order. Each step is from the official documents we hold, with the quote. Send /ladder minor if the person was under 18 (an unsure age is treated as under 18)."
+    ask_usage: "Send /ask followed by your question, for example: /ask how long do I have to appeal to the Grievance Appellate Committee? Answers come only from the official documents we hold, and are refused when they are not there."
+    draft_usage: "Send /draft complaint, /draft followup or /draft escalation, then your details as key=value pairs separated by semicolons, for example: /draft complaint name=Asha; platform=Instagram; links=https://example.org/x. Keys: name, authority, platform, account, links, dates, ack_no, reported_on, demand. Do not send any picture."
+    raksha_busy: "I could not answer that right now. Nothing was guessed. Please try again shortly."
 
 explain:
   max_players: 8

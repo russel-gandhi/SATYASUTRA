@@ -135,6 +135,11 @@ forensics\venv311\Scripts\python forensics\service.py --port 8100          # Tru
   `/command` (tabs: `/intel/overview`, `/intel/graph`, `/intel/media`, `/intel/claims`, `/registry`, `/cases*` workspace), all computed by `intel.py` from `RecordStore`. Cases only point at record ids.
   `runtime.intel.not_available` lists sources we looked at and do not use (PIB, MoHFW, PMIndia, cybercrime 403; IMD/NDMA no feed). No auth: the command centre shows every stored record. Pydantic request
   models for routes must be module-level in `api/app.py` (a class defined inside `create_app` is read as a query parameter because of `from __future__ import annotations`).
+- Raksha grounded guide (2026-11-01, `docs/PLAN_RAKSHA_RAG.md`, `docs/raksha-rag-sheet.md`): `raksha/corpus.py` (official documents in git-ignored `data/raksha_corpus` with a SHA-256 manifest, FTS5 index in `data/raksha.sqlite3`;
+  `scripts/raksha_corpus.py fetch|add|build|list|peek`), `raksha/ask.py` (`POST /raksha/ask`: Gemini only picks and phrases; code keeps a sentence only if its quote is verbatim in the cited passage and every figure is in the quote; nothing left = refusal; danger words get the 112 text before any model call),
+  `raksha/ladder.py` + `config/escalation.yaml` (`GET /raksha/ladder`, Delhi, every rung with quotes re-checked against the index), `raksha/drafts.py` + `config/raksha_drafts.yaml` (`POST /raksha/draft`, typed fields only, no model). Surfaces: `/help` page and Telegram `/ladder`, `/ask`, `/draft`.
+  The statute and IT Rules hosts answer 403, so those PDFs are NOT in the corpus (add them by hand with `add`); the voice/social-media section (RR6) is not built; Hindi and legal wording unreviewed. First live run: 14/14 retrieval, 12/14 correct, 11/11 refusals on 25 questions by one labeller.
+  A YAML flow list needs commas between items (a missing comma once merged the stopwords into two strings); `no`/`on` must be quoted.
 - Not done: (Telegram bot done, see above) (needs a fresh token), escalation never fired live, TruFor false-alarm rate on real social-media images
   unknown, README with a real-vs-roadmap table. `tests/unit/test_trace_sse.py::test_leaving_mid_run...` failed once under full-suite load and
   passes alone (timing).
