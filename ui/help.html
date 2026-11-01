@@ -62,6 +62,13 @@
   .chatbox .msg.me { background: var(--accent); }
   .chatbox .chips { margin: 10px 0 4px; }
   .chatbox .chips button { background: transparent; }
+  details.stepbox { border-top: 1px solid var(--line); padding: 8px 0; }
+  details.stepbox summary { cursor: pointer; font-weight: 600; }
+  details.stepbox > :not(summary) { margin-left: 2.1em; }
+  .aid { margin: 10px 0 2px; padding-left: 1.2em; font-size: 14px; }
+  .aid li { margin: 3px 0; }
+  .acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .acts button { border: 1px solid var(--line); background: transparent; color: var(--text); border-radius: 999px; padding: 6px 14px; font-size: 14px; cursor: pointer; }
   .small { font-size: 13px; color: var(--mute); margin-top: 18px; }
   .sr { display: none; }
 </style>
@@ -130,6 +137,7 @@ const T = {
         draft: "Draft a letter", draftLead: "Fill what you can. The letter uses only what you type and fixed wording. You send it yourself; nothing is saved or sent from here.", draftBtn: "Make the draft", copy: "Copy", copied: "Copied",
         ages: ["18 or older", "Under 18", "Not sure"], kinds: ["Complaint", "Follow-up", "Escalation letter"], whats: ["Someone is threatening to share", "Shared already", "Changed or faked"],
         fields: { name: "Your name or an alias", authority: "Who the letter is to (office or officer)", platform: "Where it is happening", account: "Name, username or number of the person", links: "Links (text only)", dates: "Dates and times", ack_no: "Acknowledgement number", reported_on: "Date you first reported", demand: "What they are demanding or threatening" },
+        planActs: ["Write the letter for me", "Show everything in order"], planActsSend: ["write a letter for me", "what should I do next"], more: "Steps",
         start: "Start here", bring: "Have ready", wait: "How long it takes", unconfirmed: "I could not re-check this source just now", retrieved: "fetched", whereFrom: "Where this comes from", source: "Source", steps: "Steps", busy: "Could not answer right now. Try again shortly." },
   hi: { title: "आप किसी मुसीबत में नहीं हैं। ये करें।", lead: "निजी तस्वीरें फैलाई गईं या धमकी मिली? यहाँ कुछ सेव नहीं होता, और कुछ अपलोड नहीं करना है।",
         exit: "यह पेज अभी बंद करें", fine: "यह पेज सिर्फ़ जानकारी देता है। यह तस्वीरें न लेता है, न रखता है, न जाँचता है, आपकी ओर से कोई शिकायत दर्ज नहीं करता और कोई इतिहास नहीं रखता। प्राइवेट या इन्कॉग्निटो विंडो ब्राउज़र में भी निशान नहीं छोड़ती।",
@@ -142,6 +150,7 @@ const T = {
         draft: "पत्र का मसौदा", draftLead: "जितना हो सके भरें। पत्र में सिर्फ़ आपका लिखा और तय शब्द आते हैं। आप इसे खुद भेजें; यहाँ से कुछ सेव या भेजा नहीं जाता।", draftBtn: "मसौदा बनाएँ", copy: "कॉपी करें", copied: "कॉपी हो गया",
         ages: ["18 या ज़्यादा", "18 से कम", "पक्का नहीं"], kinds: ["शिकायत", "अनुवर्ती पत्र", "वरिष्ठ अधिकारी को पत्र"], whats: ["कोई फैलाने की धमकी दे रहा है", "पहले ही फैल चुकी हैं", "बदली या नकली बनाई गईं"],
         fields: { name: "आपका नाम या कोई उपनाम", authority: "पत्र किसे है (कार्यालय या अधिकारी)", platform: "यह कहाँ हो रहा है", account: "करने वाले का नाम, यूज़रनेम या नंबर", links: "लिंक (सिर्फ़ टेक्स्ट)", dates: "तारीख और समय", ack_no: "पावती संख्या", reported_on: "पहली शिकायत की तारीख", demand: "वे क्या माँग रहे हैं या क्या धमकी दे रहे हैं" },
+        planActs: ["मेरे लिए पत्र लिखिए", "सब कुछ क्रम में दिखाइए"], planActsSend: ["मेरे लिए पत्र लिखिए", "अब क्या करूँ"], more: "कदम",
         start: "यहाँ से शुरू करें", bring: "तैयार रखें", wait: "कितना समय लगता है", unconfirmed: "यह स्रोत अभी दोबारा जाँच नहीं हो सका", retrieved: "लिया गया", whereFrom: "यह कहाँ से है", source: "स्रोत", steps: "कदम", busy: "अभी जवाब नहीं दे पाए। थोड़ी देर बाद कोशिश करें।" },
 };
 const $ = (id) => document.getElementById(id);
@@ -212,6 +221,7 @@ async function loadLadder() {
 }
 
 let noted = false;
+let profile = {};                                      // what the person has told us (age, what happened): kept in this page only, sent with each message
 function showTab(name) {
   document.querySelectorAll("#tabs button").forEach((b) => b.setAttribute("aria-selected", b.dataset.tab === name));
   ["chat", "steps", "ladder", "draft"].forEach((n) => { $("p-" + n).hidden = n !== name; });
@@ -235,17 +245,40 @@ function showAnswer(box, a) {
   if (list.length) box.append(sourceBlock(list.map((x) => ({ quote: x.quote, publisher: x.source.publisher, title: x.source.title, url: x.source.url }))));
   if (a.note && !noted) { box.append(el("p", "src", a.note)); noted = true; }       // said once per chat, not under every answer
 }
-async function send(text) {
+function stepBox(r, n) {
+  const t = T[lang];
+  const d = el("details", "stepbox"); d.append(el("summary", "", n + ". " + r.title));
+  d.append(el("p", "", r.how));
+  if (r.attach) d.append(el("div", "take", t.bring + ": " + r.attach));
+  d.append(el("div", "take", t.wait + ": " + r.wait));
+  d.append(sourceBlock(r.sources));
+  return d;
+}
+function chips(box, items) {
+  const row = el("div", "acts");
+  items.forEach((it) => { const b = el("button", "", it.label); b.type = "button"; b.onclick = () => { row.remove(); send(it.send || it.label, it.set); }; row.append(b); });
+  box.append(row);
+}
+async function send(text, patch) {
   text = (text || "").trim(); if (!text) return;
+  if (patch) Object.assign(profile, patch);
   $("q").value = ""; bubble("me").textContent = text;
   const reply = bubble("bot"); reply.textContent = T[lang].typing;
   try {
-    const r = await fetch("/raksha/chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text, lang, age, history: said.slice(-2) }) });
+    const r = await fetch("/raksha/chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text, lang, age, history: said.slice(-2), profile }) });
     if (!r.ok) throw new Error(r.status);
     const a = await r.json(); reply.replaceChildren();
+    if (a.profile) { profile = a.profile; if (profile.age && profile.age !== age) { age = profile.age; paint(); loadLadder(); } }
     if (a.type === "danger") { reply.classList.add("alert"); reply.textContent = a.message; }
-    else if (a.type === "ladder") { reply.append(el("p", "", T[lang].ladderIntro)); a.rungs.forEach((x, i) => reply.append(rungCard(x, i + 1))); reply.append(el("p", "mute", a.not_covered)); }
     else if (a.type === "support") { reply.append(el("p", "", a.message)); }
+    else if (a.type === "ask") { reply.append(el("p", "", a.message)); chips(reply, a.options.map((o) => ({ label: o.label, set: o.set }))); }
+    else if (a.type === "plan") {
+      reply.append(el("p", "", a.message));
+      const ul = el("ul", "aid"); a.aid.slice(0, 2).forEach((x) => ul.append(el("li", "", x))); reply.append(ul);
+      a.steps.forEach((x, i) => reply.append(stepBox(x, i + 1)));
+      chips(reply, T[lang].planActs.map((label, i) => ({ label, send: T[lang].planActsSend[i] })));
+    }
+    else if (a.type === "ladder") { reply.append(el("p", "", T[lang].ladderIntro)); a.rungs.forEach((x, i) => reply.append(stepBox(x, i + 1))); reply.append(el("p", "src", a.not_covered)); }
     else if (a.type === "draft") { reply.append(el("p", "", T[lang].draftHint)); showTab("draft"); }
     else showAnswer(reply, a);
     said.push(text);

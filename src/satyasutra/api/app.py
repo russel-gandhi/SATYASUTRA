@@ -45,6 +45,7 @@ from ..sources.bluesky import PostNotFound, fetch_post
 from ..act import build_pack, build_plan, is_intimate, load_actions
 from ..scam import check_links, load_domains
 from ..raksha.ask import answer_question, public as raksha_public, route as raksha_route
+from ..raksha.chat import compose as raksha_compose_reply, is_incident, next_turn
 from ..raksha.corpus import CorpusIndex, load_rag
 from ..raksha.drafts import load_drafts, render as render_draft
 from ..raksha.flow import load_flow
@@ -122,6 +123,7 @@ class RakshaChat(BaseModel):
     lang: str = Field(default="en", pattern="^(en|hi)$")
     age: str = Field(default="unsure", pattern="^(adult|minor|unsure)$")
     history: list[str] = Field(default_factory=list, max_length=4)       # the person's own earlier messages, kept by the page, not by us
+    profile: dict[str, str | bool] = Field(default_factory=dict, max_length=8)   # what the person has told us so far (age, situation), kept by the page, not by us
 
 
 class RakshaDraft(BaseModel):
@@ -164,6 +166,7 @@ def create_app(
     analyse_image: Callable[[Config, bytes], dict] = forensic_scores,
     image_index: ImageIndex | None = None,
     raksha_ask: Callable[[str, str], dict] | None = None,
+    raksha_compose: Callable[[dict, list, str], str | None] | None = None,
 ) -> FastAPI:
     load_env_file(ROOT / ".env")
     cfg = config or load_config()
@@ -631,8 +634,23 @@ def create_app(
             return {"type": "danger", "message": flow.messages["danger"].model_dump()[req.lang]}
         if kind == "support":
             return {"type": "support", "message": getattr(rag.chat.support, req.lang)}
+        profile = {k: v for k, v in req.profile.items() if isinstance(v, (str, bool))}
+        # A short message while we are still asking is the person's answer (a chip click, or "I was 16"); a long one is a new question and goes its own way.
+        answering = profile.get("situation") is True and not profile.get("done") and len(req.text.split()) <= rag.chat.reply_max_words and "?" not in req.text
+        if kind != "draft" and (answering or is_incident(req.text, rag, load_actions(config_dir() / "actions.yaml"))):
+            turn = next_turn(profile, req.text, rag, req.lang)
+            if turn.kind == "ask":
+                return {"type": "ask", "message": turn.say, "options": turn.options, "profile": turn.profile}
+            view = ladder_view(load_ladder(), CorpusIndex(rag), turn.profile["age"], req.lang)
+            rungs = [r for rid in turn.steps for r in view["rungs"] if r["id"] == rid]
+            def write() -> str | None:
+                return (raksha_compose or (lambda p, r, lang: raksha_compose_reply(gemini(), rag, p, r, lang)))(turn.profile, rungs, req.lang)
+            composed = await run_in_threadpool(write)
+            aid = [getattr(a, req.lang) for a in rag.chat.first_aid]
+            return {"type": "plan", "message": composed or getattr(rag.chat.plan_fallback, req.lang), "composed": composed is not None, "aid": aid,
+                    "steps": rungs, "profile": {**turn.profile, "done": True}, "not_covered": view["not_covered"]}
         if kind == "ladder":
-            return {"type": "ladder", **ladder_view(load_ladder(), CorpusIndex(rag), req.age, req.lang)}
+            return {"type": "ladder", **ladder_view(load_ladder(), CorpusIndex(rag), str(profile.get("age") or req.age), req.lang)}
         if kind == "draft":
             return {"type": "draft"}
         def run() -> dict:

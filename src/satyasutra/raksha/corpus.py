@@ -62,11 +62,33 @@ class Retrieval(_Strict):
     number_words: dict[str, int]
 
 
+class Option(_Strict):
+    label: Text
+    set: dict[str, str]
+
+
+class Question(_Strict):
+    say: Text
+    options: list[Option]
+
+
 class Chat(_Strict):
     ladder_terms: list[str]
     draft_terms: list[str]
     support_terms: list[str]
     support: Text
+    incident_terms: list[str]
+    age_terms: dict[str, list[str]]
+    what_terms: dict[str, list[str]]
+    opener: Text
+    ask_age: Question
+    ask_what: Question
+    first_aid: list[Text]
+    plan: dict[str, list[str]]
+    plan_fallback: Text
+    max_message_chars: int
+    reply_max_words: int
+    forbidden_terms: list[str]
     short_question_words: int
     history_turns: int
 
