@@ -2,7 +2,7 @@
 
 FORGE is the build repository for **SATYASUTRA**, a hackathon project (Theme 1, Civic Pulse): a real-time fact-verification and
 deepfake audit engine for Indian social media. The product code is the Python package `satyasutra` under `src/`.
-Remote: `github.com/aadamaftabpersonal-boop/FORGEHackathon` (public).
+Remote: `github.com/russel-gandhi/SATYASUTRA` (public; moved here from `aadamaftabpersonal-boop/FORGEHackathon` on 2026-11-01).
 
 ## Hackathon rules that shape every decision
 

@@ -4,7 +4,7 @@
 
 **A fact-verification and deepfake audit engine for Indian social media,<br>built in the open with live sources only.**
 
-[![CI](https://github.com/aadamaftabpersonal-boop/FORGEHackathon/actions/workflows/ci.yml/badge.svg)](https://github.com/aadamaftabpersonal-boop/FORGEHackathon/actions/workflows/ci.yml)
+[![CI](https://github.com/russel-gandhi/SATYASUTRA/actions/workflows/ci.yml/badge.svg)](https://github.com/russel-gandhi/SATYASUTRA/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.14-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white)
 ![LangGraph](https://img.shields.io/badge/agent-LangGraph-1C3C3C)
