@@ -69,6 +69,12 @@
   .aid li { margin: 3px 0; }
   .acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
   .acts button { border: 1px solid var(--line); background: transparent; color: var(--text); border-radius: 999px; padding: 6px 14px; font-size: 14px; cursor: pointer; }
+  .dots { display: inline-flex; gap: 5px; padding: 6px 2px; }
+  .dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--mute); opacity: .35; animation: blink 1.2s infinite ease-in-out; }
+  .dots i:nth-child(2) { animation-delay: .2s; }
+  .dots i:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink { 0%, 80%, 100% { opacity: .25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
+  @media (prefers-reduced-motion: reduce) { .dots i { animation: none; opacity: .6; } }
   .small { font-size: 13px; color: var(--mute); margin-top: 18px; }
   .sr { display: none; }
 </style>
@@ -96,7 +102,7 @@
       <div class="chips" id="quick"></div>
       <form class="chatform" id="chatform"><input type="text" id="q" maxlength="1000" autocomplete="off" aria-label="Your message"><button class="btn go" id="askgo" type="submit">Send</button></form>
     </div>
-    <p class="small" id="t-ask-lead">Answers come only from official documents, with their source. If it is not there, I say so. This chat is gone when you close the page.</p>
+    <p class="small" id="t-ask-lead">This chat disappears when you close the page.</p>
   </section>
 
   <section class="panel" id="p-steps" hidden>
@@ -105,7 +111,7 @@
 
   <section class="panel" id="p-ladder" hidden>
     <h2 class="sr" id="t-ladder">Who to approach, in order</h2>
-    <p class="lead" id="t-ladder-lead">Each step shows what the official documents say. Where a document gives no time limit, we say so.</p>
+    <p class="lead" id="t-ladder-lead">Go in this order. Each step says what to do and where.</p>
     <div class="chips" role="group" aria-label="Age"><button id="a-adult" aria-pressed="false">18 or older</button><button id="a-minor" aria-pressed="false">Under 18</button><button id="a-unsure" aria-pressed="true">Not sure</button></div>
     <div id="ladder"></div>
   </section>
@@ -122,31 +128,31 @@
   </section>
 
   <div class="err" id="err" role="alert"></div>
-  <p class="small" id="t-fine">This page gives guidance only. It does not take, store or check pictures, it files nothing for you, and it keeps no history. A private or incognito window leaves no trace in the browser either.</p>
+  <p class="small" id="t-fine">Nothing you type here is saved, and you never need to share a picture.</p>
 </div>
 <script>
 const T = {
   en: { title: "You are not in trouble. Here is what to do.", lead: "Private pictures shared or threatened? Nothing here is saved, and you never need to upload anything.",
-        exit: "Close this page now", fine: "This page gives guidance only. It does not take, store or check pictures, it files nothing for you, and it keeps no history. A private or incognito window leaves no trace in the browser either.",
+        exit: "Close this page now", fine: "Nothing you type here is saved, and you never need to share a picture.",
         tabs: ["Talk", "First steps", "Who to approach", "Write a letter"],
         err: "The steps could not be loaded. If you are in danger right now, call 112.",
-        ladder: "Who to approach, in order", ladderLead: "Each step shows what the official documents say. Where a document gives no time limit, we say so.",
-        ask: "Talk to Raksha", askLead: "Answers come only from official documents, with their source. If it is not there, I say so. This chat is gone when you close the page.", askBtn: "Send",
-        hello: "Hi, I am Raksha. It is not your fault. Tell me what is happening, or pick one below. I will never ask for pictures.", typing: "Looking in the documents...", placeholder: "Type your message",
-        quick: ["What should I do next?", "Write a letter for me", "How do I track my complaint?", "How long do I have to appeal to the GAC?"], ladderIntro: "Here is who to approach, in order, from the official documents:", draftHint: "Opening the letter form. It uses only what you type.",
+        ladder: "Who to approach, in order", ladderLead: "Go in this order. Each step says what to do and where.",
+        ask: "Talk to Raksha", askLead: "This chat disappears when you close the page.", askBtn: "Send",
+        hello: "Hi, I am Raksha. It is not your fault. Tell me what is happening, or pick one below. I will never ask for pictures.", typing: "", placeholder: "Type your message",
+        quick: ["What should I do next?", "Write a letter for me", "How do I track my complaint?", "How long do I have to appeal to the GAC?"], ladderIntro: "Here is who to approach, in this order:", draftHint: "Opening the letter form. It uses only what you type.",
         draft: "Draft a letter", draftLead: "Fill what you can. The letter uses only what you type and fixed wording. You send it yourself; nothing is saved or sent from here.", draftBtn: "Make the draft", copy: "Copy", copied: "Copied",
         ages: ["18 or older", "Under 18", "Not sure"], kinds: ["Complaint", "Follow-up", "Escalation letter"], whats: ["Someone is threatening to share", "Shared already", "Changed or faked"],
         fields: { name: "Your name or an alias", authority: "Who the letter is to (office or officer)", platform: "Where it is happening", account: "Name, username or number of the person", links: "Links (text only)", dates: "Dates and times", ack_no: "Acknowledgement number", reported_on: "Date you first reported", demand: "What they are demanding or threatening" },
         planActs: ["Write the letter for me", "Show everything in order"], planActsSend: ["write a letter for me", "what should I do next"], more: "Steps",
         start: "Start here", bring: "Have ready", wait: "How long it takes", unconfirmed: "I could not re-check this source just now", retrieved: "fetched", whereFrom: "Where this comes from", source: "Source", steps: "Steps", busy: "Could not answer right now. Try again shortly." },
   hi: { title: "आप किसी मुसीबत में नहीं हैं। ये करें।", lead: "निजी तस्वीरें फैलाई गईं या धमकी मिली? यहाँ कुछ सेव नहीं होता, और कुछ अपलोड नहीं करना है।",
-        exit: "यह पेज अभी बंद करें", fine: "यह पेज सिर्फ़ जानकारी देता है। यह तस्वीरें न लेता है, न रखता है, न जाँचता है, आपकी ओर से कोई शिकायत दर्ज नहीं करता और कोई इतिहास नहीं रखता। प्राइवेट या इन्कॉग्निटो विंडो ब्राउज़र में भी निशान नहीं छोड़ती।",
+        exit: "यह पेज अभी बंद करें", fine: "यहाँ जो लिखते हैं वह सेव नहीं होता, और आपको कोई तस्वीर देने की ज़रूरत नहीं है।",
         tabs: ["बात करें", "पहले कदम", "किसके पास जाएँ", "पत्र लिखें"],
         err: "ये कदम लोड नहीं हो सके। अगर आप अभी खतरे में हैं तो 112 पर कॉल करें।",
-        ladder: "किसके पास जाएँ, किस क्रम में", ladderLead: "हर कदम में सरकारी दस्तावेज़ों की बात है। जहाँ दस्तावेज़ समय-सीमा नहीं देता, हम वह बता देते हैं।",
-        ask: "रक्षा से बात करें", askLead: "जवाब सिर्फ़ सरकारी दस्तावेज़ों से आते हैं, स्रोत के साथ। वहाँ न हो तो मैं बता देती हूँ। पेज बंद करते ही यह चैट मिट जाती है।", askBtn: "भेजें",
-        hello: "नमस्ते, मैं रक्षा हूँ। इसमें आपकी कोई गलती नहीं है। बताइए क्या हो रहा है, या नीचे से चुनिए। मैं कभी तस्वीर नहीं माँगती।", typing: "दस्तावेज़ों में देख रही हूँ...", placeholder: "अपना संदेश लिखिए",
-        quick: ["अब मुझे क्या करना चाहिए?", "मेरे लिए पत्र लिखिए", "शिकायत की स्थिति कैसे देखूँ?", "GAC में अपील कितने दिन में करनी होती है?"], ladderIntro: "सरकारी दस्तावेज़ों के अनुसार, इस क्रम में संपर्क करें:", draftHint: "पत्र का फ़ॉर्म खोल रही हूँ। उसमें सिर्फ़ वही आता है जो आप लिखते हैं।",
+        ladder: "किसके पास जाएँ, किस क्रम में", ladderLead: "इसी क्रम में चलिए। हर कदम बताता है कि क्या करना है और कहाँ।",
+        ask: "रक्षा से बात करें", askLead: "पेज बंद करते ही यह चैट मिट जाती है।", askBtn: "भेजें",
+        hello: "नमस्ते, मैं रक्षा हूँ। इसमें आपकी कोई गलती नहीं है। बताइए क्या हो रहा है, या नीचे से चुनिए। मैं कभी तस्वीर नहीं माँगती।", typing: "", placeholder: "अपना संदेश लिखिए",
+        quick: ["अब मुझे क्या करना चाहिए?", "मेरे लिए पत्र लिखिए", "शिकायत की स्थिति कैसे देखूँ?", "GAC में अपील कितने दिन में करनी होती है?"], ladderIntro: "इसी क्रम में संपर्क करें:", draftHint: "पत्र का फ़ॉर्म खोल रही हूँ। उसमें सिर्फ़ वही आता है जो आप लिखते हैं।",
         draft: "पत्र का मसौदा", draftLead: "जितना हो सके भरें। पत्र में सिर्फ़ आपका लिखा और तय शब्द आते हैं। आप इसे खुद भेजें; यहाँ से कुछ सेव या भेजा नहीं जाता।", draftBtn: "मसौदा बनाएँ", copy: "कॉपी करें", copied: "कॉपी हो गया",
         ages: ["18 या ज़्यादा", "18 से कम", "पक्का नहीं"], kinds: ["शिकायत", "अनुवर्ती पत्र", "वरिष्ठ अधिकारी को पत्र"], whats: ["कोई फैलाने की धमकी दे रहा है", "पहले ही फैल चुकी हैं", "बदली या नकली बनाई गईं"],
         fields: { name: "आपका नाम या कोई उपनाम", authority: "पत्र किसे है (कार्यालय या अधिकारी)", platform: "यह कहाँ हो रहा है", account: "करने वाले का नाम, यूज़रनेम या नंबर", links: "लिंक (सिर्फ़ टेक्स्ट)", dates: "तारीख और समय", ack_no: "पावती संख्या", reported_on: "पहली शिकायत की तारीख", demand: "वे क्या माँग रहे हैं या क्या धमकी दे रहे हैं" },
@@ -205,7 +211,7 @@ function rungCard(r, n) {
   head.append(el("b", "", r.title));
   card.append(head, el("p", "", r.how));
   if (r.attach) card.append(el("div", "take", t.bring + ": " + r.attach));
-  card.append(el("div", "take", t.wait + ": " + r.wait));
+  if (r.wait_documented) card.append(el("div", "take", t.wait + ": " + r.wait));
   card.append(sourceBlock(r.sources));
   return card;
 }
@@ -213,7 +219,6 @@ function paintLadder() {
   const box = $("ladder"); box.replaceChildren();
   if (!ladder) return;
   ladder.rungs.forEach((r, i) => box.append(rungCard(r, i + 1)));
-  box.append(el("p", "mute", ladder.not_covered));
 }
 async function loadLadder() {
   try { const r = await fetch("/raksha/ladder?age=" + age + "&lang=" + lang); if (!r.ok) throw new Error(r.status); ladder = await r.json(); } catch (e) { ladder = null; }
@@ -243,14 +248,13 @@ function showAnswer(box, a) {
   const list = a.sentences || [];
   if (list.length) box.append(el("p", "", list.map((x) => x.text).join(" ")));
   if (list.length) box.append(sourceBlock(list.map((x) => ({ quote: x.quote, publisher: x.source.publisher, title: x.source.title, url: x.source.url }))));
-  if (a.note && !noted) { box.append(el("p", "src", a.note)); noted = true; }       // said once per chat, not under every answer
 }
 function stepBox(r, n) {
   const t = T[lang];
   const d = el("details", "stepbox"); d.append(el("summary", "", n + ". " + r.title));
   d.append(el("p", "", r.how));
   if (r.attach) d.append(el("div", "take", t.bring + ": " + r.attach));
-  d.append(el("div", "take", t.wait + ": " + r.wait));
+  if (r.wait_documented) d.append(el("div", "take", t.wait + ": " + r.wait));
   d.append(sourceBlock(r.sources));
   return d;
 }
@@ -263,7 +267,7 @@ async function send(text, patch) {
   text = (text || "").trim(); if (!text) return;
   if (patch) Object.assign(profile, patch);
   $("q").value = ""; bubble("me").textContent = text;
-  const reply = bubble("bot"); reply.textContent = T[lang].typing;
+  const reply = bubble("bot"); reply.replaceChildren(el("span", "dots", "")); reply.firstChild.append(el("i"), el("i"), el("i")); reply.setAttribute("aria-label", "typing");
   try {
     const r = await fetch("/raksha/chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text, lang, age, history: said.slice(-2), profile }) });
     if (!r.ok) throw new Error(r.status);
@@ -278,7 +282,7 @@ async function send(text, patch) {
       a.steps.forEach((x, i) => reply.append(stepBox(x, i + 1)));
       chips(reply, T[lang].planActs.map((label, i) => ({ label, send: T[lang].planActsSend[i] })));
     }
-    else if (a.type === "ladder") { reply.append(el("p", "", T[lang].ladderIntro)); a.rungs.forEach((x, i) => reply.append(stepBox(x, i + 1))); reply.append(el("p", "src", a.not_covered)); }
+    else if (a.type === "ladder") { reply.append(el("p", "", T[lang].ladderIntro)); a.rungs.forEach((x, i) => reply.append(stepBox(x, i + 1))); }
     else if (a.type === "draft") { reply.append(el("p", "", T[lang].draftHint)); showTab("draft"); }
     else showAnswer(reply, a);
     said.push(text);

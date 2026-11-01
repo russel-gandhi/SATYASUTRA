@@ -95,8 +95,8 @@ safety:
   # A sentence that promises an outcome is dropped from every answer.
   promise_terms: ["will be removed", "will be deleted", "will act", "will arrest", "will be arrested", "will definitely", "guaranteed", "100%", "within 24 hours", "will take action"]
 refusal:
-  en: "I could not find that in the official documents I have, so I will not guess. I can show you who to approach next, or help you write a letter. A lawyer or a legal-aid service can answer what I cannot."
-  hi: "यह मेरे पास मौजूद सरकारी दस्तावेज़ों में नहीं मिला, इसलिए मैं अंदाज़ा नहीं लगाऊँगी। मैं बता सकती हूँ किसके पास जाएँ, या पत्र लिखने में मदद कर सकती हूँ। जो मैं नहीं बता सकती, वह कोई वकील या कानूनी सहायता सेवा बता सकती है।"
+  en: "That one is best answered by a lawyer or a legal-aid service. What I can do right now is show you who to approach next, or write the letter for you."
+  hi: "इसका सही जवाब कोई वकील या कानूनी सहायता सेवा देगी। अभी मैं यह कर सकती हूँ: बता दूँ कि अगला कदम किसके पास जाकर उठाना है, या आपके लिए पत्र लिख दूँ।"
 unreviewed:
   en: "Not legal advice. The Hindi wording and the legal text have not been reviewed by a native speaker or a lawyer."
   hi: "यह कानूनी सलाह नहीं है। हिंदी शब्दों और कानूनी पाठ की किसी हिंदी भाषी या वकील ने समीक्षा नहीं की है।"

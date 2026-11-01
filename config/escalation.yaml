@@ -35,7 +35,7 @@ rungs:
       - {passage: "takeitdown_home:1:3", quote: "Please do NOT send, share, or download any image or video in order to submit to Take It Down."}
   report_portal:
     title: {en: "Report on the National Cybercrime Reporting Portal", hi: "राष्ट्रीय साइबर अपराध रिपोर्टिंग पोर्टल पर शिकायत करें"}
-    how: {en: "Go to cybercrime.gov.in yourself. There is an option for crime related to women or children and another for other cybercrimes. Keep the acknowledgement number: it tracks your complaint. We do not file anything for you.", hi: "cybercrime.gov.in पर आप खुद जाएँ। महिलाओं या बच्चों से जुड़े अपराध का अलग विकल्प है, और दूसरे साइबर अपराधों का अलग। पावती संख्या संभालकर रखें: उसी से शिकायत की स्थिति देखी जाती है। हम आपकी ओर से कुछ दर्ज नहीं करते।"}
+    how: {en: "Go to cybercrime.gov.in yourself. There is an option for crime related to women or children and another for other cybercrimes. Keep the acknowledgement number: it tracks your complaint.", hi: "cybercrime.gov.in पर आप खुद जाएँ। महिलाओं या बच्चों से जुड़े अपराध का अलग विकल्प है, और दूसरे साइबर अपराधों का अलग। पावती संख्या संभालकर रखें: उसी से शिकायत की स्थिति देखी जाती है।"}
     attach: {en: "Links, screenshots that show the name or number and the date, and dates and times, as in your summary.", hi: "लिंक, ऐसे स्क्रीनशॉट जिनमें नाम या नंबर और तारीख दिखे, और तारीख-समय, जैसा आपके सारांश में है।"}
     wait: not_stated
     next: [police_station]

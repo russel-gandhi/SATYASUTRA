@@ -84,7 +84,7 @@ def test_fabricated_quote_is_dropped_and_the_reply_is_a_refusal(rag):
     fake = {**GOOD, "quote": "the committee must decide every appeal within ten days of filing"}
     out = answer_question(FakeClient([fake]), CorpusIndex(rag), rag, "How long do I have to appeal to the committee?", "en")
     assert out.refused and out.dropped == 1 and not out.sentences
-    assert public(out, rag, "en", "")["refusal"].startswith("I could not find that")
+    assert public(out, rag, "en", "")["refusal"].startswith("That one is best answered")
 
 
 def test_a_figure_that_is_not_in_the_quote_is_dropped(rag):
@@ -261,7 +261,7 @@ def test_bot_conversation_covers_ladder_answer_refusal_danger_and_draft(tmp_path
 
     ladder = say("/ladder minor")
     assert "Take It Down" in ladder or "18" in ladder and "report" in ladder.casefold()
-    assert "No time limit is stated" in ladder and "gac.gov.in" in ladder
+    assert "No time limit" not in ladder and "gac.gov.in" in ladder
     assert "within 30 days" in say("/ask how long to appeal") and "Not legal advice" in say("/ask how long to appeal")
     assert say("/ask what is the weather").startswith("I cannot find this")
     assert say("/ask I want to die") == "Please call 112 now."
