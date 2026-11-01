@@ -15,7 +15,7 @@ def test_help_page_is_quiet(tmp_path):
     assert r.headers["cache-control"] .startswith("no-store")  # a shared phone should not keep the page in its cache
     html = r.text
     assert "nav.js" not in html and 'type="file"' not in html
-    assert "about:blank" in html            # the one-tap exit
+    assert "window.close()" in html and "location.replace" in html   # the one-tap exit: close the tab, else replace the page
     assert "/act/plan" in html              # steps come from the plan endpoint, not from text hard-coded in the page
     assert "localStorage" not in html and "sessionStorage" not in html
 
