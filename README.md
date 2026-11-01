@@ -1,7 +1,24 @@
+<div align="center">
+
 # SATYASUTRA
 
-**A fact-verification and deepfake audit engine for Indian social media, built in the open with live sources only.**
-Hackathon Theme 1, Civic Pulse (problem statement 4). This repository, FORGE, is where it was built.
+**A fact-verification and deepfake audit engine for Indian social media,<br>built in the open with live sources only.**
+
+[![CI](https://github.com/aadamaftabpersonal-boop/FORGEHackathon/actions/workflows/ci.yml/badge.svg)](https://github.com/aadamaftabpersonal-boop/FORGEHackathon/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.14-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white)
+![LangGraph](https://img.shields.io/badge/agent-LangGraph-1C3C3C)
+![Gemini](https://img.shields.io/badge/LLM-Gemini-4285F4?logo=googlegemini&logoColor=white)
+![Data](https://img.shields.io/badge/mock%20data-none-success)
+![Languages](https://img.shields.io/badge/languages-EN%20%C2%B7%20HI%20%C2%B7%20KN-orange)
+
+Hackathon Theme 1, Civic Pulse (problem statement 4) &nbsp;|&nbsp; this repository, FORGE, is where it was built
+
+[The problem](#the-problem) &nbsp;·&nbsp; [What it does](#what-it-does) &nbsp;·&nbsp; [Status](#status-at-a-glance) &nbsp;·&nbsp; [How it decides](#how-a-claim-is-decided) &nbsp;·&nbsp; [Accuracy](#how-well-does-it-work) &nbsp;·&nbsp; [Run it](#run-it) &nbsp;·&nbsp; [Limits](#known-limits)
+
+</div>
+
+---
 
 You give it a claim, a forwarded message, a link, a PDF, a photo, a video, a voice note or a screenshot of a notice. It checks what it can
 against live sources and tells you what it found, with every source shown. When nobody reliable has checked a claim it says
@@ -20,9 +37,25 @@ pictures are being shared or threatened.
 | Tests | 624 unit tests (live-network contract tests are separate); one timing-sensitive live-server test is flaky under full-suite load and passes alone |
 | Pages | one page per check (`/check/claim`, `/photo`, `/notice`, `/voice`, `/link`), Call guard, Private help (Raksha), Trust Report, investigator views |
 
+> [!IMPORTANT]
 > **Read this first.** This is a hackathon prototype. Section [How well does it work?](#how-well-does-it-work) gives the measured numbers,
 > including a held-out test where one of our rules **failed** its own pass criteria. Section [Known limits](#known-limits) lists what we did not test.
 > Nothing here is claimed beyond what those sections say.
+
+### At a glance
+
+<table>
+<tr>
+<td width="33%" valign="top"><b>Claims</b><br>Paste a claim in English, Hindi or Kannada. Watch each step run live, then read a verdict with its sources, or an honest "cannot tell".</td>
+<td width="33%" valign="top"><b>Photos, video, voice</b><br>Tamper heatmaps, AI-generated scores, matches against images fact-checkers already debunked, transcripts and synthetic-voice checks.</td>
+<td width="33%" valign="top"><b>Notices, links, PDFs</b><br>Scam wording, look-alike links and official-text mismatches, read without ever opening the links.</td>
+</tr>
+<tr>
+<td valign="top"><b>Call guard</b><br>Listens to a suspicious call and turns amber or red as the words follow a scam script, with advice for that scam.</td>
+<td valign="top"><b>Raksha</b><br>A kind, sourced chat for someone whose private pictures are threatened or shared. It asks two questions, then gives the steps in order.</td>
+<td valign="top"><b>Trust Report</b><br>One shareable page per investigation, built only from records this server produced, plus Hindi and English correction cards.</td>
+</tr>
+</table>
 
 ---
 
@@ -76,7 +109,7 @@ SATYASUTRA is our attempt at that. The design rules are in `docs/plan/`; the wor
 
 ## Status at a glance
 
-An honest split between what runs today, what runs with stated weaknesses, and what is not built.
+An honest split between what runs today, what runs with stated weaknesses, and what is not built. **Built** means it runs end to end; it does not mean it is accurate on every input.
 
 | Capability | Status | Note |
 |---|---|---|
@@ -176,6 +209,23 @@ For someone whose private pictures are being threatened, shared or faked. It is 
 - **Safety first.** Danger words ("I want to die", "he is outside") get the 112 and trusted-person text before any retrieval or model call. A message in distress gets a warm reply and options, not a document search.
 - **What it never does.** It never asks for, accepts, stores or checks pictures, files nothing, and gives no legal advice. The conversation state lives in the page; the server keeps nothing. The page has a one-tap exit that returns to the previous page.
 
+```mermaid
+flowchart TD
+    M[Message] --> D{Danger words?}
+    D -->|yes| E[112 and trusted-person text, no model]
+    D -->|no| I{About private images?}
+    I -->|yes| A[Ask age, then what happened - chips or typed]
+    A --> P[Code picks the steps from the ladder by age and situation]
+    P --> G[Gemini phrases a short kind reply from those steps]
+    G --> C{Every figure, link and law word in the steps? No promises?}
+    C -->|yes| R[Reply + folded steps + sources]
+    C -->|no| F[Fixed warm reply + the same steps]
+    I -->|a question| Q[Retrieve official passages]
+    Q --> V{Quote verbatim and figures in quote?}
+    V -->|yes| S[Answer with source]
+    V -->|no| N[Point to legal aid, offer next step]
+```
+
 ### Trust Report, history and command centre
 Every check saves a server-side record. A **Trust Report** (`/report/<id>`) is one shareable page with ten sections, built only from records this server produced, with a content-hash id. `/my-investigations` keeps your history in your browser and lets you delete it. `/command` is a view for investigators: overview, evidence graph, media lab, claim groups across languages, a source registry and a case workspace. There is no sign-in, so the command centre shows every record on that server.
 
@@ -251,7 +301,8 @@ Smaug weights are downloaded separately; [`docs/licences.md`](docs/licences.md) 
 .\.venv\Scripts\python scripts\eval\run.py --split dev --factcheck off --official snapshot --out docs\claim-sheet.md
 ```
 
-The test split needs a clean git tree on the guarded paths and is meant to be run once per frozen version.
+> [!NOTE]
+> The test split needs a clean git tree on the guarded paths and is meant to be run once per frozen version.
 
 ## Deploying it
 
@@ -262,6 +313,9 @@ ngrok http 8000                                              # a public tunnel t
 .\.venv\Scripts\python scripts\make_vercel.py https://<your-tunnel-host>
 cd deploy\vercel ; vercel deploy --prod
 ```
+
+> [!WARNING]
+> The public address depends on your machine, the API and the tunnel staying up, and it has no sign-in. Anyone with the link spends the Gemini free quota.
 
 `scripts/make_vercel.py` writes `deploy/vercel/vercel.json`, which proxies the public pages and APIs to the backend. The command centre, intel, registry and case pages are **not** proxied (the app has no sign-in and they show every stored record), so they return 404 on the public address. The site is up only while the machine, the API and the tunnel are up. Anyone with the link spends the Gemini free quota. Request-size limits for photo, video and voice uploads through the proxy were not measured.
 
@@ -322,6 +376,9 @@ tools/        forge.py: the phase and ticket board
 ```
 
 ## Known limits
+
+> [!CAUTION]
+> The numbers above describe one version on small sets. Treat them as evidence of how the system behaves, not as a guarantee of accuracy on your input.
 
 - **Accuracy is measured on a small set.** 62 held-out rows, mostly finance claims, one labeller for most groups. The set cannot show rare failures, and coverage is low: most claims end as "cannot tell".
 - **The web rule has a known weakness.** An outlet reporting a rumour, or old coverage of an event stated without a "now" word, can still be mistaken for confirmation. The outlet lists and counts are policy choices, not calibrated.
