@@ -48,7 +48,7 @@ Each line has an owner, what "done" means, and what to do if it cannot be done.
 
 ### D. Polish (build, no one else needed)
 
-- [ ] Walk every page at phone width: `/`, `/guard`, `/help`, `/my-investigations`, `/report/<id>`, `/officials`, `/command`, `/about`. Fix overflow and unreadable text.
+- [ ] Walk every page at phone width: `/`, `/guard`, `/help`, `/my-investigations`, `/report/<id>`, `/officials`, `/command`. Fix overflow and unreadable text.
 - [ ] Click through the new pieces once in a real browser: the family-alert link, the delete button, the how-to box, the nav links after a hard reload.
 - [ ] Read what each page says when Gemini is out, with the server running and the key blocked (use a wrong key in a scratch run, not the real `.env`).
 - [ ] Remove dead links and stale pages; check the README links resolve.
