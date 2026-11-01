@@ -7,15 +7,16 @@
 <link rel="stylesheet" href="/static/jv.css">
 <style>
   .wrap { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
-  .hero { background: radial-gradient(900px 300px at 85% -10%, #dfe7ff 0, transparent 70%), radial-gradient(700px 260px at 0% 0%, #fff1de 0, transparent 70%); padding: 44px 0 28px; }
-  :root[data-theme="dark"] .hero { background: none; }
-  .hero h1 { margin: 0 auto 8px; max-width: 14em; text-align: center; font-size: clamp(30px, 5vw, 46px); line-height: 1.12; letter-spacing: -.02em; }
-  .hero .sub { text-align: center; color: var(--mute); max-width: 36em; margin: 0 auto 18px; font-size: 17px; }
-  .feats { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px 22px; margin: 0 0 22px; color: var(--mute); font-size: 13px; }
+  .hero { background: radial-gradient(520px 260px at 88% 0, rgba(245, 181, 15, .38), transparent 70%), radial-gradient(circle at 14px 14px, rgba(255, 255, 255, .07) 2px, transparent 2.6px) 0 0 / 28px 28px, linear-gradient(180deg, var(--indigo-deep), var(--indigo)); padding: 40px 0 34px; color: #fff; }
+  :root[data-theme="dark"] .hero { background: none; color: var(--text); }
+  .wm { text-align: center; font-family: "Noto Sans Devanagari", sans-serif; font-size: 20px; font-weight: 700; color: var(--marigold); letter-spacing: .04em; margin-bottom: 6px; }
+  .hero h1 { margin: 0 auto 10px; max-width: 14em; text-align: center; font-size: clamp(32px, 5.4vw, 52px); line-height: 1.1; letter-spacing: -.02em; font-weight: 800; color: #fff; }
+  .hero .sub { text-align: center; color: #d6daf6; max-width: 36em; margin: 0 auto 18px; font-size: 17px; }
+  .feats { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px 22px; margin: 0 0 22px; color: #c6ccf2; font-size: 13px; }
   .feats span { display: inline-flex; align-items: center; gap: 7px; }
-  .feats i { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); display: inline-block; }
+  .feats i { width: 9px; height: 9px; border-radius: 2px; transform: rotate(45deg); background: var(--marigold); display: inline-block; }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; }
-  .invest { max-width: 780px; margin: 0 auto; }
+  .invest { max-width: 780px; margin: 0 auto; position: relative; border-top: 4px solid var(--saffron); }
   .tabs { display: flex; gap: 4px; flex-wrap: wrap; background: var(--idle-soft); border-radius: 10px; padding: 4px; margin-bottom: 14px; }
   .tabs button { flex: 1; min-width: 70px; background: transparent; color: var(--mute); border: 0; border-radius: 8px; padding: 9px 10px; cursor: pointer; font-weight: 600; }
   .tabs button[aria-selected="true"] { background: var(--panel); color: var(--accent); box-shadow: 0 1px 3px rgba(15, 26, 58, .12); }
@@ -31,6 +32,7 @@
   .langs { text-align: center; color: var(--mute); font-size: 13px; margin-top: 12px; }
   .pills { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 14px; }
   .pill { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 3px 12px; font-size: 12px; color: var(--mute); }
+  .hero .pill { background: rgba(255, 255, 255, .1); border-color: rgba(255, 255, 255, .22); color: #d6daf6; } .hero .pill b { color: #fff; } .hero .pill.good b { color: #7fe3bd; }
   .pill b { color: var(--text); } .pill.good b { color: var(--ok); } .pill.bad b { color: var(--bad); }
   .results { max-width: 780px; margin: 18px auto 0; display: grid; gap: 14px; }
   .results:empty { display: none; }
@@ -83,6 +85,7 @@
 <body>
 <div class="hero">
   <div class="wrap">
+    <div class="wm" lang="hi">सत्यसूत्र</div>
     <h1>India's digital truth, in your hands</h1>
     <p class="sub">Paste a claim, a link, a photo, a video or a voice note. We search the web and official sources, then tell you if it is true, false, or that we cannot tell yet.</p>
     <div class="feats"><span><i></i>Searches the live web and fact-checkers</span><span><i></i>Checks photos, video and voice for tampering</span><span><i></i>Works in English, हिन्दी, ಕನ್ನಡ and more</span></div>
@@ -126,7 +129,13 @@
   <div class="results">
     <div class="card trace" id="trace" style="display:none"></div>
     <div id="links"></div>
-    <details class="card" style="margin-top:14px"><summary><b>How to use this site</b></summary>
+    <div id="out"></div>
+    <div id="act"></div>
+    <div id="rep"></div>
+    <div id="noticeOut"></div>
+    <div id="docOut"></div>
+    <div id="mediaOut"></div>
+    <details class="card" style="margin-top:6px"><summary><b>How to use this site</b></summary>
       <ol>
         <li><b>Text:</b> paste a forwarded message or claim, press Investigate. You see each step live, then the verdict with its sources. "Cannot tell" is an honest answer.</li>
         <li><b>Link or PDF, Image or video, Voice note:</b> use the other tabs. Image and video checks show tampering signals, never "this is real".</li>
@@ -135,12 +144,6 @@
         <li><b>After a check:</b> build a shareable Trust report, or delete the stored record of your checks.</li>
       </ol>
     </details>
-    <div id="out"></div>
-    <div id="act"></div>
-    <div id="rep"></div>
-    <div id="noticeOut"></div>
-    <div id="docOut"></div>
-    <div id="mediaOut"></div>
   </div>
 
   <div class="sectionhead"><h2>Being fact-checked across India right now</h2><a href="/officials">See everything</a></div>
@@ -519,8 +522,32 @@ async function chain() {
   catch (e) { out.prepend(el("div", "err", e.message)); }
 }
 
+function loading(title, items, o) {
+  o = o || {};
+  const wheel = el("div", "chakra"); wheel.setAttribute("aria-hidden", "true");
+  const NS = "http://www.w3.org/2000/svg"; const svg = document.createElementNS(NS, "svg"); svg.setAttribute("viewBox", "-50 -50 100 100");
+  const ring = (r, w) => { const c = document.createElementNS(NS, "circle"); c.setAttribute("r", r); c.setAttribute("fill", "none"); c.setAttribute("stroke", "currentColor"); c.setAttribute("stroke-width", w); return c; };
+  svg.append(ring(44, 4), ring(8, 4));
+  for (let i = 0; i < 24; i++) { const l = document.createElementNS(NS, "line"); l.setAttribute("y1", 9); l.setAttribute("y2", 43); l.setAttribute("stroke", "currentColor"); l.setAttribute("stroke-width", 2.2); l.setAttribute("stroke-linecap", "round"); l.setAttribute("transform", "rotate(" + i * 15 + ")"); svg.append(l); }
+  wheel.append(svg);
+  const t = el("span", "lt", "0 s"); const head = el("div"); head.append(el("b", "", title), t);
+  const ul = el("ul", "ll"); items.forEach((x) => ul.append(el("li", "", x)));
+  const body = el("div", "load-body"); body.append(head, ul);
+  if (o.skeleton) { const f = el("div", "film-skel"); for (let i = 0; i < o.skeleton; i++) f.append(el("i")); body.append(f); }
+  const card = el("div", "load"); card.setAttribute("role", "status"); card.setAttribute("aria-live", "polite"); card.append(wheel, body);
+  const t0 = Date.now(); const iv = setInterval(() => { if (!card.isConnected) return clearInterval(iv); t.textContent = Math.round((Date.now() - t0) / 1000) + " s"; }, 500);
+  if (!o.preview) return card;
+  const wrap = el("div"); wrap.style.display = "grid"; wrap.style.gap = "12px"; wrap.append(o.preview, card); return wrap;
+}
+function scanning(file) {
+  const box = el("div", "scan");
+  if (file.type.startsWith("video/")) { const v = el("video"); v.src = URL.createObjectURL(file); v.muted = true; v.preload = "metadata"; box.append(v); }
+  else { const i = el("img"); i.src = URL.createObjectURL(file); box.append(i); }
+  return box;
+}
+
 async function checkVideo(f, out) {
-  out.append(el("div", "small", "Sampling frames and running TruFor on each. This can take a little while."));
+  out.replaceChildren(loading("Checking the video", ["Sampling 8 frames", "Looking for edits", "Looking for AI generation", "Matching fact-checked images"], { preview: scanning(f), skeleton: 8 }));
   try {
     const r = await fetch("/video/check", { method: "POST", headers: { "x-filename": safeName(f) }, body: f });
     const body = await r.json();
@@ -549,7 +576,7 @@ async function checkImage() {
   const f = $("file").files[0]; const out = $("mediaOut"); out.replaceChildren();
   if (!f) return;
   if (f.type.startsWith("video/")) return checkVideo(f, out);
-  out.append(el("div", "small", "Analysing " + f.name + " ..."));
+  out.replaceChildren(loading("Checking the image", ["Looking for edits", "Looking for AI generation", "Matching fact-checked images", "Reading file details"], { preview: scanning(f) }));
   try {
     const r = await fetch("/media/check", { method: "POST", headers: { "x-filename": safeName(f) }, body: f });
     const body = await r.json();
@@ -585,7 +612,7 @@ async function checkImage() {
 async function checkVoice() {
   const f = $("audio").files[0], box = $("voiceOut"); box.replaceChildren();
   if (!f) return;
-  box.textContent = "Reading the voice note...";
+  box.replaceChildren(loading("Listening to the voice note", ["Turning speech into text", "Detecting the language"]));
   try {
     const t = await api("/voice/transcribe", { method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: await f.arrayBuffer() });
     box.replaceChildren(el("div", "", "Transcript (" + t.language + ", " + Math.round(t.language_prob * 100) + "% sure of the language, " + t.seconds + " s): " + t.text));
@@ -605,7 +632,7 @@ async function checkVoice() {
 async function checkNotice() {
   const f = $("notice").files[0], box = $("noticeOut"); box.replaceChildren();
   if (!f) return;
-  box.textContent = "Reading the notice...";
+  box.replaceChildren(loading("Reading the notice", ["Copying the text", "Checking links", "Checking scam wording"]));
   try {
     const n = await api("/notice/check", { method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: await f.arrayBuffer() });
     box.replaceChildren();
@@ -628,13 +655,13 @@ function showDoc(n, kind) {
 }
 async function checkPage() {
   const u = $("pageUrl").value.trim(); if (!u) return;
-  $("docOut").textContent = "Reading the page...";
+  $("docOut").replaceChildren(loading("Reading the page", ["Fetching the page", "Checking links", "Checking scam wording"]));
   try { showDoc(await api("/url/check", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: u }) }), "page"); }
   catch (e) { $("docOut").replaceChildren(el("div", "err", "Could not read the page: " + e.message)); }
 }
 async function checkPdf() {
   const f = $("pdf").files[0]; if (!f) return;
-  $("docOut").textContent = "Reading the PDF...";
+  $("docOut").replaceChildren(loading("Reading the PDF", ["Extracting the text", "Checking links", "Checking scam wording"]));
   try { showDoc(await api("/doc/check", { method: "POST", headers: { "Content-Type": "application/octet-stream", "x-filename": safeName(f) }, body: await f.arrayBuffer() }), "document"); }
   catch (e) { $("docOut").replaceChildren(el("div", "err", "Could not read the PDF: " + e.message)); }
 }
