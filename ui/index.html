@@ -358,6 +358,8 @@ const SAY = {
 };
 const SURE = { high: "We are confident in this.", medium: "We are fairly sure.", low: "There is little to go on, so treat this as a first look." };
 
+let FROM_DOC = false, CUR_DOC = false;          // set when the claims come from a document or page the person uploaded: "do not forward" advice is for forwarded rumours
+
 function renderClaim(c) {
   const [headline, tone, advice] = SAY[c.label] || [c.label, "idle", ""];
   const box = el("div", "claim t-" + tone);
@@ -366,7 +368,7 @@ function renderClaim(c) {
   if (c.quote && c.quote !== c.text) box.append(el("div", "small", "original: " + c.quote));
   box.append(el("div", "small", SURE[c.confidence_band] || ""));
   const viaNews = c.label === "SUPPORTED" && c.citations && c.citations.length && c.citations.every((e) => e.route === "web");
-  if (advice) box.append(el("div", "advice", viaNews ? "Several reputable news outlets report this as fact." : advice));
+  if (advice && !(CUR_DOC && c.label === "UNVERIFIABLE_YET")) box.append(el("div", "advice", viaNews ? "Several reputable news outlets report this as fact." : advice));
 
   const found = el("ul", "found"); box.append(el("div", "sect", "What we found"), found);
   if (c.citations && c.citations.length) {
@@ -486,6 +488,7 @@ async function showActions(text, body) {
 }
 
 async function verify() {
+  CUR_DOC = FROM_DOC; FROM_DOC = false;
   const text = $("text").value.trim(), uri = $("uri").value.trim();
   const out = $("out"); out.replaceChildren();
   if (!text && !uri) return;
@@ -646,9 +649,11 @@ async function checkNotice() {
 function showDoc(n, kind) {
   const box = $("docOut"); box.replaceChildren();
   const card = el("div", "claim");
+  const red = n.findings.some((x) => x.level === "red_flag");
+  card.append(el("div", "headline " + (red ? "bad" : "ok"), n.text ? (red ? "Scam signs found" : "No scam signs found") : "Nothing readable"));
   card.append(el("div", "small", "Read from " + (n.url || n.name || "the file") + ":"), el("div", "q", n.text ? n.text.slice(0, 600) + (n.text.length > 600 ? " ..." : "") : "(no readable text)"));
   const ul = el("ul"); n.findings.forEach((x) => ul.append(el("li", x.level === "red_flag" ? "err" : "", (x.level === "red_flag" ? "Red flag: " : "") + x.text))); card.append(ul);
-  if (n.text) { const b = el("button", "ghost toggle", "Check the claims in this text"); b.onclick = () => { $("text").value = n.text.slice(0, 2000); $("uri").value = ""; verify(); window.scrollTo({ top: 0, behavior: "smooth" }); }; card.append(b); }
+  if (n.text) { const b = el("button", "ghost toggle", "Check the claims in this text"); b.onclick = () => { $("text").value = n.text.slice(0, 2000); $("uri").value = ""; FROM_DOC = true; verify(); window.scrollTo({ top: 0, behavior: "smooth" }); }; card.append(b); }
   box.append(card); offerReport(kind, n.record_id);
 }
 async function checkPage() {
