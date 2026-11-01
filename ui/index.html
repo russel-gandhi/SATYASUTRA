@@ -303,7 +303,7 @@ async function newsLine(text, box) {
     if (n.status === "reported") {
       box.append("In the news (context, not proof that it is true): ");
       n.hits.forEach((h, i) => { const a = el("a", "", h.publisher + ": " + h.title); a.href = h.url; a.target = "_blank"; a.rel = "noopener"; if (i) box.append(" | "); box.append(a); });
-    } else box.textContent = n.note;
+    } else box.textContent = "Not found in the news we checked.";
   } catch (_) { box.textContent = ""; }
 }
 
@@ -347,7 +347,7 @@ async function makeCard(claim, box) {
     const spec = await api("/card/spec", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ claim }) });
     const canvas = await drawCard(spec); canvas.style.maxWidth = "100%"; canvas.style.border = "1px solid #8884"; canvas.style.borderRadius = "8px";
     const dl = el("a", "", "Download the card (PNG)"); dl.href = "#"; dl.onclick = (e) => { e.preventDefault(); canvas.toBlob((b) => { const u = URL.createObjectURL(b), a = document.createElement("a"); a.href = u; a.download = spec.filename + ".png"; a.click(); setTimeout(() => URL.revokeObjectURL(u), 1000); }); };
-    box.replaceChildren(canvas, el("div"), dl, el("div", "small", "The card carries the answer and the source link, never the original image or video. " + (spec.lang === "hi" ? "The Hindi wording has not been reviewed by a native speaker." : "")));
+    box.replaceChildren(canvas, el("div"), dl,)
   } catch (e) { box.textContent = e.message; }
 }
 
@@ -368,7 +368,7 @@ function renderClaim(c) {
   if (c.quote && c.quote !== c.text) box.append(el("div", "small", "original: " + c.quote));
   box.append(el("div", "small", SURE[c.confidence_band] || ""));
   const viaNews = c.label === "SUPPORTED" && c.citations && c.citations.length && c.citations.every((e) => e.route === "web");
-  if (advice) box.append(el("div", "advice", viaNews ? "Several reputable news outlets report this as fact. News can repeat itself and can be wrong, so this is a good sign, not a guarantee." : advice));
+  if (advice) box.append(el("div", "advice", viaNews ? "Several reputable news outlets report this as fact." : advice));
 
   const found = el("ul", "found"); box.append(el("div", "sect", "What we found"), found);
   if (c.citations && c.citations.length) {
@@ -406,7 +406,7 @@ function renderClaim(c) {
 
 function showResult(body, out) {
   out.replaceChildren();
-  if (!body.claims.length) out.append(el("div", "claim small", "No checkable claim found in this text (" + body.extraction.status + "). Opinions and chatter are not claims."));
+  if (!body.claims.length) out.append(el("div", "claim small", "No checkable claim found in this text."));
   body.claims.forEach((c) => out.append(renderClaim(c)));
 }
 
@@ -421,7 +421,7 @@ function offerReport(kind, id) {
   RECS[kind] = id;
   const box = $("rep"); box.replaceChildren();
   const n = Object.keys(RECS).length;
-  const card = el("div", "claim"); card.append(el("div", "small", "Trust report: one page with the verdict, the evidence, the sources, the graph and the limits, as a shareable link. It covers " + n + " submission" + (n > 1 ? "s" : "") + " from this session (" + Object.keys(RECS).join(", ") + ")."));
+  const card = el("div", "claim"); card.append(el("div", "small", "Trust report: the verdict, evidence and sources as one shareable link (" + n + " submission" + (n > 1 ? "s" : "") + ")."));
   const mk = (lang, label) => { const b = el("button", "ghost toggle", label); b.onclick = async () => { b.disabled = true; try { const r = await api("/report/build", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ record_ids: Object.values(RECS), lang }) }); window.open(r.url, "_blank"); } catch (e) { card.append(el("div", "err", "Could not build the report: " + e.message)); } b.disabled = false; }; return b; };
   const clear = el("button", "ghost toggle", "Start a new report"); clear.onclick = () => { Object.keys(RECS).forEach((k) => delete RECS[k]); box.replaceChildren(); };
   const del = el("button", "ghost toggle", "Delete these checks"); del.onclick = async () => {
@@ -450,7 +450,7 @@ function streamAgent(text) {
     es.addEventListener("node_started", (m) => { const e = JSON.parse(m.data); open[e.node] = add("run", e.node); });
     es.addEventListener("tool_call", (m) => { const e = JSON.parse(m.data); add("tool", e.data.name, e.data.summary); });
     es.addEventListener("node_finished", (m) => { const e = JSON.parse(m.data); if (open[e.node]) { open[e.node].classList.remove("run"); open[e.node].append(" " + e.elapsed_ms + " ms"); } });
-    es.addEventListener("error", (m) => { if (m.data) { const e = JSON.parse(m.data); add("", "failed", (e.node || "") + " " + e.data.type); out.replaceChildren(el("div", "err", e.data.type === "ModelBusy" ? "The language model is at its free-tier limit or unreachable right now. Nothing was checked and nothing was guessed. If it is the per-minute limit, try again shortly; if it is the daily allowance, it resets later and waiting a minute will not help." : "The run stopped at " + (e.node || "a step") + " (" + e.data.type + "). No verdict was guessed.")); finish(); } else if (!gotResult) { finish(); } });
+    es.addEventListener("error", (m) => { if (m.data) { const e = JSON.parse(m.data); add("", "failed", (e.node || "") + " " + e.data.type); out.replaceChildren(el("div", "err", e.data.type === "ModelBusy" ? "The language model is at its limit right now. Try again shortly." : "The run stopped at " + (e.node || "a step") + " (" + e.data.type + ").")); finish(); } else if (!gotResult) { finish(); } });
     es.addEventListener("result", (m) => { gotResult = true; const b = JSON.parse(m.data); showResult(b, out); showActions(text, b); offerReport("claims", b.record_id); });
     es.addEventListener("run_finished", () => { setTimeout(finish, 300); });
   });
@@ -466,7 +466,7 @@ async function checkLinks(text) {
       row.append(Object.assign(el("b"), { textContent: l.status === "official" ? "Official link: " : l.status === "shortened" ? "Shortened link: " : l.status === "gov_style" ? "Government-style link: " : "Possible lookalike link: " }), l.reason + ".");
       box.append(row);
     });
-    if (d.links.some((l) => l.status === "lookalike" || l.status === "similar_name")) box.append(el("div", "small", "Do not open it or enter details. We checked the name only and never opened the link. To report a cyber fraud, use the official national portal or call the helpline from the official website."));
+    if (d.links.some((l) => l.status === "lookalike" || l.status === "similar_name")) box.append(el("div", "small", "Do not open it or enter details."));
   } catch (_) {}
 }
 
@@ -497,7 +497,7 @@ async function verify() {
     $("act").replaceChildren();
     const got = await streamAgent(text);
     if (!got) showActions(text, { claims: [] });
-    if (!got && !out.childNodes.length) out.append(el("div", "claim small", "No checkable claim found in this text. Opinions and chatter are not claims."));
+    if (!got && !out.childNodes.length) out.append(el("div", "claim small", "No checkable claim found in this text."));
     $("go").disabled = false; $("spin").style.display = "none"; refreshPills();
     return;
   }
@@ -507,7 +507,7 @@ async function verify() {
     const meta = el("div", "small");
     meta.textContent = body.from_cache ? "answered from cache" : "computed just now";
     out.append(meta);
-    if (!body.claims.length) out.append(el("div", "claim small", "No checkable claim found in this text (" + body.extraction.status + "). Opinions and chatter are not claims."));
+    if (!body.claims.length) out.append(el("div", "claim small", "No checkable claim found in this text."));
     body.claims.forEach((c) => out.append(renderClaim(c)));
   } catch (e) { out.append(el("div", "err", "Could not verify: " + e.message)); }
   finally { $("go").disabled = false; $("spin").style.display = "none"; refreshPills(); }
@@ -568,8 +568,7 @@ async function checkImage() {
     card.append(head);
     const ul = el("ul"); body.reasons.forEach((x) => ul.append(el("li", "", x)));
     if (clean) {
-      card.append(el("div", "", "Both detectors came back clean and it is not a known debunked image, so it most likely is what it looks like."),
-                  el("div", "small", "That is not a guarantee. In our tests the edit detector missed about 4 in 10 spliced photos after sharing and the AI detector missed about 1 in 10 AI images, and neither detects face swaps. If it matters, ask where the photo first appeared."));
+      card.append(el("div", "", "No edits found, no AI generation found, and not a known debunked image."));
       const d = el("details"); d.append(el("summary", "small", "What each check found"), ul); card.append(d);
     } else card.append(ul);
     if (body.matches.length) {
@@ -591,13 +590,12 @@ async function checkVoice() {
     const t = await api("/voice/transcribe", { method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: await f.arrayBuffer() });
     box.replaceChildren(el("div", "", "Transcript (" + t.language + ", " + Math.round(t.language_prob * 100) + "% sure of the language, " + t.seconds + " s): " + t.text));
     offerReport("voice", t.record_id);
-    if (t.language_uncertain) box.append(el("div", "", "The language is uncertain, so the words may be wrong. Check the text before verifying."));
-    box.append(el("div", "", t.note));
+    if (t.language_uncertain) box.append(el("div", "", "The language is uncertain. Check the text before verifying."));
     try {
       const a = await api("/audio/check", { method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: await f.arrayBuffer() });
       const suspect = a.label === "SYNTHETIC_SUSPECTED";
       const v = el("div", suspect ? "err" : "", (suspect ? "Voice: possibly synthetic or cloned. " : "Voice: no sign of synthetic speech found (this does not prove it is a real voice). ") + a.reasons.join(" "));
-      box.append(v, el("div", "small", a.note)); offerReport("audio", a.record_id);
+      box.append(v); offerReport("audio", a.record_id);
     } catch (e) { box.append(el("div", "small", "Voice check not run: " + e.message)); }
     $("text").value = t.text; $("uri").value = "";
     if (t.text.trim()) verify();
@@ -615,7 +613,6 @@ async function checkNotice() {
     card.append(el("div", "small", "Read from the image" + (n.issuer ? " (it says it is from: " + n.issuer + ")" : "") + ":"), el("div", "q", n.text || "(nothing readable)"));
     const ul = el("ul"); n.findings.forEach((x) => { const li = el("li", x.level === "red_flag" ? "err" : "", (x.level === "red_flag" ? "Red flag: " : "") + x.text); ul.append(li); }); card.append(ul);
     if (n.text) { const b = el("button", "ghost toggle", "Check the claims in this text"); b.onclick = () => { $("text").value = n.text; $("uri").value = ""; verify(); window.scrollTo({ top: 0, behavior: "smooth" }); }; card.append(b); }
-    card.append(el("div", "small", n.note));
     box.append(card); offerReport("notice", n.record_id);
     if (n.plan && n.plan.intent !== "none") showActions(n.text, { claims: [] });
   } catch (e) { box.replaceChildren(el("div", "err", "Could not check the notice: " + e.message)); }
@@ -627,7 +624,7 @@ function showDoc(n, kind) {
   card.append(el("div", "small", "Read from " + (n.url || n.name || "the file") + ":"), el("div", "q", n.text ? n.text.slice(0, 600) + (n.text.length > 600 ? " ..." : "") : "(no readable text)"));
   const ul = el("ul"); n.findings.forEach((x) => ul.append(el("li", x.level === "red_flag" ? "err" : "", (x.level === "red_flag" ? "Red flag: " : "") + x.text))); card.append(ul);
   if (n.text) { const b = el("button", "ghost toggle", "Check the claims in this text"); b.onclick = () => { $("text").value = n.text.slice(0, 2000); $("uri").value = ""; verify(); window.scrollTo({ top: 0, behavior: "smooth" }); }; card.append(b); }
-  card.append(el("div", "small", n.note)); box.append(card); offerReport(kind, n.record_id);
+  box.append(card); offerReport(kind, n.record_id);
 }
 async function checkPage() {
   const u = $("pageUrl").value.trim(); if (!u) return;
