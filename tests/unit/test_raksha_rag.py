@@ -84,7 +84,7 @@ def test_fabricated_quote_is_dropped_and_the_reply_is_a_refusal(rag):
     fake = {**GOOD, "quote": "the committee must decide every appeal within ten days of filing"}
     out = answer_question(FakeClient([fake]), CorpusIndex(rag), rag, "How long do I have to appeal to the committee?", "en")
     assert out.refused and out.dropped == 1 and not out.sentences
-    assert public(out, rag, "en", "")["refusal"].startswith("I cannot find this")
+    assert public(out, rag, "en", "")["refusal"].startswith("I could not find that")
 
 
 def test_a_figure_that_is_not_in_the_quote_is_dropped(rag):
@@ -299,3 +299,14 @@ def test_a_short_follow_up_borrows_the_earlier_question_for_search_only(rag):
     assert "How long do I have to appeal" not in client.prompts[-1].split("<<<QUESTION")[1].split("QUESTION>>>")[0]   # the model sees only the current question
     none = answer_question(FakeClient([GOOD]), CorpusIndex(rag), rag, "and then?", "en")
     assert none.refused and none.retrieved == 0                                # without the context the same words find nothing
+
+
+def test_a_message_about_feelings_gets_the_fixed_warm_reply_without_the_model(tmp_path):
+    from satyasutra.raksha.ask import route
+    rag = load_rag()
+    assert route("I feel shitty", rag) == "support" and route("I want to die", rag) == "danger"   # danger still wins
+    asked = []
+    c = _app(tmp_path, ask=lambda text, lang: asked.append(text) or {})
+    r = c.post("/raksha/chat", json={"text": "I feel shitty"}).json()
+    assert r["type"] == "support" and "not your fault" in r["message"] and "112" in r["message"] and asked == []
+    assert "आपकी कोई गलती नहीं" in c.post("/raksha/chat", json={"text": "मुझे बहुत डर लग रहा है", "lang": "hi"}).json()["message"]

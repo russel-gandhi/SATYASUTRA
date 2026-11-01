@@ -116,10 +116,12 @@ def _keep(item: dict, passages: list[Chunk], rag: Rag) -> dict | None:
 
 
 def route(text: str, rag: Rag) -> str:
-    """What a chat message is for, by plain word lists: danger first, then the ladder, then a letter, otherwise a question for the documents."""
+    """What a chat message is for, by plain word lists: danger first, then how the person feels, then the ladder, then a letter, otherwise a question for the documents."""
     low = text.casefold()
     if is_danger(text, rag):
         return "danger"
+    if any(t.casefold() in low for t in rag.chat.support_terms):
+        return "support"
     if any(t.casefold() in low for t in rag.chat.ladder_terms):
         return "ladder"
     if any(t.casefold() in low for t in rag.chat.draft_terms):

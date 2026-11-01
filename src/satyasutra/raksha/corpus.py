@@ -65,6 +65,8 @@ class Retrieval(_Strict):
 class Chat(_Strict):
     ladder_terms: list[str]
     draft_terms: list[str]
+    support_terms: list[str]
+    support: Text
     short_question_words: int
     history_turns: int
 

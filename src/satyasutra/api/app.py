@@ -629,6 +629,8 @@ def create_app(
         kind = raksha_route(req.text, rag)
         if kind == "danger":
             return {"type": "danger", "message": flow.messages["danger"].model_dump()[req.lang]}
+        if kind == "support":
+            return {"type": "support", "message": getattr(rag.chat.support, req.lang)}
         if kind == "ladder":
             return {"type": "ladder", **ladder_view(load_ladder(), CorpusIndex(rag), req.age, req.lang)}
         if kind == "draft":

@@ -42,6 +42,11 @@ chat:
   # Plain word lists decide what a chat message is for; a model never picks the route. Danger words are checked first.
   ladder_terms: ["who do i", "who should i", "who to approach", "what next", "what now", "next step", "what should i do", "what do i do", "where do i report", "where to report", "how do i report", "no reply", "no response", "nobody is", "not responding", "escalate", "ladder", "किसके पास", "आगे क्या", "अब क्या", "क्या करूँ", "क्या करें", "कहाँ शिकायत"]
   draft_terms: ["draft", "write a letter", "write a complaint", "letter", "application for", "मसौदा", "पत्र लिख", "शिकायत लिख"]
+  # A message about how the person feels gets a fixed, warm reply (no model): it never goes to the document search, where it would only be refused.
+  support_terms: ["feel bad", "feel sick", "feel shit", "shitty", "feel terrible", "terrible", "feel awful", "awful", "feel worthless", "worthless", "feel low", "feel scared", "i am scared", "i'm scared", "i am afraid", "i'm afraid", "ashamed", "so alone", "i am alone", "hopeless", "depressed", "anxious", "crying", "panic", "can't cope", "cant cope", "i hate myself", "डर लग", "शर्म", "अकेला", "अकेली", "घबरा", "रो रही", "रो रहा", "बहुत बुरा", "परेशान"]
+  support:
+    en: "I am sorry you are going through this. What happened is not your fault, and you do not have to carry it alone. Whenever you are ready, tell me what is happening, or pick one below: I can show you who to approach, or help you write a letter. If you feel you might hurt yourself, please call 112 now or go to someone you trust."
+    hi: "मुझे दुख है कि आप इससे गुज़र रही/रहे हैं। जो हुआ उसमें आपकी कोई गलती नहीं है, और इसे अकेले उठाने की ज़रूरत नहीं है। जब आप तैयार हों, बताइए क्या हो रहा है, या नीचे से एक चुनिए: मैं बता सकती हूँ किसके पास जाएँ, या पत्र लिखने में मदद कर सकती हूँ। अगर आपको खुद को नुकसान पहुँचाने का मन हो, तो अभी 112 पर कॉल करें या किसी भरोसेमंद व्यक्ति के पास जाएँ।"
   short_question_words: 3      # a question with fewer content words than this borrows the words of the person's previous question for the search only
   history_turns: 2             # earlier messages the page sends along
 safety:
@@ -50,8 +55,8 @@ safety:
   # A sentence that promises an outcome is dropped from every answer.
   promise_terms: ["will be removed", "will be deleted", "will act", "will arrest", "will be arrested", "will definitely", "guaranteed", "100%", "within 24 hours", "will take action"]
 refusal:
-  en: "I cannot find this in the official documents I hold, so I will not guess. Try the steps in the ladder, or ask a lawyer or a legal-aid service."
-  hi: "यह मेरे पास मौजूद सरकारी दस्तावेज़ों में नहीं मिला, इसलिए मैं अंदाज़ा नहीं लगाऊँगा। सीढ़ी के कदम आज़माइए, या किसी वकील या कानूनी सहायता सेवा से पूछिए।"
+  en: "I could not find that in the official documents I have, so I will not guess. I can show you who to approach next, or help you write a letter. A lawyer or a legal-aid service can answer what I cannot."
+  hi: "यह मेरे पास मौजूद सरकारी दस्तावेज़ों में नहीं मिला, इसलिए मैं अंदाज़ा नहीं लगाऊँगी। मैं बता सकती हूँ किसके पास जाएँ, या पत्र लिखने में मदद कर सकती हूँ। जो मैं नहीं बता सकती, वह कोई वकील या कानूनी सहायता सेवा बता सकती है।"
 unreviewed:
   en: "Not legal advice. The Hindi wording and the legal text have not been reviewed by a native speaker or a lawyer."
   hi: "यह कानूनी सलाह नहीं है। हिंदी शब्दों और कानूनी पाठ की किसी हिंदी भाषी या वकील ने समीक्षा नहीं की है।"

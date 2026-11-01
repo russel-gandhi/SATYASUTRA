@@ -46,58 +46,99 @@
   .chatform .go { margin: 0; white-space: nowrap; }
   .msg .card { margin-top: 8px; }
   .alert { background: var(--panel); border: 2px solid var(--bad); border-radius: 12px; padding: 12px 14px; font-weight: 600; margin-top: 10px; }
+  .wrap { max-width: 640px; }
+  .top { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .top h1 { font-size: 21px; margin: 0; }
+  .top .lang { margin: 0; }
+  .exit { display: inline-block; width: auto; font-size: 14px; padding: 7px 14px; margin: 0; }
+  .tabs { display: flex; gap: 2px; overflow-x: auto; border-bottom: 1px solid var(--line); margin: 14px 0 12px; }
+  .tabs button { border: 0; background: none; color: var(--mute); padding: 10px 12px; font: inherit; font-size: 15px; cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; }
+  .tabs button[aria-selected="true"] { color: var(--text); font-weight: 600; border-bottom-color: var(--accent); }
+  .panel[hidden] { display: none; }
+  .lead { color: var(--mute); margin: 0 0 8px; }
+  .chatbox { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 12px; }
+  .chatbox .log { max-height: 52vh; min-height: 240px; }
+  .chatbox .msg { background: var(--bg, #fff); }
+  .chatbox .msg.me { background: var(--accent); }
+  .chatbox .chips { margin: 10px 0 4px; }
+  .chatbox .chips button { background: transparent; }
+  .small { font-size: 13px; color: var(--mute); margin-top: 18px; }
+  .sr { display: none; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1 id="t-title">You are not in trouble. Here is what to do.</h1>
-  <div class="lang" role="group" aria-label="Language"><button id="l-en" aria-pressed="true">English</button><button id="l-hi" aria-pressed="false">हिंदी</button></div>
-  <p id="t-lead">This is about private pictures or videos being shared, or threatened to be shared, without your say. Nothing you do on this page is saved, and you do not need to upload anything.</p>
-  <div id="routes"></div>
+  <div class="top">
+    <h1 id="t-title">You are not in trouble. Here is what to do.</h1>
+    <button class="btn ghost exit" id="exit">Close this page now</button>
+  </div>
+  <div class="lang" role="group" aria-label="Language" style="margin-top:10px"><button id="l-en" aria-pressed="true">English</button><button id="l-hi" aria-pressed="false">हिंदी</button></div>
+  <p class="lead" id="t-lead">Private pictures shared or threatened? Nothing here is saved, and you never need to upload anything.</p>
 
-  <h2 id="t-ladder">Who to approach, in order</h2>
-  <p class="mute" id="t-ladder-lead">Each step shows what the official documents say, with the quote. Where a document gives no time limit, we say so.</p>
-  <div class="chips" role="group" aria-label="Age"><button id="a-adult" aria-pressed="false">18 or older</button><button id="a-minor" aria-pressed="false">Under 18</button><button id="a-unsure" aria-pressed="true">Not sure</button></div>
-  <div id="ladder"></div>
+  <div class="tabs" role="tablist" id="tabs">
+    <button role="tab" data-tab="chat" aria-selected="true"></button>
+    <button role="tab" data-tab="steps" aria-selected="false"></button>
+    <button role="tab" data-tab="ladder" aria-selected="false"></button>
+    <button role="tab" data-tab="draft" aria-selected="false"></button>
+  </div>
 
-  <h2 id="t-ask">Talk to Raksha</h2>
-  <p class="mute" id="t-ask-lead">Ask in your own words. Answers come only from the official documents we hold and show their quote. If it is not there, I say so instead of guessing. This chat is not saved: it is gone when you close the page.</p>
-  <div class="log" id="log" aria-live="polite"></div>
-  <div class="chips" id="quick"></div>
-  <form class="chatform" id="chatform"><input type="text" id="q" maxlength="1000" autocomplete="off" aria-label="Your message"><button class="btn go" id="askgo" type="submit">Send</button></form>
+  <section class="panel" id="p-chat">
+    <h2 class="sr" id="t-ask">Talk to Raksha</h2>
+    <div class="chatbox">
+      <div class="log" id="log" aria-live="polite"></div>
+      <div class="chips" id="quick"></div>
+      <form class="chatform" id="chatform"><input type="text" id="q" maxlength="1000" autocomplete="off" aria-label="Your message"><button class="btn go" id="askgo" type="submit">Send</button></form>
+    </div>
+    <p class="small" id="t-ask-lead">Answers come only from official documents, with their source. If it is not there, I say so. This chat is gone when you close the page.</p>
+  </section>
 
-  <h2 id="t-draft">Draft a letter</h2>
-  <p class="mute" id="t-draft-lead">Fill what you can. The letter uses only what you type and fixed wording. You send it yourself; nothing is saved or sent from here.</p>
-  <select id="d-kind" aria-label="Kind of letter"><option value="complaint">Complaint</option><option value="followup">Follow-up</option><option value="escalation">Escalation letter</option></select>
-  <select id="d-what" aria-label="What happened"><option value="threatened">Someone is threatening to share</option><option value="shared" selected>Shared already</option><option value="faked">Changed or faked</option></select>
-  <div id="d-fields"></div>
-  <button class="btn go" id="draftgo">Make the draft</button>
-  <pre class="draft" id="draftout" hidden></pre>
-  <button class="btn ghost go" id="copy" hidden>Copy</button>
-  <button class="btn ghost exit" id="exit">Close this page now</button>
+  <section class="panel" id="p-steps" hidden>
+    <div id="routes"></div>
+  </section>
+
+  <section class="panel" id="p-ladder" hidden>
+    <h2 class="sr" id="t-ladder">Who to approach, in order</h2>
+    <p class="lead" id="t-ladder-lead">Each step shows what the official documents say. Where a document gives no time limit, we say so.</p>
+    <div class="chips" role="group" aria-label="Age"><button id="a-adult" aria-pressed="false">18 or older</button><button id="a-minor" aria-pressed="false">Under 18</button><button id="a-unsure" aria-pressed="true">Not sure</button></div>
+    <div id="ladder"></div>
+  </section>
+
+  <section class="panel" id="p-draft" hidden>
+    <h2 class="sr" id="t-draft">Draft a letter</h2>
+    <p class="lead" id="t-draft-lead">Fill what you can. The letter uses only what you type. You send it yourself; nothing is saved or sent from here.</p>
+    <select id="d-kind" aria-label="Kind of letter"><option value="complaint">Complaint</option><option value="followup">Follow-up</option><option value="escalation">Escalation letter</option></select>
+    <select id="d-what" aria-label="What happened"><option value="threatened">Someone is threatening to share</option><option value="shared" selected>Shared already</option><option value="faked">Changed or faked</option></select>
+    <div id="d-fields"></div>
+    <button class="btn go" id="draftgo">Make the draft</button>
+    <pre class="draft" id="draftout" hidden></pre>
+    <button class="btn ghost go" id="copy" hidden>Copy</button>
+  </section>
+
   <div class="err" id="err" role="alert"></div>
-  <p class="fine" id="t-fine">This page gives guidance only. It does not take, store or check pictures, it files nothing for you, and it keeps no history. A private or incognito window leaves no trace in the browser either.</p>
+  <p class="small" id="t-fine">This page gives guidance only. It does not take, store or check pictures, it files nothing for you, and it keeps no history. A private or incognito window leaves no trace in the browser either.</p>
 </div>
 <script>
 const T = {
-  en: { title: "You are not in trouble. Here is what to do.", lead: "This is about private pictures or videos being shared, or threatened to be shared, without your say. Nothing you do on this page is saved, and you do not need to upload anything.",
+  en: { title: "You are not in trouble. Here is what to do.", lead: "Private pictures shared or threatened? Nothing here is saved, and you never need to upload anything.",
         exit: "Close this page now", fine: "This page gives guidance only. It does not take, store or check pictures, it files nothing for you, and it keeps no history. A private or incognito window leaves no trace in the browser either.",
+        tabs: ["Talk", "First steps", "Who to approach", "Write a letter"],
         err: "The steps could not be loaded. If you are in danger right now, call 112.",
-        ladder: "Who to approach, in order", ladderLead: "Each step shows what the official documents say, with the quote. Where a document gives no time limit, we say so.",
-        ask: "Talk to Raksha", askLead: "Ask in your own words. Answers come only from the official documents we hold and show their quote. If it is not there, I say so instead of guessing. This chat is not saved: it is gone when you close the page.", askBtn: "Send",
-        hello: "Hi. I am Raksha. It is not your fault. Tell me what is happening or ask me anything about reporting it, and I will answer from the official documents. I never ask for pictures.", typing: "Looking in the documents...", placeholder: "Type your message",
-        quick: ["What should I do next?", "Write a letter for me", "How do I track my complaint?", "How long do I have to appeal to the GAC?"], ladderIntro: "Here is who to approach, in order, from the official documents:", draftHint: "Fill in the form under Draft a letter below. It uses only what you type.",
+        ladder: "Who to approach, in order", ladderLead: "Each step shows what the official documents say. Where a document gives no time limit, we say so.",
+        ask: "Talk to Raksha", askLead: "Answers come only from official documents, with their source. If it is not there, I say so. This chat is gone when you close the page.", askBtn: "Send",
+        hello: "Hi, I am Raksha. It is not your fault. Tell me what is happening, or pick one below. I will never ask for pictures.", typing: "Looking in the documents...", placeholder: "Type your message",
+        quick: ["What should I do next?", "Write a letter for me", "How do I track my complaint?", "How long do I have to appeal to the GAC?"], ladderIntro: "Here is who to approach, in order, from the official documents:", draftHint: "Opening the letter form. It uses only what you type.",
         draft: "Draft a letter", draftLead: "Fill what you can. The letter uses only what you type and fixed wording. You send it yourself; nothing is saved or sent from here.", draftBtn: "Make the draft", copy: "Copy", copied: "Copied",
         ages: ["18 or older", "Under 18", "Not sure"], kinds: ["Complaint", "Follow-up", "Escalation letter"], whats: ["Someone is threatening to share", "Shared already", "Changed or faked"],
         fields: { name: "Your name or an alias", authority: "Who the letter is to (office or officer)", platform: "Where it is happening", account: "Name, username or number of the person", links: "Links (text only)", dates: "Dates and times", ack_no: "Acknowledgement number", reported_on: "Date you first reported", demand: "What they are demanding or threatening" },
         start: "Start here", bring: "Have ready", wait: "How long it takes", unconfirmed: "I could not re-check this source just now", retrieved: "fetched", whereFrom: "Where this comes from", source: "Source", steps: "Steps", busy: "Could not answer right now. Try again shortly." },
-  hi: { title: "आप किसी मुसीबत में नहीं हैं। ये करें।", lead: "यह निजी तस्वीरों या वीडियो के आपकी मर्ज़ी के बिना फैलाए जाने, या फैलाने की धमकी के बारे में है। इस पेज पर आप जो करते हैं वह सेव नहीं होता, और कुछ अपलोड करने की ज़रूरत नहीं है।",
+  hi: { title: "आप किसी मुसीबत में नहीं हैं। ये करें।", lead: "निजी तस्वीरें फैलाई गईं या धमकी मिली? यहाँ कुछ सेव नहीं होता, और कुछ अपलोड नहीं करना है।",
         exit: "यह पेज अभी बंद करें", fine: "यह पेज सिर्फ़ जानकारी देता है। यह तस्वीरें न लेता है, न रखता है, न जाँचता है, आपकी ओर से कोई शिकायत दर्ज नहीं करता और कोई इतिहास नहीं रखता। प्राइवेट या इन्कॉग्निटो विंडो ब्राउज़र में भी निशान नहीं छोड़ती।",
+        tabs: ["बात करें", "पहले कदम", "किसके पास जाएँ", "पत्र लिखें"],
         err: "ये कदम लोड नहीं हो सके। अगर आप अभी खतरे में हैं तो 112 पर कॉल करें।",
-        ladder: "किसके पास जाएँ, किस क्रम में", ladderLead: "हर कदम में सरकारी दस्तावेज़ों की बात उद्धरण के साथ है। जहाँ दस्तावेज़ समय-सीमा नहीं देता, हम वह बता देते हैं।",
-        ask: "रक्षा से बात करें", askLead: "अपने शब्दों में पूछिए। जवाब सिर्फ़ हमारे पास मौजूद सरकारी दस्तावेज़ों से आते हैं और उनका उद्धरण दिखाते हैं। वहाँ न हो तो मैं अंदाज़ा नहीं लगाती। यह चैट सेव नहीं होती: पेज बंद करते ही मिट जाती है।", askBtn: "भेजें",
-        hello: "नमस्ते। मैं रक्षा हूँ। इसमें आपकी कोई गलती नहीं है। बताइए क्या हो रहा है, या शिकायत से जुड़ा कुछ भी पूछिए। मैं सरकारी दस्तावेज़ों से जवाब दूँगी। मैं कभी तस्वीर नहीं माँगती।", typing: "दस्तावेज़ों में देख रही हूँ...", placeholder: "अपना संदेश लिखिए",
-        quick: ["अब मुझे क्या करना चाहिए?", "मेरे लिए पत्र लिखिए", "शिकायत की स्थिति कैसे देखूँ?", "GAC में अपील कितने दिन में करनी होती है?"], ladderIntro: "सरकारी दस्तावेज़ों के अनुसार, इस क्रम में संपर्क करें:", draftHint: "नीचे 'पत्र का मसौदा' का फ़ॉर्म भरिए। उसमें सिर्फ़ वही आता है जो आप लिखते हैं।",
+        ladder: "किसके पास जाएँ, किस क्रम में", ladderLead: "हर कदम में सरकारी दस्तावेज़ों की बात है। जहाँ दस्तावेज़ समय-सीमा नहीं देता, हम वह बता देते हैं।",
+        ask: "रक्षा से बात करें", askLead: "जवाब सिर्फ़ सरकारी दस्तावेज़ों से आते हैं, स्रोत के साथ। वहाँ न हो तो मैं बता देती हूँ। पेज बंद करते ही यह चैट मिट जाती है।", askBtn: "भेजें",
+        hello: "नमस्ते, मैं रक्षा हूँ। इसमें आपकी कोई गलती नहीं है। बताइए क्या हो रहा है, या नीचे से चुनिए। मैं कभी तस्वीर नहीं माँगती।", typing: "दस्तावेज़ों में देख रही हूँ...", placeholder: "अपना संदेश लिखिए",
+        quick: ["अब मुझे क्या करना चाहिए?", "मेरे लिए पत्र लिखिए", "शिकायत की स्थिति कैसे देखूँ?", "GAC में अपील कितने दिन में करनी होती है?"], ladderIntro: "सरकारी दस्तावेज़ों के अनुसार, इस क्रम में संपर्क करें:", draftHint: "पत्र का फ़ॉर्म खोल रही हूँ। उसमें सिर्फ़ वही आता है जो आप लिखते हैं।",
         draft: "पत्र का मसौदा", draftLead: "जितना हो सके भरें। पत्र में सिर्फ़ आपका लिखा और तय शब्द आते हैं। आप इसे खुद भेजें; यहाँ से कुछ सेव या भेजा नहीं जाता।", draftBtn: "मसौदा बनाएँ", copy: "कॉपी करें", copied: "कॉपी हो गया",
         ages: ["18 या ज़्यादा", "18 से कम", "पक्का नहीं"], kinds: ["शिकायत", "अनुवर्ती पत्र", "वरिष्ठ अधिकारी को पत्र"], whats: ["कोई फैलाने की धमकी दे रहा है", "पहले ही फैल चुकी हैं", "बदली या नकली बनाई गईं"],
         fields: { name: "आपका नाम या कोई उपनाम", authority: "पत्र किसे है (कार्यालय या अधिकारी)", platform: "यह कहाँ हो रहा है", account: "करने वाले का नाम, यूज़रनेम या नंबर", links: "लिंक (सिर्फ़ टेक्स्ट)", dates: "तारीख और समय", ack_no: "पावती संख्या", reported_on: "पहली शिकायत की तारीख", demand: "वे क्या माँग रहे हैं या क्या धमकी दे रहे हैं" },
@@ -111,6 +152,7 @@ const safeUrl = (u) => (u && /^https:[/][/]/.test(u) ? u : "");
 function paint() {
   const t = T[lang];
   document.documentElement.lang = lang;
+  document.querySelectorAll("#tabs button").forEach((b, i) => { b.textContent = t.tabs[i]; });
   $("t-title").textContent = t.title; $("t-lead").textContent = t.lead; $("exit").textContent = t.exit; $("t-fine").textContent = t.fine;
   $("l-en").setAttribute("aria-pressed", lang === "en"); $("l-hi").setAttribute("aria-pressed", lang === "hi");
   $("t-ladder").textContent = t.ladder; $("t-ladder-lead").textContent = t.ladderLead; $("t-ask").textContent = t.ask; $("t-ask-lead").textContent = t.askLead; $("askgo").textContent = t.askBtn; $("q").placeholder = t.placeholder; paintQuick(); greet();
@@ -170,6 +212,11 @@ async function loadLadder() {
 }
 
 let noted = false;
+function showTab(name) {
+  document.querySelectorAll("#tabs button").forEach((b) => b.setAttribute("aria-selected", b.dataset.tab === name));
+  ["chat", "steps", "ladder", "draft"].forEach((n) => { $("p-" + n).hidden = n !== name; });
+}
+document.querySelectorAll("#tabs button").forEach((b) => { b.onclick = () => showTab(b.dataset.tab); });
 const said = [];                                              // the person's own messages, kept in this page only and sent along for follow-up questions
 const bubble = (cls) => { const b = el("div", "msg " + cls); $("log").append(b); $("log").scrollTop = $("log").scrollHeight; return b; };
 function greet() {
@@ -198,7 +245,8 @@ async function send(text) {
     const a = await r.json(); reply.replaceChildren();
     if (a.type === "danger") { reply.classList.add("alert"); reply.textContent = a.message; }
     else if (a.type === "ladder") { reply.append(el("p", "", T[lang].ladderIntro)); a.rungs.forEach((x, i) => reply.append(rungCard(x, i + 1))); reply.append(el("p", "mute", a.not_covered)); }
-    else if (a.type === "draft") { reply.append(el("p", "", T[lang].draftHint)); $("t-draft").scrollIntoView({ behavior: "smooth" }); }
+    else if (a.type === "support") { reply.append(el("p", "", a.message)); }
+    else if (a.type === "draft") { reply.append(el("p", "", T[lang].draftHint)); showTab("draft"); }
     else showAnswer(reply, a);
     said.push(text);
   } catch (e) { reply.replaceChildren(el("p", "err", T[lang].busy)); }
