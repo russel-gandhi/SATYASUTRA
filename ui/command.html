@@ -10,6 +10,10 @@
   .jnav { padding-inline: 22px; }
   .kpis { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
   .kpi { background: var(--panel); border: 1px solid var(--line); border-top: 3px solid var(--accent); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; }
+  .kpi { background: linear-gradient(180deg, rgba(245, 181, 15, .08), transparent 60%), var(--panel); box-shadow: 0 10px 28px rgba(5, 8, 40, .45); }
+  .panel { box-shadow: 0 10px 28px rgba(5, 8, 40, .35); }
+  .side { background: linear-gradient(180deg, #181f5c, var(--panel)); }
+  .tabs button.on { box-shadow: inset 3px 0 0 var(--saffron); }
   .kpi.bad { border-top-color: var(--bad); } .kpi.ok { border-top-color: var(--ok); } .kpi.warn { border-top-color: var(--warn); } .kpi.idle { border-top-color: var(--idle); }
   .kpi .klabel { color: var(--mute); font-size: 13px; } .kpi b { font-size: 38px; line-height: 1.05; letter-spacing: -.02em; }
   .dash { display: grid; gap: 12px; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 12px; align-items: start; }

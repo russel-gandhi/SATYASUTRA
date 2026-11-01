@@ -22,14 +22,11 @@ from typing import Callable
 from PIL import Image
 
 from .config import Config
-from .media import SCOPE_NOTE, forensic_scores
+from . import plain
+from .media import forensic_scores
 from .provenance import BadImage, ImageIndex, fingerprint
 
 FFMPEG, FFPROBE = "ffmpeg", "ffprobe"
-VIDEO_SCOPE_NOTE = ("Video deepfakes are not detected as video: face swaps are not detected at all, and AI-generated video is only suspected when several sampled "
-                    "frames look AI-generated as still images.")
-COMPRESSION_NOTE = ("Video compression hides editing traces: in our test (scripts/video_live.py) a spliced frame that scored 1.00 as a still image scored 0.27 "
-                    "after H.264 encoding, so a clean result here is weak evidence.")
 THUMB_QUALITY = 70
 
 
@@ -54,6 +51,7 @@ class VideoResult:
     label: str
     reasons: list[str]
     forensics_available: bool
+    headline: str = ""
 
 
 def _tool(name: str) -> str:
@@ -123,30 +121,21 @@ def check_video(cfg: Config, data: bytes, index: ImageIndex, analyse: Callable[[
 
     scored = [f for f in frames if f.score is not None]
     flagged = [f for f in frames if f.flagged]
-    reasons: list[str] = []
+    notes: list[str] = []
     label = "INCONCLUSIVE"
     if not scored:
-        reasons.append(next((f.note for f in frames if f.note), "no frame could be analysed"))
+        notes.append(next((f.note for f in frames if f.note), "no frame could be analysed"))
     elif cut_entry is None:
-        reasons.append(f"no calibrated {s.threshold}: scores are shown but no label is given")
+        notes.append(f"no calibrated {s.threshold}: scores are shown but no label is given")
     elif flagged:
         label = "EDITED"
-        top = max(flagged, key=lambda f: f.score)
-        reasons.append(f"{len(flagged)} of {len(scored)} sampled frames are at or above the cut {cut_entry.value} (highest {top.score:.2f} at {top.at_s:.1f} s); the heatmap marks where")
-    else:
-        best = max(scored, key=lambda f: f.score)
-        reasons.append(f"none of {len(scored)} sampled frames reaches the cut {cut_entry.value} (highest {best.score:.2f}): no editing found in those frames, which does not prove the video is genuine")
+    top = max(flagged, key=lambda f: f.score) if flagged and cut_entry is not None else None
     ai_flagged = [f for f in frames if f.ai_flagged]
     ai_scored = [f for f in frames if f.ai_score is not None]
-    if ai_scored and ai_entry is not None:
-        if len(ai_flagged) >= s.video_ai_min_frames:
-            label = "SYNTHETIC_SUSPECTED"
-            reasons.append(f"{len(ai_flagged)} of {len(ai_scored)} sampled frames look AI-generated as still images (cut {ai_entry.value}); that is a suspicion about the video, not a finding")
-        else:
-            reasons.append(f"{len(ai_flagged)} of {len(ai_scored)} sampled frames are over the AI-generated cut {ai_entry.value} (it takes {s.video_ai_min_frames} to raise a suspicion): "
-                           "no sign of AI generation found in those frames, which does not prove the video is real")
-    reasons += [SCOPE_NOTE, VIDEO_SCOPE_NOTE, COMPRESSION_NOTE]
+    ai_enough = bool(ai_scored) and ai_entry is not None and len(ai_flagged) >= s.video_ai_min_frames
+    if ai_enough:
+        label = "SYNTHETIC_SUSPECTED"
     seen = {m["article_url"] for f in frames for m in f.matches}
-    reasons.append(f"frames appeared in {len(seen)} fact-checker article(s): a lead about history, not a verdict on any claim" if seen
-                   else "no sampled frame is in the debunked-image index; that says nothing about whether the video is authentic")
-    return VideoResult(round(duration, 2), frames, label, reasons, bool(scored))
+    headline, why = plain.video(len(flagged) if cut_entry is not None else 0, len(ai_flagged), ai_enough, len(scored), len(ai_scored), s.video_mostly_share, top.at_s if top else None, len(seen))
+    reasons = [*why, *notes]
+    return VideoResult(round(duration, 2), frames, label, reasons, bool(scored), headline)

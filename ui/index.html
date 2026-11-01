@@ -546,6 +546,9 @@ function scanning(file) {
   return box;
 }
 
+const toneOf = (label, ok) => (label === "INCONCLUSIVE" ? (ok ? "ok" : "idle") : label === "EDITED" ? "bad" : "warn");
+function mediaHead(headline, label, ok) { return el("div", "headline " + toneOf(label, ok), headline || label.replaceAll("_", " ")); }
+
 async function checkVideo(f, out) {
   out.replaceChildren(loading("Checking the video", ["Sampling 8 frames", "Looking for edits", "Looking for AI generation", "Matching fact-checked images"], { preview: scanning(f), skeleton: 8 }));
   try {
@@ -565,7 +568,7 @@ async function checkVideo(f, out) {
     out.append(film);
     if (heats.length) { const b = el("button", "ghost toggle", "Show heatmaps"); b.onclick = () => { const on = heats[0].style.display === "none"; heats.forEach((h) => (h.style.display = on ? "" : "none")); b.textContent = on ? "Hide heatmaps" : "Show heatmaps"; }; out.append(b); }
     const card = el("div", "claim"); const head = el("div");
-    head.append(el("span", "badge " + body.label, body.label.replaceAll("_", " ")), " ", el("span", "small", body.duration_s + " s video, " + body.frames.length + " frames sampled"));
+    head.append(mediaHead(body.headline, body.label, body.forensics_available), el("div", "small", body.duration_s + " s video, " + body.frames.length + " frames checked"));
     card.append(head);
     const ul = el("ul"); body.reasons.forEach((x) => ul.append(el("li", "", x))); card.append(ul);
     out.append(card);
@@ -589,15 +592,15 @@ async function checkImage() {
     out.append(stage);
     if (heat) { const b = el("button", "ghost toggle", "Hide heatmap"); b.onclick = () => { heat.style.display = heat.style.display === "none" ? "" : "none"; b.textContent = heat.style.display === "none" ? "Show heatmap" : "Hide heatmap"; }; out.append(b); }
     const card = el("div", "claim"); const head = el("div");
-    const clean = body.label === "INCONCLUSIVE" && body.forensics.available && !body.matches.length;
-    head.append(el("span", "badge " + (clean ? "SUPPORTED" : body.label), clean ? "NO SIGN OF EDITING OR AI" : body.label.replaceAll("_", " ")));
-    if (body.forensics.available) head.append(" ", el("span", "small", "edit score " + body.forensics.score.toFixed(2) + (body.forensics.ai_score != null ? ", AI-generated score " + body.forensics.ai_score.toFixed(2) : "") + " (" + body.forensics.device + ", " + body.forensics.seconds + " s)"));
+    const clean = body.label === "INCONCLUSIVE" && body.forensics.available;
+    head.append(mediaHead(body.headline, body.label, clean));
     card.append(head);
     const ul = el("ul"); body.reasons.forEach((x) => ul.append(el("li", "", x)));
-    if (clean) {
-      card.append(el("div", "", "No edits found, no AI generation found, and not a known debunked image."));
-      const d = el("details"); d.append(el("summary", "small", "What each check found"), ul); card.append(d);
-    } else card.append(ul);
+    card.append(ul);
+    if (body.forensics.available) {
+      const d = el("details"); d.append(el("summary", "small", "Technical details"), el("div", "small", "edit score " + body.forensics.score.toFixed(2) + (body.forensics.ai_score != null ? ", AI-made score " + body.forensics.ai_score.toFixed(2) : "") + " (" + body.forensics.device + ", " + (body.forensics.seconds != null ? body.forensics.seconds.toFixed(2) + " s" : "") + ")"));
+      card.append(d);
+    }
     if (body.matches.length) {
       card.append(el("div", "small", "Seen in fact-checks"));
       const m = el("ul");
@@ -621,7 +624,7 @@ async function checkVoice() {
     try {
       const a = await api("/audio/check", { method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: await f.arrayBuffer() });
       const suspect = a.label === "SYNTHETIC_SUSPECTED";
-      const v = el("div", suspect ? "err" : "", (suspect ? "Voice: possibly synthetic or cloned. " : "Voice: no sign of synthetic speech found (this does not prove it is a real voice). ") + a.reasons.join(" "));
+      const v = el("div", "claim"); v.append(el("div", "headline " + (suspect ? "bad" : "ok"), a.headline || a.label), el("div", "", a.reasons.join(" ")));
       box.append(v); offerReport("audio", a.record_id);
     } catch (e) { box.append(el("div", "small", "Voice check not run: " + e.message)); }
     $("text").value = t.text; $("uri").value = "";
