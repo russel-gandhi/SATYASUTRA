@@ -57,8 +57,10 @@ function paint() {
   });
 }
 $("l-en").onclick = () => { lang = "en"; paint(); }; $("l-hi").onclick = () => { lang = "hi"; paint(); };
-$("exit").onclick = () => { location.replace("about:blank"); };
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") location.replace("about:blank"); });
+// A page cannot open about:blank (browsers block it). Close the tab if the browser allows it, otherwise replace this page, so Back does not return to it, with an ordinary page.
+const leave = () => { document.body.replaceChildren(); window.close(); setTimeout(() => location.replace("https://www.google.com/"), 150); };
+$("exit").onclick = leave;
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") leave(); });
 (async () => {
   try {
     const r = await fetch("/act/plan", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text: "someone is threatening to share my private photos", labels: [], ledger_seqs: [] }) });
