@@ -62,6 +62,13 @@ class Retrieval(_Strict):
     number_words: dict[str, int]
 
 
+class Chat(_Strict):
+    ladder_terms: list[str]
+    draft_terms: list[str]
+    short_question_words: int
+    history_turns: int
+
+
 class Safety(_Strict):
     danger_terms: list[str]
     promise_terms: list[str]
@@ -79,6 +86,7 @@ class Rag(_Strict):
     retrieval: Retrieval
     stopwords: list[str]
     safety: Safety
+    chat: Chat
     refusal: Text
     unreviewed: Text
 

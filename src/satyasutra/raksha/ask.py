@@ -115,7 +115,19 @@ def _keep(item: dict, passages: list[Chunk], rag: Rag) -> dict | None:
     return {"text": " ".join(text.split()), "quote": quote.strip(), "source": chunk}
 
 
-def answer_question(client: GeminiClient, index: CorpusIndex, rag: Rag, question: str, lang: str) -> Answer:
+def route(text: str, rag: Rag) -> str:
+    """What a chat message is for, by plain word lists: danger first, then the ladder, then a letter, otherwise a question for the documents."""
+    low = text.casefold()
+    if is_danger(text, rag):
+        return "danger"
+    if any(t.casefold() in low for t in rag.chat.ladder_terms):
+        return "ladder"
+    if any(t.casefold() in low for t in rag.chat.draft_terms):
+        return "draft"
+    return "ask"
+
+
+def answer_question(client: GeminiClient, index: CorpusIndex, rag: Rag, question: str, lang: str, context: str = "") -> Answer:
     question = _clean(question)
     out = Answer()
     if is_danger(question, rag):
@@ -123,7 +135,10 @@ def answer_question(client: GeminiClient, index: CorpusIndex, rag: Rag, question
         return out
     english = to_english(client, question) if DEVANAGARI.search(question) else question
     out.english_query = english
-    passages = retrieve(index, rag, english)
+    # A short follow-up ("and then?") borrows the previous English question for the search only; the model still sees just the current question.
+    earlier = _clean(context)
+    short = len(set(content_words(english, rag))) < rag.chat.short_question_words
+    passages = retrieve(index, rag, f"{english} {earlier}" if earlier and short and not DEVANAGARI.search(earlier) else english)
     out.retrieved = len(passages)
     if not passages:
         out.refused = True

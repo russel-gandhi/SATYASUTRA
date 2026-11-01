@@ -44,7 +44,7 @@ from ..sources import WikidataClient
 from ..sources.bluesky import PostNotFound, fetch_post
 from ..act import build_pack, build_plan, is_intimate, load_actions
 from ..scam import check_links, load_domains
-from ..raksha.ask import answer_question, public as raksha_public
+from ..raksha.ask import answer_question, public as raksha_public, route as raksha_route
 from ..raksha.corpus import CorpusIndex, load_rag
 from ..raksha.drafts import load_drafts, render as render_draft
 from ..raksha.flow import load_flow
@@ -115,6 +115,13 @@ class GuardText(BaseModel):
 class RakshaAsk(BaseModel):
     text: str = Field(min_length=1, max_length=1000)
     lang: str = Field(default="en", pattern="^(en|hi)$")
+
+
+class RakshaChat(BaseModel):
+    text: str = Field(min_length=1, max_length=1000)
+    lang: str = Field(default="en", pattern="^(en|hi)$")
+    age: str = Field(default="unsure", pattern="^(adult|minor|unsure)$")
+    history: list[str] = Field(default_factory=list, max_length=4)       # the person's own earlier messages, kept by the page, not by us
 
 
 class RakshaDraft(BaseModel):
@@ -609,6 +616,33 @@ def create_app(
             return raksha_public(answer_question(gemini(), index, rag, req.text, req.lang), rag, req.lang, flow.messages["danger"].model_dump()[req.lang])
         try:
             return await run_in_threadpool(run)
+        except ConfigError as exc:
+            raise HTTPException(status_code=503, detail=str(exc))
+        except SourceError:
+            raise HTTPException(status_code=503, detail="The language model is at its limit right now, so nothing was answered and nothing was guessed. Try again shortly.")
+
+    @app.post("/raksha/chat")
+    async def raksha_chat(req: RakshaChat) -> dict:
+        """One chat turn. Plain word lists pick the route (danger, ladder, letter, question); only a question reaches the model, and it is answered from the documents with quotes.
+        The page keeps the conversation; the server keeps nothing."""
+        rag, flow = load_rag(), load_flow()
+        kind = raksha_route(req.text, rag)
+        if kind == "danger":
+            return {"type": "danger", "message": flow.messages["danger"].model_dump()[req.lang]}
+        if kind == "ladder":
+            return {"type": "ladder", **ladder_view(load_ladder(), CorpusIndex(rag), req.age, req.lang)}
+        if kind == "draft":
+            return {"type": "draft"}
+        def run() -> dict:
+            if raksha_ask is not None:
+                return raksha_ask(req.text, req.lang)
+            index = CorpusIndex(rag)
+            if not index.ready():
+                raise HTTPException(status_code=503, detail="the Raksha document index is not built yet: run scripts/raksha_corpus.py build")
+            context = " ".join(req.history[-rag.chat.history_turns:])
+            return raksha_public(answer_question(gemini(), index, rag, req.text, req.lang, context), rag, req.lang, flow.messages["danger"].model_dump()[req.lang])
+        try:
+            return {"type": "answer", **await run_in_threadpool(run)}
         except ConfigError as exc:
             raise HTTPException(status_code=503, detail=str(exc))
         except SourceError:

@@ -38,6 +38,12 @@ retrieval:
                  fifty: 50, sixty: 60, ninety: 90, hundred: 100, thousand: 1000}   # a figure written in words counts like its digits when a sentence is checked against its quote
   min_quote_chars: 25          # a quote shorter than this is too small to show that a sentence is in the passage
 stopwords: ["the", "and", "for", "are", "but", "not", "you", "your", "with", "that", "this", "from", "have", "has", "was", "were", "what", "when", "where", "which", "who", "whom", "how", "can", "could", "should", "would", "will", "shall", "may", "might", "does", "did", "any", "all", "into", "out", "about", "over", "under", "then", "than", "them", "they", "their", "there", "here", "its", "our", "his", "her", "she", "him", "cant", "dont", "is", "it", "in", "on", "of", "to", "a", "an", "be", "by", "as", "at", "or", "if", "do", "so", "no", "me", "my", "i", "we", "us", "up", "please", "tell", "help", "need", "want", "get", "got", "say", "said"]
+chat:
+  # Plain word lists decide what a chat message is for; a model never picks the route. Danger words are checked first.
+  ladder_terms: ["who do i", "who should i", "who to approach", "what next", "what now", "next step", "what should i do", "what do i do", "where do i report", "where to report", "how do i report", "no reply", "no response", "nobody is", "not responding", "escalate", "ladder", "किसके पास", "आगे क्या", "अब क्या", "क्या करूँ", "क्या करें", "कहाँ शिकायत"]
+  draft_terms: ["draft", "write a letter", "write a complaint", "letter", "application for", "मसौदा", "पत्र लिख", "शिकायत लिख"]
+  short_question_words: 3      # a question with fewer content words than this borrows the words of the person's previous question for the search only
+  history_turns: 2             # earlier messages the page sends along
 safety:
   # A message with one of these goes to the 112 and trusted-person text before anything is retrieved or sent to a model.
   danger_terms: [kill myself, end my life, suicide, want to die, harm myself, "i am in danger", "he is outside", "he will kill", "मर जाऊँ", "मर जाना चाहती", "मर जाना चाहता", "आत्महत्या", "जान से मार"]

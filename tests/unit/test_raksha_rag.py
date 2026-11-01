@@ -272,3 +272,30 @@ def test_bot_conversation_covers_ladder_answer_refusal_danger_and_draft(tmp_path
     assert "unknown fields" in refused and "Zed" not in refused and "hack" not in refused.replace("secret", "")
     assert say("/draft") == cfg.runtime.telegram.messages["draft_usage"]
     assert not bot.raksha and "/verify" not in str(asks)         # none of this opened the guided flow or the fact-check path
+
+
+def test_chat_routes_by_word_lists_and_only_a_question_reaches_the_model(tmp_path):
+    from satyasutra.raksha.ask import route
+    rag = load_rag()
+    assert route("I want to die, what next", rag) == "danger"                 # danger outranks every other route
+    assert route("What should I do next?", rag) == "ladder" and route("अब क्या करूँ", rag) == "ladder"
+    assert route("can you write a letter for me", rag) == "draft"
+    assert route("how long do I have to appeal", rag) == "ask"
+    asked = []
+    c = _app(tmp_path, ask=lambda text, lang: asked.append(text) or {"danger": False, "refused": True, "refusal": "no", "sentences": []})
+    assert c.post("/raksha/chat", json={"text": "I want to die"}).json()["type"] == "danger"
+    ladder = c.post("/raksha/chat", json={"text": "what should I do next", "age": "minor"}).json()
+    assert ladder["type"] == "ladder" and ladder["age"] == "minor" and ladder["rungs"]
+    assert c.post("/raksha/chat", json={"text": "write me a letter"}).json() == {"type": "draft"}
+    assert asked == []                                                         # none of those three touched the answerer
+    assert c.post("/raksha/chat", json={"text": "how long to appeal"}).json()["type"] == "answer" and asked == ["how long to appeal"]
+    assert c.post("/raksha/chat", json={"text": "x", "history": ["a"] * 9}).status_code == 422
+
+
+def test_a_short_follow_up_borrows_the_earlier_question_for_search_only(rag):
+    client = FakeClient([GOOD])
+    out = answer_question(client, CorpusIndex(rag), rag, "and then?", "en", context="How long do I have to appeal to the committee?")
+    assert out.retrieved and "and then?" in client.prompts[-1]
+    assert "How long do I have to appeal" not in client.prompts[-1].split("<<<QUESTION")[1].split("QUESTION>>>")[0]   # the model sees only the current question
+    none = answer_question(FakeClient([GOOD]), CorpusIndex(rag), rag, "and then?", "en")
+    assert none.refused and none.retrieved == 0                                # without the context the same words find nothing
