@@ -45,8 +45,8 @@ chat:
   # A message about how the person feels gets a fixed, warm reply (no model): it never goes to the document search, where it would only be refused.
   support_terms: ["feel bad", "feel sick", "feel shit", "shitty", "feel terrible", "terrible", "feel awful", "awful", "feel worthless", "worthless", "feel low", "feel scared", "i am scared", "i'm scared", "i am afraid", "i'm afraid", "ashamed", "so alone", "i am alone", "hopeless", "depressed", "anxious", "crying", "panic", "can't cope", "cant cope", "i hate myself", "डर लग", "शर्म", "अकेला", "अकेली", "घबरा", "रो रही", "रो रहा", "बहुत बुरा", "परेशान"]
   support:
-    en: "I am sorry you are going through this. What happened is not your fault, and you do not have to carry it alone. Whenever you are ready, tell me what is happening, or pick one below: I can show you who to approach, or help you write a letter. If you feel you might hurt yourself, please call 112 now or go to someone you trust."
-    hi: "मुझे दुख है कि आप इससे गुज़र रही/रहे हैं। जो हुआ उसमें आपकी कोई गलती नहीं है, और इसे अकेले उठाने की ज़रूरत नहीं है। जब आप तैयार हों, बताइए क्या हो रहा है, या नीचे से एक चुनिए: मैं बता सकती हूँ किसके पास जाएँ, या पत्र लिखने में मदद कर सकती हूँ। अगर आपको खुद को नुकसान पहुँचाने का मन हो, तो अभी 112 पर कॉल करें या किसी भरोसेमंद व्यक्ति के पास जाएँ।"
+    en: "I am really sorry you are going through this, and I am glad you said it out loud. None of this is your fault, and you do not have to carry it alone. Take your time. When you feel ready, tell me what is happening in your own words, or pick one of the options below and I will take it from there. And if it ever feels like too much, or you feel you might hurt yourself, please call 112 right now or go to someone you trust."
+    hi: "मुझे सच में दुख है कि आप इससे गुज़र रही/रहे हैं, और मुझे खुशी है कि आपने इसे कह दिया। इसमें आपकी कोई गलती नहीं है, और इसे अकेले उठाने की ज़रूरत नहीं है। आराम से बताइए। जब आप तैयार हों, अपने शब्दों में बताइए क्या हो रहा है, या नीचे से एक चुनिए, आगे मैं संभाल लूँगी। और अगर कभी बहुत भारी लगे, या खुद को नुकसान पहुँचाने का मन हो, तो अभी 112 पर कॉल करें या किसी भरोसेमंद व्यक्ति के पास जाएँ।"
   # --- the situation conversation (src/satyasutra/raksha/chat.py). Plain words decide; a model only phrases the final reply from these facts.
   incident_terms: ["nude", "naked", "leak", "blackmail", "sextortion", "morph", "deepfake", "fake photo", "fake video", "fake pic", "my photos", "my pics", "my pictures", "my video", "intimate", "private photo", "private pic", "viral", "revenge porn", "न्यूड", "ब्लैकमेल", "मॉर्फ", "लीक", "वायरल", "फोटो", "तस्वीर"]
   age_terms:
@@ -60,13 +60,13 @@ chat:
     en: "I am so sorry you are dealing with this, and I am glad you told me. It is not your fault."
     hi: "मुझे बहुत दुख है कि आप इससे गुज़र रही/रहे हैं, और मुझे खुशी है कि आपने मुझे बताया। इसमें आपकी कोई गलती नहीं है।"
   ask_age:
-    say: {en: "So I can point you to the right help: were you 18 or older when the pictures were taken?", hi: "ताकि मैं सही मदद बता सकूँ: जब तस्वीरें ली गईं तब क्या आप 18 साल या उससे ज़्यादा के थे/थीं?"}
+    say: {en: "I want to send you to exactly the right help, and that depends on one thing: were you 18 or older when the pictures were taken?", hi: "ताकि मैं सही मदद बता सकूँ: जब तस्वीरें ली गईं तब क्या आप 18 साल या उससे ज़्यादा के थे/थीं?"}
     options:
       - {label: {en: "Yes, 18 or older", hi: "हाँ, 18 या ज़्यादा"}, set: {age: adult}}
       - {label: {en: "No, under 18", hi: "नहीं, 18 से कम"}, set: {age: minor}}
       - {label: {en: "Not sure", hi: "पक्का नहीं पता"}, set: {age: unsure}}
   ask_what:
-    say: {en: "One more thing: have the pictures already been shared, or is it a threat so far?", hi: "एक बात और: क्या तस्वीरें पहले ही फैल चुकी हैं, या अभी सिर्फ़ धमकी है?"}
+    say: {en: "Thank you for telling me. One last thing, so I get the order of steps right: have the pictures already been shared, or is it only a threat so far?", hi: "एक बात और: क्या तस्वीरें पहले ही फैल चुकी हैं, या अभी सिर्फ़ धमकी है?"}
     options:
       - {label: {en: "Only a threat so far", hi: "अभी सिर्फ़ धमकी है"}, set: {what: threatened}}
       - {label: {en: "Already shared", hi: "पहले ही फैल चुकी हैं"}, set: {what: shared}}
@@ -82,9 +82,9 @@ chat:
     shared: [hash, report_portal, platform_officer]
     faked: [report_portal, platform_officer, hash]
   plan_fallback:
-    en: "I am so sorry. It is not your fault, and you do not have to face this alone. Here are the first things I would do, in this order."
-    hi: "मुझे बहुत दुख है। इसमें आपकी कोई गलती नहीं है, और आपको यह अकेले नहीं झेलना है। मैं सबसे पहले ये करूँगी, इसी क्रम में।"
-  max_message_chars: 900
+    en: "I am so sorry you are dealing with this. It is not your fault, and you do not have to face it alone. Here is exactly what I would do first, in this order, and I will stay with you through each step."
+    hi: "मुझे बहुत दुख है कि आप इससे गुज़र रही/रहे हैं। इसमें आपकी कोई गलती नहीं है, और आपको यह अकेले नहीं झेलना है। सबसे पहले मैं यही करूँगी, इसी क्रम में, और हर कदम पर आपके साथ रहूँगी।"
+  max_message_chars: 1100
   reply_max_words: 5            # a message this short, while a question of ours is open, is read as the answer to it
   forbidden_terms: ["section ", "ipc", "bns", "pocso", "it act", "act, 20", "court order", "fir "]    # law-like words are allowed only if the facts contain them
   short_question_words: 3      # a question with fewer content words than this borrows the words of the person's previous question for the search only

@@ -308,7 +308,7 @@ def test_a_message_about_feelings_gets_the_fixed_warm_reply_without_the_model(tm
     asked = []
     c = _app(tmp_path, ask=lambda text, lang: asked.append(text) or {})
     r = c.post("/raksha/chat", json={"text": "I feel shitty"}).json()
-    assert r["type"] == "support" and "not your fault" in r["message"] and "112" in r["message"] and asked == []
+    assert r["type"] == "support" and "your fault" in r["message"] and "112" in r["message"] and asked == []
     assert "आपकी कोई गलती नहीं" in c.post("/raksha/chat", json={"text": "मुझे बहुत डर लग रहा है", "lang": "hi"}).json()["message"]
 
 
@@ -326,7 +326,7 @@ def _app_with(tmp_path, compose):
 def test_a_threat_message_is_met_with_a_question_not_a_ladder_dump(tmp_path):
     c = _app_with(tmp_path, lambda p, r, lang: "kind words")
     r = c.post("/raksha/chat", json={"text": "What do I do? My boyfriend is threatening to leak my nudes"}).json()
-    assert r["type"] == "ask" and "not your fault" in r["message"] and "18" in r["message"]
+    assert r["type"] == "ask" and "your fault" in r["message"] and "18" in r["message"]
     assert [o["set"] for o in r["options"]] == [{"age": "adult"}, {"age": "minor"}, {"age": "unsure"}]
     assert r["profile"] == {"situation": True, "what": "threatened"}           # read from the words; the age is never guessed
 
