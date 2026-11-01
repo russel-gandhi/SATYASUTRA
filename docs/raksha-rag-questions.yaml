@@ -1,0 +1,29 @@
+# Labelled questions for the Raksha grounded guide (plan RR8). Written by one person (the author) from the documents in data/raksha_corpus on 2026-11-01;
+# no second labeller. `docs` are the documents that answer it (any one counts for retrieval); `contains` are words one answer sentence must hold for the answer
+# to count as correct (any one). `answerable: false` means no document we hold answers it, so the right reply is a refusal.
+# Not a held-out split: the questions were written after the pipeline existed and the stopword list was fixed, but they are one set, run once.
+- {q: "How long do I have to appeal to the Grievance Appellate Committee?", answerable: true, docs: [gac_faqs, gac_home, gac_attachment_2], contains: ["30", "thirty"]}
+- {q: "How can I track the status of my appeal on the GAC platform?", answerable: true, docs: [gac_faqs], contains: ["login", "track"]}
+- {q: "Who can I approach for further queries about my complaint on the cybercrime portal?", answerable: true, docs: [i4c_faq], contains: ["nodal", "police station"]}
+- {q: "How do I check the status of my complaint on the National Cybercrime Reporting Portal?", answerable: true, docs: [i4c_faq], contains: ["acknowledgement", "check status"]}
+- {q: "Can I report a crime against women or children anonymously on the cybercrime portal?", answerable: true, docs: [i4c_faq], contains: ["anonymous"]}
+- {q: "Does StopNCII upload my image?", answerable: true, docs: [stopncii_home], contains: ["not", "hash", "device"]}
+- {q: "Is Take It Down for images taken before I was 18?", answerable: true, docs: [takeitdown_home], contains: ["18"]}
+- {q: "What kind of matters does CPGRAMS not take up?", answerable: true, docs: [cpgrams_home], contains: ["rti", "court", "religious"]}
+- {q: "Is there a fee for filing a grievance on CPGRAMS?", answerable: true, docs: [cpgrams_home], contains: ["fee", "not charging"]}
+- {q: "What does NALSA provide?", answerable: true, docs: [nalsa_home], contains: ["free", "legal"]}
+- {q: "Does the Grievance Appellate Committee handle cybercrime cases?", answerable: true, docs: [gac_home, gac_faqs], contains: ["not"]}
+- {q: "Who is on the Grievance Appellate Committee?", answerable: true, docs: [gac_faqs], contains: ["chairperson"]}
+- {q: "मैं साइबर क्राइम पोर्टल पर शिकायत की स्थिति कैसे देखूँ?", answerable: true, docs: [i4c_faq], contains: []}
+- {q: "GAC में अपील कितने दिन में करनी होती है?", answerable: true, docs: [gac_faqs, gac_home, gac_attachment_2], contains: ["30", "३०", "तीस"]}
+- {q: "What is the weather in Delhi today?", answerable: false}
+- {q: "Will the police arrest the person who leaked my photos?", answerable: false}
+- {q: "How much compensation will I get?", answerable: false}
+- {q: "Which section of the IT Act punishes sharing intimate images?", answerable: false}
+- {q: "What is the fine for sharing someone's intimate images?", answerable: false}
+- {q: "How do I file my income tax return?", answerable: false}
+- {q: "Can you remove the photos from Instagram for me?", answerable: false}
+- {q: "How do I renew my passport?", answerable: false}
+- {q: "How many hours does a platform have to remove intimate images after a complaint?", answerable: false}
+- {q: "Which lawyer should I hire in Delhi?", answerable: false}
+- {q: "आज दिल्ली का मौसम कैसा है?", answerable: false}

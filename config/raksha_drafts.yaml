@@ -1,0 +1,105 @@
+# Raksha letter drafts (plan RR5). Text filled from typed fields only: there is no model call, so nothing outside the fields and this fixed wording can appear.
+# The wording never describes the images and cites no law. Hindi is OUR draft, not reviewed by a native speaker or a lawyer; reviewed_by stays empty until then.
+reviewed_by: ""
+reviewed_on: ""
+max_field_chars: 300
+missing: {en: "[not given]", hi: "[नहीं दिया गया]"}
+fields: [name, platform, account, links, dates, ack_no, authority, reported_on, demand]
+note:
+  en: "This is a draft for you to send yourself. It is not legal advice: ask a lawyer or a legal-aid service to check it before you send it. Do not attach or paste any picture."
+  hi: "यह एक मसौदा है जिसे आप खुद भेजेंगे। यह कानूनी सलाह नहीं है: भेजने से पहले किसी वकील या कानूनी सहायता सेवा से जँचवा लीजिए। कोई तस्वीर न जोड़ें, न चिपकाएँ।"
+subjects:
+  adult:
+    threatened: {en: "someone is threatening to share my private pictures without my consent", hi: "कोई मेरी सहमति के बिना मेरी निजी तस्वीरें फैलाने की धमकी दे रहा है"}
+    shared: {en: "my private pictures have been shared without my consent", hi: "मेरी निजी तस्वीरें मेरी सहमति के बिना फैलाई गई हैं"}
+    faked: {en: "pictures of me have been changed or faked and shared without my consent", hi: "मेरी तस्वीरों को बदला या नकली बनाया गया है और मेरी सहमति के बिना फैलाया गया है"}
+  minor:
+    threatened: {en: "a person under 18 is being threatened online", hi: "18 साल से कम उम्र के व्यक्ति को ऑनलाइन धमकाया जा रहा है"}
+    shared: {en: "private content of a person under 18 has been shared online", hi: "18 साल से कम उम्र के व्यक्ति की निजी सामग्री ऑनलाइन फैलाई गई है"}
+    faked: {en: "pictures of a person under 18 have been changed or faked and shared online", hi: "18 साल से कम उम्र के व्यक्ति की तस्वीरें बदली या नकली बनाकर ऑनलाइन फैलाई गई हैं"}
+drafts:
+  complaint:
+    title: {en: "Complaint", hi: "शिकायत"}
+    body:
+      en: |
+        To: {authority}
+
+        Subject: Complaint about online abuse
+
+        I, {name}, am writing to report that {subject}.
+
+        Where it is happening: {platform}
+        Account or number involved: {account}
+        Links: {links}
+        Dates and times: {dates}
+        What they are demanding or threatening: {demand}
+
+        I request that this complaint be registered and that I be given an acknowledgement number. I have kept screenshots showing the account, the dates and the links, and I can share them with you.
+      hi: |
+        प्रति: {authority}
+
+        विषय: ऑनलाइन दुर्व्यवहार की शिकायत
+
+        मैं, {name}, यह शिकायत दर्ज कराना चाहता/चाहती हूँ कि {subject}।
+
+        यह कहाँ हो रहा है: {platform}
+        संबंधित अकाउंट या नंबर: {account}
+        लिंक: {links}
+        तारीख और समय: {dates}
+        वे क्या माँग रहे हैं या क्या धमकी दे रहे हैं: {demand}
+
+        मेरा अनुरोध है कि यह शिकायत दर्ज की जाए और मुझे पावती संख्या दी जाए। मेरे पास अकाउंट, तारीखें और लिंक दिखाने वाले स्क्रीनशॉट सुरक्षित हैं, जो मैं आपको दे सकता/सकती हूँ।
+  followup:
+    title: {en: "Follow-up", hi: "अनुवर्ती पत्र"}
+    body:
+      en: |
+        To: {authority}
+
+        Subject: Follow-up on my complaint, acknowledgement number {ack_no}
+
+        I, {name}, reported on {reported_on} that {subject}.
+
+        Where it is happening: {platform}
+        Links: {links}
+
+        I have not received an update on this complaint. I request the current status and the name of the officer handling it.
+      hi: |
+        प्रति: {authority}
+
+        विषय: मेरी शिकायत पर अनुवर्ती, पावती संख्या {ack_no}
+
+        मैंने, {name}, {reported_on} को शिकायत की थी कि {subject}।
+
+        यह कहाँ हो रहा है: {platform}
+        लिंक: {links}
+
+        मुझे इस शिकायत पर कोई जानकारी नहीं मिली है। मेरा अनुरोध है कि मुझे इसकी वर्तमान स्थिति और इसे देख रहे अधिकारी का नाम बताया जाए।
+  escalation:
+    title: {en: "Escalation letter", hi: "वरिष्ठ अधिकारी को पत्र"}
+    body:
+      en: |
+        To: {authority}
+
+        Subject: Request for action on an unresolved complaint, acknowledgement number {ack_no}
+
+        I, {name}, first reported on {reported_on} that {subject}.
+
+        Where it is happening: {platform}
+        Account or number involved: {account}
+        Links: {links}
+        Dates and times: {dates}
+
+        I have followed up and the matter is still unresolved. I request that you look into the complaint and tell me what is being done. I can share my screenshots and my earlier messages.
+      hi: |
+        प्रति: {authority}
+
+        विषय: अनसुलझी शिकायत पर कार्रवाई का अनुरोध, पावती संख्या {ack_no}
+
+        मैंने, {name}, {reported_on} को पहली बार शिकायत की थी कि {subject}।
+
+        यह कहाँ हो रहा है: {platform}
+        संबंधित अकाउंट या नंबर: {account}
+        लिंक: {links}
+        तारीख और समय: {dates}
+
+        मैंने अनुवर्ती भी किया है और मामला अब भी अनसुलझा है। मेरा अनुरोध है कि आप शिकायत को देखें और बताएँ कि क्या कार्रवाई हो रही है। मैं अपने स्क्रीनशॉट और पिछले संदेश दे सकता/सकती हूँ।

@@ -1,0 +1,51 @@
+# Raksha grounded guide (plan docs/PLAN_RAKSHA_RAG.md, packages RR1-RR3). Nothing here is calibrated: counts and floors are policy choices.
+# The documents themselves live in data/raksha_corpus (git-ignored) with a manifest that records where and when each one came from.
+corpus_dir: data/raksha_corpus
+db_path: data/raksha.sqlite3
+timeout_s: 30
+max_bytes: 15000000            # a download larger than this is refused
+chunk_chars: 900               # a passage is cut at a paragraph or sentence end below this length
+min_chunk_chars: 60            # shorter pieces are menu text and are dropped
+# Hosts we fetch from, by plain honest request. Statute hosts (indiacode, meity, mha, legislative) answered 403 to that request on 2026-11-01
+# and are NOT fetched: those PDFs are downloaded by hand and added with `scripts/raksha_corpus.py add`.
+allowed_hosts: [gac.gov.in, pgportal.gov.in, nalsa.gov.in, i4c.mha.gov.in, delhipolice.gov.in, sancharsaathi.gov.in, stopncii.org, takeitdown.ncmec.org]
+sources:
+  - {id: gac_home, title: "Grievance Appellate Committee", publisher: "Grievance Appellate Committee, Government of India", url: "https://gac.gov.in/", kind: portal_help}
+  - {id: cpgrams_home, title: "CPGRAMS public grievance portal", publisher: "Department of Administrative Reforms and Public Grievances", url: "https://pgportal.gov.in/", kind: portal_help}
+  - {id: gac_faqs, title: "GAC frequently asked questions", publisher: "Grievance Appellate Committee, Government of India", url: "https://gac.gov.in/CMSData/FAQs", kind: portal_help}
+  - {id: gac_attachment_1, title: "GAC document (attachment 1 on the home page)", publisher: "Grievance Appellate Committee, Government of India", url: "https://gac.gov.in/CMSData/CMSViewAttachment?qs=DTWr7vJt8mOEfusdPp/Wsw==", kind: rules}
+  - {id: gac_attachment_2, title: "GAC document (attachment 2 on the home page)", publisher: "Grievance Appellate Committee, Government of India", url: "https://gac.gov.in/CMSData/CMSViewAttachment?qs=EFjSG8GfYpAmbH3jQ8y/8Q==", kind: rules}
+  - {id: i4c_ncrp, title: "I4C: National Cybercrime Reporting Portal", publisher: "I4C, Ministry of Home Affairs", url: "https://i4c.mha.gov.in/ncrp.aspx", kind: portal_help}
+  - {id: i4c_faq, title: "I4C FAQ", publisher: "I4C, Ministry of Home Affairs", url: "https://i4c.mha.gov.in/FAQ.aspx", kind: portal_help}
+  - {id: i4c_help, title: "I4C help", publisher: "I4C, Ministry of Home Affairs", url: "https://i4c.mha.gov.in/help.aspx", kind: portal_help}
+  - {id: i4c_acts, title: "I4C acts and rules", publisher: "I4C, Ministry of Home Affairs", url: "https://i4c.mha.gov.in/acts-and-rules.aspx", kind: statute}
+  - {id: nalsa_victim_compensation, title: "NALSA victim compensation", publisher: "NALSA", url: "https://nalsa.gov.in/victim-compensation/", kind: portal_help}
+  - {id: nalsa_home, title: "National Legal Services Authority", publisher: "NALSA", url: "https://nalsa.gov.in/", kind: portal_help}
+  - {id: i4c_home, title: "Indian Cyber Crime Coordination Centre", publisher: "I4C, Ministry of Home Affairs", url: "https://i4c.mha.gov.in/", kind: portal_help}
+  - {id: delhi_police_home, title: "Delhi Police", publisher: "Delhi Police", url: "https://delhipolice.gov.in/", kind: portal_help}
+  - {id: delhi_police_contacts, title: "Delhi Police important contacts", publisher: "Delhi Police", url: "https://delhipolice.gov.in/important-contact.html", kind: portal_help}
+  - {id: delhi_police_services, title: "Delhi Police services", publisher: "Delhi Police", url: "https://delhipolice.gov.in/police-services.html", kind: portal_help}
+  - {id: sancharsaathi_home, title: "Sanchar Saathi", publisher: "Department of Telecommunications", url: "https://sancharsaathi.gov.in/", kind: service}
+  - {id: stopncii_home, title: "StopNCII.org", publisher: "StopNCII.org (SWGfL)", url: "https://stopncii.org/", kind: service}
+  - {id: takeitdown_home, title: "Take It Down", publisher: "National Center for Missing and Exploited Children", url: "https://takeitdown.ncmec.org/", kind: service}
+retrieval:
+  candidates: 30               # passages taken from the keyword search before the coverage check
+  top_k: 5                     # passages shown to the model and returned as sources
+  min_word_chars: 3
+  min_coverage: 0.5            # share of the question's content words a passage must contain, or it is not returned (a floor, not calibrated)
+  min_words: 2                 # a question with fewer content words than this is not searched
+  number_words: {one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, twelve: 12, fifteen: 15, twenty: 20, thirty: 30, forty: 40,
+                 fifty: 50, sixty: 60, ninety: 90, hundred: 100, thousand: 1000}   # a figure written in words counts like its digits when a sentence is checked against its quote
+  min_quote_chars: 25          # a quote shorter than this is too small to show that a sentence is in the passage
+stopwords: ["the", "and", "for", "are", "but", "not", "you", "your", "with", "that", "this", "from", "have", "has", "was", "were", "what", "when", "where", "which", "who", "whom", "how", "can", "could", "should", "would", "will", "shall", "may", "might", "does", "did", "any", "all", "into", "out", "about", "over", "under", "then", "than", "them", "they", "their", "there", "here", "its", "our", "his", "her", "she", "him", "cant", "dont", "is", "it", "in", "on", "of", "to", "a", "an", "be", "by", "as", "at", "or", "if", "do", "so", "no", "me", "my", "i", "we", "us", "up", "please", "tell", "help", "need", "want", "get", "got", "say", "said"]
+safety:
+  # A message with one of these goes to the 112 and trusted-person text before anything is retrieved or sent to a model.
+  danger_terms: [kill myself, end my life, suicide, want to die, harm myself, "i am in danger", "he is outside", "he will kill", "मर जाऊँ", "मर जाना चाहती", "मर जाना चाहता", "आत्महत्या", "जान से मार"]
+  # A sentence that promises an outcome is dropped from every answer.
+  promise_terms: ["will be removed", "will be deleted", "will act", "will arrest", "will be arrested", "will definitely", "guaranteed", "100%", "within 24 hours", "will take action"]
+refusal:
+  en: "I cannot find this in the official documents I hold, so I will not guess. Try the steps in the ladder, or ask a lawyer or a legal-aid service."
+  hi: "यह मेरे पास मौजूद सरकारी दस्तावेज़ों में नहीं मिला, इसलिए मैं अंदाज़ा नहीं लगाऊँगा। सीढ़ी के कदम आज़माइए, या किसी वकील या कानूनी सहायता सेवा से पूछिए।"
+unreviewed:
+  en: "Not legal advice. The Hindi wording and the legal text have not been reviewed by a native speaker or a lawyer."
+  hi: "यह कानूनी सलाह नहीं है। हिंदी शब्दों और कानूनी पाठ की किसी हिंदी भाषी या वकील ने समीक्षा नहीं की है।"

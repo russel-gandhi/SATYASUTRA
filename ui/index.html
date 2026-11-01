@@ -30,6 +30,12 @@
   .drop + .drop { margin-top: 10px; }
   .cta { width: 100%; margin-top: 12px; padding: 13px; font-size: 16px; }
   .langs { text-align: center; color: var(--mute); font-size: 13px; margin-top: 12px; }
+  body.home .toolonly, body.tool .homeonly { display: none; }
+  .tiles { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); max-width: 1000px; margin: 8px auto 0; }
+  .tile { display: flex; flex-direction: column; gap: 6px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-top: 4px solid var(--saffron); border-radius: var(--radius); padding: 18px; text-decoration: none; box-shadow: var(--shadow); transition: transform .15s, box-shadow .15s; }
+  .tile:hover { transform: translateY(-3px); box-shadow: 0 2px 4px rgba(35, 42, 116, .1), 0 18px 36px rgba(35, 42, 116, .14); }
+  .tile b { font-size: 18px; color: var(--indigo); } .tile span { color: var(--mute); font-size: 14px; }
+  .tile.safe { border-top-color: var(--madder); } .tile.pulse { border-top-color: var(--green); }
   .pills { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 14px; }
   .pill { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 3px 12px; font-size: 12px; color: var(--mute); }
   .hero .pill { background: rgba(255, 255, 255, .1); border-color: rgba(255, 255, 255, .22); color: #d6daf6; } .hero .pill b { color: #fff; } .hero .pill.good b { color: #7fe3bd; }
@@ -86,11 +92,13 @@
 <div class="hero">
   <div class="wrap">
     <div class="wm" lang="hi">सत्यसूत्र</div>
-    <h1>India's digital truth, in your hands</h1>
-    <p class="sub">Paste a claim, a link, a photo, a video or a voice note. We search the web and official sources, then tell you if it is true, false, or that we cannot tell yet.</p>
-    <div class="feats"><span><i></i>Searches the live web and fact-checkers</span><span><i></i>Checks photos, video and voice for tampering</span><span><i></i>Works in English, हिन्दी, ಕನ್ನಡ and more</span></div>
+    <h1 id="h1">India's digital truth, in your hands</h1>
+    <p class="sub" id="subline">Paste a claim, a link, a photo, a video or a voice note. We search the web and official sources, then tell you if it is true, false, or that we cannot tell yet.</p>
+    <div class="feats homeonly"><span><i></i>Searches the live web and fact-checkers</span><span><i></i>Checks photos, video and voice for tampering</span><span><i></i>Works in English, हिन्दी, ಕನ್ನಡ and more</span></div>
 
-    <div class="card invest">
+    <div class="tiles homeonly" id="tiles"></div>
+
+    <div class="card invest toolonly">
       <div class="tabs" role="tablist" id="tabs">
         <button role="tab" data-tab="text" aria-selected="true">Text</button>
         <button role="tab" data-tab="link" aria-selected="false">Link or PDF</button>
@@ -111,8 +119,8 @@
       </div>
 
       <div class="tabpanel" data-panel="image" hidden>
-        <label class="drop"><input type="file" id="file" accept="image/*,video/*" hidden><strong>Drop an image or video here or click to choose</strong>Checked against fact-checkers' past articles and for editing. AI-generated video and face-swaps are not detected.</label>
-        <label class="drop"><input type="file" id="notice" accept="image/*" hidden><strong>A notice or message screenshot?</strong>We copy its text, then check links, scam wording and who it claims to be from.</label>
+        <label class="drop" id="dropFile"><input type="file" id="file" accept="image/*,video/*" hidden><strong>Drop an image or video here or click to choose</strong>Checked against fact-checkers' past articles and for editing. AI-generated video and face-swaps are not detected.</label>
+        <label class="drop" id="dropNotice"><input type="file" id="notice" accept="image/*" hidden><strong>A notice or message screenshot?</strong>We copy its text, then check links, scam wording and who it claims to be from.</label>
       </div>
 
       <div class="tabpanel" data-panel="audio" hidden>
@@ -126,7 +134,7 @@
 </div>
 
 <div class="wrap">
-  <div class="results">
+  <div class="results toolonly">
     <div class="card trace" id="trace" style="display:none"></div>
     <div id="links"></div>
     <div id="out"></div>
@@ -135,7 +143,9 @@
     <div id="noticeOut"></div>
     <div id="docOut"></div>
     <div id="mediaOut"></div>
-    <details class="card" style="margin-top:6px"><summary><b>How to use this site</b></summary>
+  </div>
+
+  <details class="card homeonly" style="margin-top:22px"><summary><b>How to use this site</b></summary>
       <ol>
         <li><b>Text:</b> paste a forwarded message or claim, press Investigate. You see each step live, then the verdict with its sources. "Cannot tell" is an honest answer.</li>
         <li><b>Link or PDF, Image or video, Voice note:</b> use the other tabs. Image and video checks show tampering signals, never "this is real".</li>
@@ -144,12 +154,11 @@
         <li><b>After a check:</b> build a shareable Trust report, or delete the stored record of your checks.</li>
       </ol>
     </details>
-  </div>
 
-  <div class="sectionhead"><h2>Being fact-checked across India right now</h2><a href="/officials">See everything</a></div>
-  <div class="grid" id="clusters"><div class="small">Loading...</div></div>
+  <div class="sectionhead homeonly"><h2>Being fact-checked across India right now</h2><a href="/officials">See everything</a></div>
+  <div class="grid homeonly" id="clusters"><div class="small">Loading...</div></div>
 
-  <div class="ledgerbar"><button class="ghost" id="chain">Check ledger integrity</button><span>Every verdict is written to a tamper-evident ledger.</span></div>
+  <div class="ledgerbar homeonly"><button class="ghost" id="chain">Check ledger integrity</button><span>Every verdict is written to a tamper-evident ledger.</span></div>
 </div>
 
 <script>
@@ -196,11 +205,37 @@ async function refreshClusters() {
   } catch (e) { box.textContent = "Live feed unavailable: " + e.message; }
 }
 
+const MODES = {
+  "/check/claim": { tab: "text", title: "Check a claim", sub: "Paste a forwarded message, claim or post in any language. We search fact-checkers, official sources and the news, then tell you if it is true, false, or that we cannot tell yet." },
+  "/check/photo": { tab: "image", hide: "dropNotice", title: "Check a photo or video", sub: "We look for edits, AI-made pictures and images that fact-checkers have already covered." },
+  "/check/notice": { tab: "image", hide: "dropFile", title: "Check a notice or screenshot", sub: "We copy the text, then check its links, scam wording and who it says it is from." },
+  "/check/voice": { tab: "audio", title: "Check a voice note", sub: "We turn the voice into text, check what it says, and listen for a machine-made voice." },
+  "/check/link": { tab: "link", title: "Check a link or PDF", sub: "We read a public page or a PDF, check its links and wording, and can check the claims inside it." },
+};
+const TILES = [
+  ["/check/claim", "Check a claim", "Paste a forwarded message and get a verdict with sources.", ""],
+  ["/check/photo", "Photo or video", "Edits, AI-made pictures, and images already fact-checked.", ""],
+  ["/check/notice", "Notice or screenshot", "Fake notices, scam wording and look-alike links.", ""],
+  ["/check/voice", "Voice note", "Speech to text, the claim check, and a machine-voice check.", ""],
+  ["/check/link", "Link or PDF", "Read a public page or a circular and check it.", ""],
+  ["/guard", "Call guard", "Listen to a suspicious call and warn when it follows a scam script.", "safe"],
+  ["/help", "Private help", "Steps if private pictures are being shared or threatened.", "safe"],
+  ["/officials", "What is spreading", "What India is reading, searching and fact-checking now.", "pulse"],
+];
+const MODE = MODES[location.pathname.replace(/\/+$/, "")] || null;
+document.body.classList.add(MODE ? "tool" : "home");
+if (!MODE) TILES.forEach(([href, title, text, cls]) => { const a = el("a", "tile " + cls); a.href = href; a.append(el("b", "", title), el("span", "", text)); $("tiles").append(a); });
+else {
+  document.title = MODE.title + " | SATYASUTRA"; $("h1").textContent = MODE.title; $("subline").textContent = MODE.sub;
+  $("tabs").style.display = "none"; if (MODE.hide) $(MODE.hide).style.display = "none";
+}
+
 function selectTab(name) {
   document.querySelectorAll("#tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === name)));
   document.querySelectorAll(".tabpanel").forEach((p) => { p.hidden = p.dataset.panel !== name; });
 }
 document.querySelectorAll("#tabs button").forEach((b) => { b.onclick = () => selectTab(b.dataset.tab); });
+if (MODE) selectTab(MODE.tab);
 document.querySelectorAll("label.drop").forEach((drop) => {
   const input = drop.querySelector("input[type=file]"), title = drop.querySelector("strong"), first = title.textContent;
   ["dragenter", "dragover"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("over"); }));
