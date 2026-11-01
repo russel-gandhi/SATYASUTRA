@@ -274,6 +274,11 @@ def create_app(
     def home() -> FileResponse:
         return FileResponse(ROOT / "ui" / "index.html", media_type="text/html")
 
+    @app.get("/check/{kind}", include_in_schema=False)
+    def check_page(kind: str = Path_(pattern="^(claim|photo|notice|voice|link)$")) -> FileResponse:
+        """One page per kind of check. They share one script; the page reads its own path and shows only that tool."""
+        return FileResponse(ROOT / "ui" / "index.html", media_type="text/html")
+
     @app.get("/health")
     def health() -> dict:
         head = ledger.head()
