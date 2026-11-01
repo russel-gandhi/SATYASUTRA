@@ -7,6 +7,7 @@ dependencies = [
     "langgraph>=1.2",
     "pillow>=11",
     "pypdf>=5",
+    "cryptography>=42",              # pypdf needs it to open AES-encrypted PDFs
     "numpy>=2",
     "pdqhash>=0.2.8",
     "pydantic>=2.9",

@@ -119,12 +119,14 @@ def html_text(body: str, cfg: Config) -> tuple[str, str]:
 
 def pdf_text(data: bytes, cfg: Config) -> str:
     from pypdf import PdfReader
-    from pypdf.errors import PyPdfError
+    from pypdf.errors import DependencyError, PyPdfError
     try:
         reader = PdfReader(io.BytesIO(data))
         pages = reader.pages[: cfg.runtime.inputs.max_pdf_pages]
         return " ".join(" ".join((p.extract_text() or "").split()) for p in pages).strip()
-    except (PyPdfError, ValueError, OSError, KeyError, TypeError):
+    except DependencyError:
+        raise InputError("this PDF is encrypted in a way we cannot open here") from None
+    except (PyPdfError, ValueError, OSError, KeyError, TypeError, RecursionError, AttributeError, IndexError):
         raise InputError("this is not a readable PDF") from None
 
 
