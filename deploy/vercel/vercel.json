@@ -97,6 +97,14 @@
       "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/help"
     },
     {
+      "source": "/telegram",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/telegram"
+    },
+    {
+      "source": "/telegram/info",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/telegram/info"
+    },
+    {
       "source": "/raksha/:p*",
       "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/raksha/:p*"
     },

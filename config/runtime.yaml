@@ -151,6 +151,8 @@ telegram:
   api_base: https://api.telegram.org
   local_api: http://127.0.0.1:8000
   token_env: TELEGRAM_BOT_TOKEN
+  bot_username: ""          # set to the bot's t.me name (without @) to show the Telegram link on the site
+  link_base: https://t.me
   poll_timeout_s: 30
   request_margin_s: 10
   local_timeout_s: 120

@@ -17,7 +17,7 @@ from typing import Any, Callable
 from fastapi import FastAPI, Header, HTTPException, Query, Request
 from fastapi import Path as Path_
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, model_validator
 
@@ -302,6 +302,20 @@ def create_app(
     @app.get("/", include_in_schema=False)
     def home() -> FileResponse:
         return FileResponse(ROOT / "ui" / "index.html", media_type="text/html")
+
+    tg = cfg.runtime.telegram
+    tg_url = f"{tg.link_base.rstrip('/')}/{tg.bot_username.lstrip('@')}" if tg.bot_username.strip() else ""
+
+    @app.get("/telegram/info", include_in_schema=False)
+    def telegram_info() -> dict:
+        """Whether the site has a Telegram bot to point to; the pages read this to show the link."""
+        return {"available": bool(tg_url), "url": tg_url}
+
+    @app.get("/telegram", include_in_schema=False)
+    def telegram_redirect():
+        if not tg_url:
+            raise HTTPException(404, "No Telegram bot is configured.")
+        return RedirectResponse(tg_url, status_code=302)
 
     @app.get("/check/{kind}", include_in_schema=False)
     def check_page(kind: str = Path_(pattern="^(claim|photo|notice|voice|link)$")) -> FileResponse:

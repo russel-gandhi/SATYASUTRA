@@ -35,7 +35,7 @@
   .tile { display: flex; flex-direction: column; gap: 6px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-top: 4px solid var(--saffron); border-radius: var(--radius); padding: 18px; text-decoration: none; box-shadow: var(--shadow); transition: transform .15s, box-shadow .15s; }
   .tile:hover { transform: translateY(-3px); box-shadow: 0 2px 4px rgba(35, 42, 116, .1), 0 18px 36px rgba(35, 42, 116, .14); }
   .tile b { font-size: 18px; color: var(--indigo); } .tile span { color: var(--mute); font-size: 14px; }
-  .tile.safe { border-top-color: var(--madder); } .tile.pulse { border-top-color: var(--green); }
+  .tile.tg { border-top-color: #229ed9; } .tile.safe { border-top-color: var(--madder); } .tile.pulse { border-top-color: var(--green); }
   .pills { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 14px; }
   .pill { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 3px 12px; font-size: 12px; color: var(--mute); }
   .hero .pill { background: rgba(255, 255, 255, .1); border-color: rgba(255, 255, 255, .22); color: #d6daf6; } .hero .pill b { color: #fff; } .hero .pill.good b { color: #7fe3bd; }
@@ -222,6 +222,11 @@ const TILES = [
   ["/help", "Private help", "Steps if private pictures are being shared or threatened.", "safe"],
   ["/officials", "What is spreading", "What India is reading, searching and fact-checking now.", "pulse"],
 ];
+fetch("/telegram/info").then((r) => r.json()).then((t) => {
+  if (!t.available || MODE) return;
+  const a = el("a", "tile tg"); a.href = "/telegram"; a.append(el("b", "", "Get it on Telegram"), el("span", "", "Send a message, voice note or photo to the bot and get the answer in your chat."));
+  $("tiles").append(a);
+}).catch(() => {});
 const MODE = MODES[location.pathname.replace(/\/+$/, "")] || null;
 document.body.classList.add(MODE ? "tool" : "home");
 if (!MODE) TILES.forEach(([href, title, text, cls]) => { const a = el("a", "tile " + cls); a.href = href; a.append(el("b", "", title), el("span", "", text)); $("tiles").append(a); });

@@ -391,6 +391,8 @@ class TelegramSettings(_Strict):
     api_base: str                            # Telegram Bot API host
     local_api: str                           # our own API, which the bot calls for every check
     token_env: str                           # name of the env var holding the bot token
+    bot_username: str                        # the bot's public name, for the website link; empty hides the link
+    link_base: str                           # where a public bot link points (the bot name is appended)
     poll_timeout_s: int = Field(gt=0)        # long-poll wait
     request_margin_s: float = Field(gt=0)
     local_timeout_s: float = Field(gt=0)     # a full claim check can take a while

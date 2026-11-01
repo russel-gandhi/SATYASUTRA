@@ -367,3 +367,19 @@ def test_a_composed_reply_is_kept_only_if_it_stays_inside_the_facts():
     assert not vet("Under section 66E you can sue.", facts, rag)                # a law-like word that is not in the facts
     assert not vet("They will be arrested and the photos will be deleted.", facts, rag)
     assert not vet("x" * 2000, facts, rag) and not vet("   ", facts, rag)
+
+
+def test_telegram_link_is_shown_only_when_a_bot_name_is_configured(tmp_path):
+    cfg = load_config().model_copy(deep=True)
+    cfg.runtime.report.db_path = str(tmp_path / "records.sqlite3")
+    cfg.runtime.provenance.db_path = str(tmp_path / "prov.sqlite3")
+    cfg.runtime.telegram.bot_username = ""
+    off = TestClient(create_app(cfg))
+    assert off.get("/telegram/info").json() == {"available": False, "url": ""}
+    assert off.get("/telegram", follow_redirects=False).status_code == 404
+    cfg.runtime.telegram.bot_username = "@SomeBot"
+    on = TestClient(create_app(cfg))
+    info = on.get("/telegram/info").json()
+    assert info["available"] and info["url"].endswith("/SomeBot")
+    r = on.get("/telegram", follow_redirects=False)
+    assert r.status_code == 302 and r.headers["location"] == info["url"]

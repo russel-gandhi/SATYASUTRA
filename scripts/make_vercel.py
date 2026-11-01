@@ -18,7 +18,7 @@ from pathlib import Path
 PUBLIC = [
     "/", "/check/:kind", "/health", "/health/sources", "/ledger/verify", "/ledger/:seq", "/fastclock/:p*", "/notice/check", "/url/check",
     "/doc/check", "/pulse", "/pulse/match", "/officials", "/officials/data", "/guard", "/guard/:p*", "/links/check", "/voice/transcribe",
-    "/report/build", "/report/:rid", "/my-investigations", "/history", "/records/:rid", "/help", "/raksha/:p*", "/news/check", "/audio/check",
+    "/report/build", "/report/:rid", "/my-investigations", "/history", "/records/:rid", "/help", "/telegram", "/telegram/info", "/raksha/:p*", "/news/check", "/audio/check",
     "/card/spec", "/act/plan", "/media/check", "/video/check", "/agent/stream", "/trace/stream", "/verify", "/about", "/assets/:p*", "/static/:p*",
 ]
 

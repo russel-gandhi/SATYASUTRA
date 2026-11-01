@@ -12,6 +12,8 @@
   const brand = document.createElement("b");
   brand.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 9.3 8 11 4.6-1.7 8-6 8-11V5l-8-3Z" fill="var(--accent)"/><path d="m8.5 12 2.5 2.5 4.5-5" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>SATYASUTRA';
   nav.append(brand, ...CITIZEN.map((x) => link(...x)));
+  const tgLink = link("/telegram", "Telegram"); tgLink.hidden = true; nav.append(tgLink);
+  fetch("/telegram/info").then((r) => r.json()).then((t) => { if (t.available) tgLink.hidden = false; }).catch(() => {});
   const sp = document.createElement("span"); sp.className = "sp"; nav.append(sp);
   const tag = document.createElement("span"); tag.className = "tagm"; tag.textContent = "Investigator"; nav.append(tag, ...INVESTIGATOR.map((x) => link(...x)));
   document.body.prepend(nav);
