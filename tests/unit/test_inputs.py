@@ -102,3 +102,28 @@ def test_metadata_absent_is_neutral_and_present_is_reported():
     ex[271], ex[272], ex[305] = "Canon", "EOS", "Adobe Photoshop 25"
     kinds = {f["kind"]: f["text"] for f in image_metadata(jpeg(ex), CFG)}
     assert "Canon EOS" in kinds["device"] and "image editor" in kinds["software"]
+
+
+def test_an_aes_encrypted_pdf_is_read_or_refused_never_a_server_error():
+    """A friend's PDF returned HTTP 500: pypdf raises DependencyError (not a PyPdfError) for AES files when cryptography is missing."""
+    import io
+    from PIL import Image
+    from pypdf import PdfReader, PdfWriter
+    buf = io.BytesIO(); Image.new("RGB", (200, 200), "white").save(buf, "PDF")
+    w = PdfWriter(); w.append(PdfReader(io.BytesIO(buf.getvalue()))); w.encrypt("", owner_password="owner-pw", algorithm="AES-256")
+    out = io.BytesIO(); w.write(out)
+    try:
+        pdf_text(out.getvalue(), CFG)
+    except InputError:
+        pass                                    # a clean, typed refusal is acceptable; an unhandled exception is not
+
+
+def test_a_missing_pdf_dependency_is_a_typed_refusal_not_an_unhandled_error(monkeypatch):
+    import pypdf
+    from pypdf.errors import DependencyError
+
+    def broken(*a, **k):
+        raise DependencyError("cryptography>=3.1 is required for AES algorithm")
+    monkeypatch.setattr(pypdf, "PdfReader", broken)
+    with pytest.raises(InputError):
+        pdf_text(b"%PDF-1.7", CFG)
