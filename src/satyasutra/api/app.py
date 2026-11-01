@@ -44,7 +44,8 @@ from ..sources import WikidataClient
 from ..sources.bluesky import PostNotFound, fetch_post
 from ..act import build_pack, build_plan, is_intimate, load_actions
 from ..scam import check_links, load_domains
-from ..raksha.ask import answer_question, public as raksha_public
+from ..raksha.ask import answer_question, public as raksha_public, route as raksha_route
+from ..raksha.chat import compose as raksha_compose_reply, is_incident, next_turn
 from ..raksha.corpus import CorpusIndex, load_rag
 from ..raksha.drafts import load_drafts, render as render_draft
 from ..raksha.flow import load_flow
@@ -117,6 +118,14 @@ class RakshaAsk(BaseModel):
     lang: str = Field(default="en", pattern="^(en|hi)$")
 
 
+class RakshaChat(BaseModel):
+    text: str = Field(min_length=1, max_length=1000)
+    lang: str = Field(default="en", pattern="^(en|hi)$")
+    age: str = Field(default="unsure", pattern="^(adult|minor|unsure)$")
+    history: list[str] = Field(default_factory=list, max_length=4)       # the person's own earlier messages, kept by the page, not by us
+    profile: dict[str, str | bool] = Field(default_factory=dict, max_length=8)   # what the person has told us so far (age, situation), kept by the page, not by us
+
+
 class RakshaDraft(BaseModel):
     kind: str = Field(pattern="^(complaint|followup|escalation)$")
     lang: str = Field(default="en", pattern="^(en|hi)$")
@@ -157,6 +166,7 @@ def create_app(
     analyse_image: Callable[[Config, bytes], dict] = forensic_scores,
     image_index: ImageIndex | None = None,
     raksha_ask: Callable[[str, str], dict] | None = None,
+    raksha_compose: Callable[[dict, list, str], str | None] | None = None,
 ) -> FastAPI:
     load_env_file(ROOT / ".env")
     cfg = config or load_config()
@@ -609,6 +619,50 @@ def create_app(
             return raksha_public(answer_question(gemini(), index, rag, req.text, req.lang), rag, req.lang, flow.messages["danger"].model_dump()[req.lang])
         try:
             return await run_in_threadpool(run)
+        except ConfigError as exc:
+            raise HTTPException(status_code=503, detail=str(exc))
+        except SourceError:
+            raise HTTPException(status_code=503, detail="The language model is at its limit right now, so nothing was answered and nothing was guessed. Try again shortly.")
+
+    @app.post("/raksha/chat")
+    async def raksha_chat(req: RakshaChat) -> dict:
+        """One chat turn. Plain word lists pick the route (danger, ladder, letter, question); only a question reaches the model, and it is answered from the documents with quotes.
+        The page keeps the conversation; the server keeps nothing."""
+        rag, flow = load_rag(), load_flow()
+        kind = raksha_route(req.text, rag)
+        if kind == "danger":
+            return {"type": "danger", "message": flow.messages["danger"].model_dump()[req.lang]}
+        if kind == "support":
+            return {"type": "support", "message": getattr(rag.chat.support, req.lang)}
+        profile = {k: v for k, v in req.profile.items() if isinstance(v, (str, bool))}
+        # A short message while we are still asking is the person's answer (a chip click, or "I was 16"); a long one is a new question and goes its own way.
+        answering = profile.get("situation") is True and not profile.get("done") and len(req.text.split()) <= rag.chat.reply_max_words and "?" not in req.text
+        if kind != "draft" and (answering or is_incident(req.text, rag, load_actions(config_dir() / "actions.yaml"))):
+            turn = next_turn(profile, req.text, rag, req.lang)
+            if turn.kind == "ask":
+                return {"type": "ask", "message": turn.say, "options": turn.options, "profile": turn.profile}
+            view = ladder_view(load_ladder(), CorpusIndex(rag), turn.profile["age"], req.lang)
+            rungs = [r for rid in turn.steps for r in view["rungs"] if r["id"] == rid]
+            def write() -> str | None:
+                return (raksha_compose or (lambda p, r, lang: raksha_compose_reply(gemini(), rag, p, r, lang)))(turn.profile, rungs, req.lang)
+            composed = await run_in_threadpool(write)
+            aid = [getattr(a, req.lang) for a in rag.chat.first_aid]
+            return {"type": "plan", "message": composed or getattr(rag.chat.plan_fallback, req.lang), "composed": composed is not None, "aid": aid,
+                    "steps": rungs, "profile": {**turn.profile, "done": True}, "not_covered": view["not_covered"]}
+        if kind == "ladder":
+            return {"type": "ladder", **ladder_view(load_ladder(), CorpusIndex(rag), str(profile.get("age") or req.age), req.lang)}
+        if kind == "draft":
+            return {"type": "draft"}
+        def run() -> dict:
+            if raksha_ask is not None:
+                return raksha_ask(req.text, req.lang)
+            index = CorpusIndex(rag)
+            if not index.ready():
+                raise HTTPException(status_code=503, detail="the Raksha document index is not built yet: run scripts/raksha_corpus.py build")
+            context = " ".join(req.history[-rag.chat.history_turns:])
+            return raksha_public(answer_question(gemini(), index, rag, req.text, req.lang, context), rag, req.lang, flow.messages["danger"].model_dump()[req.lang])
+        try:
+            return {"type": "answer", **await run_in_threadpool(run)}
         except ConfigError as exc:
             raise HTTPException(status_code=503, detail=str(exc))
         except SourceError:

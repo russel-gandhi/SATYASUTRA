@@ -84,7 +84,7 @@ def test_fabricated_quote_is_dropped_and_the_reply_is_a_refusal(rag):
     fake = {**GOOD, "quote": "the committee must decide every appeal within ten days of filing"}
     out = answer_question(FakeClient([fake]), CorpusIndex(rag), rag, "How long do I have to appeal to the committee?", "en")
     assert out.refused and out.dropped == 1 and not out.sentences
-    assert public(out, rag, "en", "")["refusal"].startswith("I cannot find this")
+    assert public(out, rag, "en", "")["refusal"].startswith("That one is best answered")
 
 
 def test_a_figure_that_is_not_in_the_quote_is_dropped(rag):
@@ -261,7 +261,7 @@ def test_bot_conversation_covers_ladder_answer_refusal_danger_and_draft(tmp_path
 
     ladder = say("/ladder minor")
     assert "Take It Down" in ladder or "18" in ladder and "report" in ladder.casefold()
-    assert "No time limit is stated" in ladder and "gac.gov.in" in ladder
+    assert "No time limit" not in ladder and "gac.gov.in" in ladder
     assert "within 30 days" in say("/ask how long to appeal") and "Not legal advice" in say("/ask how long to appeal")
     assert say("/ask what is the weather").startswith("I cannot find this")
     assert say("/ask I want to die") == "Please call 112 now."
@@ -272,3 +272,98 @@ def test_bot_conversation_covers_ladder_answer_refusal_danger_and_draft(tmp_path
     assert "unknown fields" in refused and "Zed" not in refused and "hack" not in refused.replace("secret", "")
     assert say("/draft") == cfg.runtime.telegram.messages["draft_usage"]
     assert not bot.raksha and "/verify" not in str(asks)         # none of this opened the guided flow or the fact-check path
+
+
+def test_chat_routes_by_word_lists_and_only_a_question_reaches_the_model(tmp_path):
+    from satyasutra.raksha.ask import route
+    rag = load_rag()
+    assert route("I want to die, what next", rag) == "danger"                 # danger outranks every other route
+    assert route("What should I do next?", rag) == "ladder" and route("अब क्या करूँ", rag) == "ladder"
+    assert route("can you write a letter for me", rag) == "draft"
+    assert route("how long do I have to appeal", rag) == "ask"
+    asked = []
+    c = _app(tmp_path, ask=lambda text, lang: asked.append(text) or {"danger": False, "refused": True, "refusal": "no", "sentences": []})
+    assert c.post("/raksha/chat", json={"text": "I want to die"}).json()["type"] == "danger"
+    ladder = c.post("/raksha/chat", json={"text": "what should I do next", "age": "minor"}).json()
+    assert ladder["type"] == "ladder" and ladder["age"] == "minor" and ladder["rungs"]
+    assert c.post("/raksha/chat", json={"text": "write me a letter"}).json() == {"type": "draft"}
+    assert asked == []                                                         # none of those three touched the answerer
+    assert c.post("/raksha/chat", json={"text": "how long to appeal"}).json()["type"] == "answer" and asked == ["how long to appeal"]
+    assert c.post("/raksha/chat", json={"text": "x", "history": ["a"] * 9}).status_code == 422
+
+
+def test_a_short_follow_up_borrows_the_earlier_question_for_search_only(rag):
+    client = FakeClient([GOOD])
+    out = answer_question(client, CorpusIndex(rag), rag, "and then?", "en", context="How long do I have to appeal to the committee?")
+    assert out.retrieved and "and then?" in client.prompts[-1]
+    assert "How long do I have to appeal" not in client.prompts[-1].split("<<<QUESTION")[1].split("QUESTION>>>")[0]   # the model sees only the current question
+    none = answer_question(FakeClient([GOOD]), CorpusIndex(rag), rag, "and then?", "en")
+    assert none.refused and none.retrieved == 0                                # without the context the same words find nothing
+
+
+def test_a_message_about_feelings_gets_the_fixed_warm_reply_without_the_model(tmp_path):
+    from satyasutra.raksha.ask import route
+    rag = load_rag()
+    assert route("I feel shitty", rag) == "support" and route("I want to die", rag) == "danger"   # danger still wins
+    asked = []
+    c = _app(tmp_path, ask=lambda text, lang: asked.append(text) or {})
+    r = c.post("/raksha/chat", json={"text": "I feel shitty"}).json()
+    assert r["type"] == "support" and "your fault" in r["message"] and "112" in r["message"] and asked == []
+    assert "आपकी कोई गलती नहीं" in c.post("/raksha/chat", json={"text": "मुझे बहुत डर लग रहा है", "lang": "hi"}).json()["message"]
+
+
+def _situation_app(tmp_path, compose):
+    return _app(tmp_path, ask=lambda text, lang: {"danger": False, "refused": True, "refusal": "no", "sentences": []}) if compose is None else _app_with(tmp_path, compose)
+
+
+def _app_with(tmp_path, compose):
+    cfg = load_config().model_copy(deep=True)
+    cfg.runtime.report.db_path = str(tmp_path / "records.sqlite3")
+    cfg.runtime.provenance.db_path = str(tmp_path / "prov.sqlite3")
+    return TestClient(create_app(cfg, raksha_ask=lambda text, lang: {"danger": False, "refused": True, "refusal": "no", "sentences": []}, raksha_compose=compose))
+
+
+def test_a_threat_message_is_met_with_a_question_not_a_ladder_dump(tmp_path):
+    c = _app_with(tmp_path, lambda p, r, lang: "kind words")
+    r = c.post("/raksha/chat", json={"text": "What do I do? My boyfriend is threatening to leak my nudes"}).json()
+    assert r["type"] == "ask" and "your fault" in r["message"] and "18" in r["message"]
+    assert [o["set"] for o in r["options"]] == [{"age": "adult"}, {"age": "minor"}, {"age": "unsure"}]
+    assert r["profile"] == {"situation": True, "what": "threatened"}           # read from the words; the age is never guessed
+
+
+def test_once_age_and_situation_are_known_the_reply_is_a_short_plan_by_age(tmp_path):
+    seen = {}
+    def compose(profile, rungs, lang):
+        seen["profile"], seen["ids"] = profile, [r["id"] for r in rungs]
+        return "A kind reply."
+    c = _app_with(tmp_path, compose)
+    adult = c.post("/raksha/chat", json={"text": "Yes, 18 or older", "profile": {"situation": True, "what": "threatened", "age": "adult"}}).json()
+    assert adult["type"] == "plan" and adult["message"] == "A kind reply." and adult["composed"] is True
+    assert [s["id"] for s in adult["steps"]] == ["stopncii", "report_portal"] and len(adult["aid"]) == 3
+    minor = c.post("/raksha/chat", json={"text": "No, under 18", "profile": {"situation": True, "what": "shared"}}).json()
+    assert [s["id"] for s in minor["steps"]] == ["take_it_down", "report_portal", "platform_officer"]    # shared adds the platform; under 18 gets Take It Down
+    unsure = c.post("/raksha/chat", json={"text": "Not sure", "profile": {"situation": True, "what": "threatened", "age": "unsure"}}).json()
+    assert unsure["steps"][0]["id"] == "take_it_down"                           # unsure is treated as under 18
+
+
+def test_a_short_typed_answer_continues_and_a_long_question_goes_its_own_way(tmp_path):
+    c = _app_with(tmp_path, lambda p, r, lang: None)
+    typed = c.post("/raksha/chat", json={"text": "I was 16", "profile": {"situation": True, "what": "shared"}}).json()
+    assert typed["type"] == "plan" and typed["profile"]["age"] == "minor" and typed["composed"] is False
+    assert typed["message"].startswith("I am so sorry")                         # the model's reply was not available: the fixed warm reply and the same steps
+    q = c.post("/raksha/chat", json={"text": "How long do I have to appeal to the GAC?", "profile": {"situation": True}}).json()
+    assert q["type"] == "answer"
+    assert c.post("/raksha/chat", json={"text": "write a letter about my leaked photos"}).json() == {"type": "draft"}
+
+
+def test_a_composed_reply_is_kept_only_if_it_stays_inside_the_facts():
+    from satyasutra.raksha.chat import vet
+    rag = load_rag()
+    facts = "Report on the portal. Open cybercrime.gov.in. If you are in danger right now, call 112."
+    assert vet("This is hard and not your fault. Start by telling the portal at cybercrime.gov.in, and call 112 if you are in danger.", facts, rag)
+    assert not vet("Report within 24 hours.", facts, rag)                       # a figure that is not in the facts
+    assert not vet("Call the helpline on 1930.", facts, rag)
+    assert not vet("Go to https://example.org/help now.", facts, rag)           # a link that is not in the facts
+    assert not vet("Under section 66E you can sue.", facts, rag)                # a law-like word that is not in the facts
+    assert not vet("They will be arrested and the photos will be deleted.", facts, rag)
+    assert not vet("x" * 2000, facts, rag) and not vet("   ", facts, rag)

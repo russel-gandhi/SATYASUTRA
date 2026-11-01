@@ -30,59 +30,134 @@
   textarea, input[type=text], select { width: 100%; box-sizing: border-box; font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--text); margin: 4px 0; }
   .go { padding: 10px 18px; border-radius: 10px; font-size: 16px; margin-top: 6px; }
   pre.draft { white-space: pre-wrap; word-break: break-word; font: inherit; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+  .log { display: flex; flex-direction: column; gap: 8px; max-height: 440px; overflow-y: auto; padding: 6px 0; }
+  .msg { max-width: 92%; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); }
+  .msg.me { align-self: flex-end; background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .msg p { margin: 4px 0; }
+  details.why { margin-top: 8px; font-size: 14px; }
+  details.why summary { cursor: pointer; color: var(--mute); }
+  .src { font-size: 13px; color: var(--mute); margin-top: 6px; }
+  .src a { color: inherit; }
+  .step { display: flex; gap: 10px; align-items: baseline; }
+  .step .n { flex: none; width: 1.6em; height: 1.6em; border-radius: 50%; background: var(--accent); color: var(--accent-ink); text-align: center; line-height: 1.6em; font-size: 13px; font-weight: 600; }
+  .take { background: var(--panel); border-radius: 10px; padding: 8px 10px; margin: 6px 0; font-size: 14px; }
+  .chatform { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
+  .chatform input { margin: 0; }
+  .chatform .go { margin: 0; white-space: nowrap; }
+  .msg .card { margin-top: 8px; }
   .alert { background: var(--panel); border: 2px solid var(--bad); border-radius: 12px; padding: 12px 14px; font-weight: 600; margin-top: 10px; }
+  .wrap { max-width: 640px; }
+  .top { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .top h1 { font-size: 21px; margin: 0; }
+  .top .lang { margin: 0; }
+  .exit { display: inline-block; width: auto; font-size: 14px; padding: 7px 14px; margin: 0; }
+  .tabs { display: flex; gap: 2px; overflow-x: auto; border-bottom: 1px solid var(--line); margin: 14px 0 12px; }
+  .tabs button { border: 0; background: none; color: var(--mute); padding: 10px 12px; font: inherit; font-size: 15px; cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; }
+  .tabs button[aria-selected="true"] { color: var(--text); font-weight: 600; border-bottom-color: var(--accent); }
+  .panel[hidden] { display: none; }
+  .lead { color: var(--mute); margin: 0 0 8px; }
+  .chatbox { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 12px; }
+  .chatbox .log { max-height: 52vh; min-height: 240px; }
+  .chatbox .msg { background: var(--bg, #fff); }
+  .chatbox .msg.me { background: var(--accent); }
+  .chatbox .chips { margin: 10px 0 4px; }
+  .chatbox .chips button { background: transparent; }
+  details.stepbox { border-top: 1px solid var(--line); padding: 8px 0; }
+  details.stepbox summary { cursor: pointer; font-weight: 600; }
+  details.stepbox > :not(summary) { margin-left: 2.1em; }
+  .aid { margin: 10px 0 2px; padding-left: 1.2em; font-size: 14px; }
+  .aid li { margin: 3px 0; }
+  .acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .acts button { border: 1px solid var(--line); background: transparent; color: var(--text); border-radius: 999px; padding: 6px 14px; font-size: 14px; cursor: pointer; }
+  .dots { display: inline-flex; gap: 5px; padding: 6px 2px; }
+  .dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--mute); opacity: .35; animation: blink 1.2s infinite ease-in-out; }
+  .dots i:nth-child(2) { animation-delay: .2s; }
+  .dots i:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink { 0%, 80%, 100% { opacity: .25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
+  @media (prefers-reduced-motion: reduce) { .dots i { animation: none; opacity: .6; } }
+  .small { font-size: 13px; color: var(--mute); margin-top: 18px; }
+  .sr { display: none; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1 id="t-title">You are not in trouble. Here is what to do.</h1>
-  <div class="lang" role="group" aria-label="Language"><button id="l-en" aria-pressed="true">English</button><button id="l-hi" aria-pressed="false">हिंदी</button></div>
-  <p id="t-lead">This is about private pictures or videos being shared, or threatened to be shared, without your say. Nothing you do on this page is saved, and you do not need to upload anything.</p>
-  <div id="routes"></div>
+  <div class="top">
+    <h1 id="t-title">You are not in trouble. Here is what to do.</h1>
+    <button class="btn ghost exit" id="exit">Close this page now</button>
+  </div>
+  <div class="lang" role="group" aria-label="Language" style="margin-top:10px"><button id="l-en" aria-pressed="true">English</button><button id="l-hi" aria-pressed="false">हिंदी</button></div>
+  <p class="lead" id="t-lead">Private pictures shared or threatened? Nothing here is saved, and you never need to upload anything.</p>
 
-  <h2 id="t-ladder">Who to approach, in order</h2>
-  <p class="mute" id="t-ladder-lead">Each step shows what the official documents say, with the quote. Where a document gives no time limit, we say so.</p>
-  <div class="chips" role="group" aria-label="Age"><button id="a-adult" aria-pressed="false">18 or older</button><button id="a-minor" aria-pressed="false">Under 18</button><button id="a-unsure" aria-pressed="true">Not sure</button></div>
-  <div id="ladder"></div>
+  <div class="tabs" role="tablist" id="tabs">
+    <button role="tab" data-tab="chat" aria-selected="true"></button>
+    <button role="tab" data-tab="steps" aria-selected="false"></button>
+    <button role="tab" data-tab="ladder" aria-selected="false"></button>
+    <button role="tab" data-tab="draft" aria-selected="false"></button>
+  </div>
 
-  <h2 id="t-ask">Ask a question</h2>
-  <p class="mute" id="t-ask-lead">Answers come only from the official documents we hold and show their quote. If it is not there, we say so instead of guessing.</p>
-  <textarea id="q" rows="2" maxlength="1000" aria-label="Your question"></textarea>
-  <button class="btn go" id="askgo">Ask</button>
-  <div id="answer" aria-live="polite"></div>
+  <section class="panel" id="p-chat">
+    <h2 class="sr" id="t-ask">Talk to Raksha</h2>
+    <div class="chatbox">
+      <div class="log" id="log" aria-live="polite"></div>
+      <div class="chips" id="quick"></div>
+      <form class="chatform" id="chatform"><input type="text" id="q" maxlength="1000" autocomplete="off" aria-label="Your message"><button class="btn go" id="askgo" type="submit">Send</button></form>
+    </div>
+    <p class="small" id="t-ask-lead">This chat disappears when you close the page.</p>
+  </section>
 
-  <h2 id="t-draft">Draft a letter</h2>
-  <p class="mute" id="t-draft-lead">Fill what you can. The letter uses only what you type and fixed wording. You send it yourself; nothing is saved or sent from here.</p>
-  <select id="d-kind" aria-label="Kind of letter"><option value="complaint">Complaint</option><option value="followup">Follow-up</option><option value="escalation">Escalation letter</option></select>
-  <select id="d-what" aria-label="What happened"><option value="threatened">Someone is threatening to share</option><option value="shared" selected>Shared already</option><option value="faked">Changed or faked</option></select>
-  <div id="d-fields"></div>
-  <button class="btn go" id="draftgo">Make the draft</button>
-  <pre class="draft" id="draftout" hidden></pre>
-  <button class="btn ghost go" id="copy" hidden>Copy</button>
-  <button class="btn ghost exit" id="exit">Close this page now</button>
+  <section class="panel" id="p-steps" hidden>
+    <div id="routes"></div>
+  </section>
+
+  <section class="panel" id="p-ladder" hidden>
+    <h2 class="sr" id="t-ladder">Who to approach, in order</h2>
+    <p class="lead" id="t-ladder-lead">Go in this order. Each step says what to do and where.</p>
+    <div class="chips" role="group" aria-label="Age"><button id="a-adult" aria-pressed="false">18 or older</button><button id="a-minor" aria-pressed="false">Under 18</button><button id="a-unsure" aria-pressed="true">Not sure</button></div>
+    <div id="ladder"></div>
+  </section>
+
+  <section class="panel" id="p-draft" hidden>
+    <h2 class="sr" id="t-draft">Draft a letter</h2>
+    <p class="lead" id="t-draft-lead">Fill what you can. The letter uses only what you type. You send it yourself; nothing is saved or sent from here.</p>
+    <select id="d-kind" aria-label="Kind of letter"><option value="complaint">Complaint</option><option value="followup">Follow-up</option><option value="escalation">Escalation letter</option></select>
+    <select id="d-what" aria-label="What happened"><option value="threatened">Someone is threatening to share</option><option value="shared" selected>Shared already</option><option value="faked">Changed or faked</option></select>
+    <div id="d-fields"></div>
+    <button class="btn go" id="draftgo">Make the draft</button>
+    <pre class="draft" id="draftout" hidden></pre>
+    <button class="btn ghost go" id="copy" hidden>Copy</button>
+  </section>
+
   <div class="err" id="err" role="alert"></div>
-  <p class="fine" id="t-fine">This page gives guidance only. It does not take, store or check pictures, it files nothing for you, and it keeps no history. A private or incognito window leaves no trace in the browser either.</p>
+  <p class="small" id="t-fine">Nothing you type here is saved, and you never need to share a picture.</p>
 </div>
 <script>
 const T = {
-  en: { title: "You are not in trouble. Here is what to do.", lead: "This is about private pictures or videos being shared, or threatened to be shared, without your say. Nothing you do on this page is saved, and you do not need to upload anything.",
-        exit: "Close this page now", fine: "This page gives guidance only. It does not take, store or check pictures, it files nothing for you, and it keeps no history. A private or incognito window leaves no trace in the browser either.",
+  en: { title: "You are not in trouble. Here is what to do.", lead: "Private pictures shared or threatened? Nothing here is saved, and you never need to upload anything.",
+        exit: "Close this page now", fine: "Nothing you type here is saved, and you never need to share a picture.",
+        tabs: ["Talk", "First steps", "Who to approach", "Write a letter"],
         err: "The steps could not be loaded. If you are in danger right now, call 112.",
-        ladder: "Who to approach, in order", ladderLead: "Each step shows what the official documents say, with the quote. Where a document gives no time limit, we say so.",
-        ask: "Ask a question", askLead: "Answers come only from the official documents we hold and show their quote. If it is not there, we say so instead of guessing.", askBtn: "Ask",
+        ladder: "Who to approach, in order", ladderLead: "Go in this order. Each step says what to do and where.",
+        ask: "Talk to Raksha", askLead: "This chat disappears when you close the page.", askBtn: "Send",
+        hello: "Hi, I am Raksha. It is not your fault. Tell me what is happening, or pick one below. I will never ask for pictures.", typing: "", placeholder: "Type your message",
+        quick: ["What should I do next?", "Write a letter for me", "How do I track my complaint?", "How long do I have to appeal to the GAC?"], ladderIntro: "Here is who to approach, in this order:", draftHint: "Opening the letter form. It uses only what you type.",
         draft: "Draft a letter", draftLead: "Fill what you can. The letter uses only what you type and fixed wording. You send it yourself; nothing is saved or sent from here.", draftBtn: "Make the draft", copy: "Copy", copied: "Copied",
         ages: ["18 or older", "Under 18", "Not sure"], kinds: ["Complaint", "Follow-up", "Escalation letter"], whats: ["Someone is threatening to share", "Shared already", "Changed or faked"],
         fields: { name: "Your name or an alias", authority: "Who the letter is to (office or officer)", platform: "Where it is happening", account: "Name, username or number of the person", links: "Links (text only)", dates: "Dates and times", ack_no: "Acknowledgement number", reported_on: "Date you first reported", demand: "What they are demanding or threatening" },
-        start: "Start here", bring: "Bring", wait: "Time", unconfirmed: "Source not confirmed right now", retrieved: "fetched", busy: "Could not answer right now. Try again shortly." },
-  hi: { title: "आप किसी मुसीबत में नहीं हैं। ये करें।", lead: "यह निजी तस्वीरों या वीडियो के आपकी मर्ज़ी के बिना फैलाए जाने, या फैलाने की धमकी के बारे में है। इस पेज पर आप जो करते हैं वह सेव नहीं होता, और कुछ अपलोड करने की ज़रूरत नहीं है।",
-        exit: "यह पेज अभी बंद करें", fine: "यह पेज सिर्फ़ जानकारी देता है। यह तस्वीरें न लेता है, न रखता है, न जाँचता है, आपकी ओर से कोई शिकायत दर्ज नहीं करता और कोई इतिहास नहीं रखता। प्राइवेट या इन्कॉग्निटो विंडो ब्राउज़र में भी निशान नहीं छोड़ती।",
+        planActs: ["Write the letter for me", "Show everything in order"], planActsSend: ["write a letter for me", "what should I do next"], more: "Steps",
+        start: "Start here", bring: "Have ready", wait: "How long it takes", unconfirmed: "I could not re-check this source just now", retrieved: "fetched", whereFrom: "Where this comes from", source: "Source", steps: "Steps", busy: "Could not answer right now. Try again shortly." },
+  hi: { title: "आप किसी मुसीबत में नहीं हैं। ये करें।", lead: "निजी तस्वीरें फैलाई गईं या धमकी मिली? यहाँ कुछ सेव नहीं होता, और कुछ अपलोड नहीं करना है।",
+        exit: "यह पेज अभी बंद करें", fine: "यहाँ जो लिखते हैं वह सेव नहीं होता, और आपको कोई तस्वीर देने की ज़रूरत नहीं है।",
+        tabs: ["बात करें", "पहले कदम", "किसके पास जाएँ", "पत्र लिखें"],
         err: "ये कदम लोड नहीं हो सके। अगर आप अभी खतरे में हैं तो 112 पर कॉल करें।",
-        ladder: "किसके पास जाएँ, किस क्रम में", ladderLead: "हर कदम में सरकारी दस्तावेज़ों की बात उद्धरण के साथ है। जहाँ दस्तावेज़ समय-सीमा नहीं देता, हम वह बता देते हैं।",
-        ask: "सवाल पूछें", askLead: "जवाब सिर्फ़ हमारे पास मौजूद सरकारी दस्तावेज़ों से आते हैं और उनका उद्धरण दिखाते हैं। वहाँ न हो तो हम अंदाज़ा नहीं लगाते।", askBtn: "पूछें",
+        ladder: "किसके पास जाएँ, किस क्रम में", ladderLead: "इसी क्रम में चलिए। हर कदम बताता है कि क्या करना है और कहाँ।",
+        ask: "रक्षा से बात करें", askLead: "पेज बंद करते ही यह चैट मिट जाती है।", askBtn: "भेजें",
+        hello: "नमस्ते, मैं रक्षा हूँ। इसमें आपकी कोई गलती नहीं है। बताइए क्या हो रहा है, या नीचे से चुनिए। मैं कभी तस्वीर नहीं माँगती।", typing: "", placeholder: "अपना संदेश लिखिए",
+        quick: ["अब मुझे क्या करना चाहिए?", "मेरे लिए पत्र लिखिए", "शिकायत की स्थिति कैसे देखूँ?", "GAC में अपील कितने दिन में करनी होती है?"], ladderIntro: "इसी क्रम में संपर्क करें:", draftHint: "पत्र का फ़ॉर्म खोल रही हूँ। उसमें सिर्फ़ वही आता है जो आप लिखते हैं।",
         draft: "पत्र का मसौदा", draftLead: "जितना हो सके भरें। पत्र में सिर्फ़ आपका लिखा और तय शब्द आते हैं। आप इसे खुद भेजें; यहाँ से कुछ सेव या भेजा नहीं जाता।", draftBtn: "मसौदा बनाएँ", copy: "कॉपी करें", copied: "कॉपी हो गया",
         ages: ["18 या ज़्यादा", "18 से कम", "पक्का नहीं"], kinds: ["शिकायत", "अनुवर्ती पत्र", "वरिष्ठ अधिकारी को पत्र"], whats: ["कोई फैलाने की धमकी दे रहा है", "पहले ही फैल चुकी हैं", "बदली या नकली बनाई गईं"],
         fields: { name: "आपका नाम या कोई उपनाम", authority: "पत्र किसे है (कार्यालय या अधिकारी)", platform: "यह कहाँ हो रहा है", account: "करने वाले का नाम, यूज़रनेम या नंबर", links: "लिंक (सिर्फ़ टेक्स्ट)", dates: "तारीख और समय", ack_no: "पावती संख्या", reported_on: "पहली शिकायत की तारीख", demand: "वे क्या माँग रहे हैं या क्या धमकी दे रहे हैं" },
-        start: "यहाँ से शुरू करें", bring: "साथ रखें", wait: "समय", unconfirmed: "स्रोत अभी पुष्ट नहीं हुआ", retrieved: "लिया गया", busy: "अभी जवाब नहीं दे पाए। थोड़ी देर बाद कोशिश करें।" },
+        planActs: ["मेरे लिए पत्र लिखिए", "सब कुछ क्रम में दिखाइए"], planActsSend: ["मेरे लिए पत्र लिखिए", "अब क्या करूँ"], more: "कदम",
+        start: "यहाँ से शुरू करें", bring: "तैयार रखें", wait: "कितना समय लगता है", unconfirmed: "यह स्रोत अभी दोबारा जाँच नहीं हो सका", retrieved: "लिया गया", whereFrom: "यह कहाँ से है", source: "स्रोत", steps: "कदम", busy: "अभी जवाब नहीं दे पाए। थोड़ी देर बाद कोशिश करें।" },
 };
 const $ = (id) => document.getElementById(id);
 let lang = "en", plan = null, age = "unsure", ladder = null;
@@ -92,9 +167,10 @@ const safeUrl = (u) => (u && /^https:[/][/]/.test(u) ? u : "");
 function paint() {
   const t = T[lang];
   document.documentElement.lang = lang;
+  document.querySelectorAll("#tabs button").forEach((b, i) => { b.textContent = t.tabs[i]; });
   $("t-title").textContent = t.title; $("t-lead").textContent = t.lead; $("exit").textContent = t.exit; $("t-fine").textContent = t.fine;
   $("l-en").setAttribute("aria-pressed", lang === "en"); $("l-hi").setAttribute("aria-pressed", lang === "hi");
-  $("t-ladder").textContent = t.ladder; $("t-ladder-lead").textContent = t.ladderLead; $("t-ask").textContent = t.ask; $("t-ask-lead").textContent = t.askLead; $("askgo").textContent = t.askBtn;
+  $("t-ladder").textContent = t.ladder; $("t-ladder-lead").textContent = t.ladderLead; $("t-ask").textContent = t.ask; $("t-ask-lead").textContent = t.askLead; $("askgo").textContent = t.askBtn; $("q").placeholder = t.placeholder; paintQuick(); greet();
   $("t-draft").textContent = t.draft; $("t-draft-lead").textContent = t.draftLead; $("draftgo").textContent = t.draftBtn; $("copy").textContent = t.copy;
   ["adult", "minor", "unsure"].forEach((a, i) => { $("a-" + a).textContent = t.ages[i]; $("a-" + a).setAttribute("aria-pressed", age === a); });
   [...$("d-kind").options].forEach((o, i) => { o.textContent = t.kinds[i]; }); [...$("d-what").options].forEach((o, i) => { o.textContent = t.whats[i]; });
@@ -114,47 +190,106 @@ function paint() {
 $("l-en").onclick = () => { lang = "en"; paint(); loadLadder(); }; $("l-hi").onclick = () => { lang = "hi"; paint(); loadLadder(); };
 ["adult", "minor", "unsure"].forEach((a) => { $("a-" + a).onclick = () => { age = a; paint(); loadLadder(); }; });
 
+function sourceBlock(list) {
+  const t = T[lang], box = el("div");
+  const first = list.find((x) => x.title) || list[0];
+  const line = el("div", "src", t.source + ": " + (first.publisher || "") + (first.title ? ", " + first.title : "") + " ");
+  const u = safeUrl(first.url); if (u) { const a = el("a", "", u.replace(/^https:[/][/]/, "").replace(/[/]$/, "")); a.href = u; a.rel = "noreferrer noopener"; line.append(a); }
+  box.append(line);
+  const bad = list.filter((x) => x.confirmed === false);
+  if (bad.length) box.append(el("div", "src err", t.unconfirmed));
+  const d = el("details", "why"); d.append(el("summary", "", t.whereFrom));
+  list.forEach((x) => d.append(el("div", "quote" + (x.confirmed === false ? " bad" : ""), "\u201c" + x.quote + "\u201d")));
+  box.append(d);
+  return box;
+}
+function rungCard(r, n) {
+  const t = T[lang];
+  const card = el("div", "card rung" + (r.start ? " start" : ""));
+  const head = el("div", "step");
+  if (n) head.append(el("span", "n", String(n)));
+  head.append(el("b", "", r.title));
+  card.append(head, el("p", "", r.how));
+  if (r.attach) card.append(el("div", "take", t.bring + ": " + r.attach));
+  if (r.wait_documented) card.append(el("div", "take", t.wait + ": " + r.wait));
+  card.append(sourceBlock(r.sources));
+  return card;
+}
 function paintLadder() {
   const box = $("ladder"); box.replaceChildren();
   if (!ladder) return;
-  const t = T[lang];
-  ladder.rungs.forEach((r) => {
-    const card = el("div", "card rung" + (r.start ? " start" : ""));
-    card.append(el("b", "", (r.start ? t.start + ": " : "") + r.title), el("p", "", r.how));
-    if (r.attach) card.append(el("p", "", t.bring + ": " + r.attach));
-    card.append(el("p", "mute", t.wait + ": " + r.wait));
-    r.sources.forEach((s) => {
-      const q = el("div", "quote" + (s.confirmed ? "" : " bad"), "\u201c" + s.quote + "\u201d");
-      const meta = el("div", "mute", s.confirmed ? "" : t.unconfirmed + ". ");
-      if (s.title) { meta.append((s.publisher || "") + ", " + s.title + ", " + t.retrieved + " " + s.retrieved_on + " "); const u = safeUrl(s.url); if (u) { const a = el("a", "", u); a.href = u; a.rel = "noreferrer noopener"; meta.append(a); } }
-      q.append(meta); card.append(q);
-    });
-    box.append(card);
-  });
-  box.append(el("p", "mute", ladder.not_covered));
+  ladder.rungs.forEach((r, i) => box.append(rungCard(r, i + 1)));
 }
 async function loadLadder() {
   try { const r = await fetch("/raksha/ladder?age=" + age + "&lang=" + lang); if (!r.ok) throw new Error(r.status); ladder = await r.json(); } catch (e) { ladder = null; }
   paintLadder();
 }
 
-$("askgo").onclick = async () => {
-  const q = $("q").value.trim(); const out = $("answer"); out.replaceChildren(); if (!q) return;
+let noted = false;
+let profile = {};                                      // what the person has told us (age, what happened): kept in this page only, sent with each message
+function showTab(name) {
+  document.querySelectorAll("#tabs button").forEach((b) => b.setAttribute("aria-selected", b.dataset.tab === name));
+  ["chat", "steps", "ladder", "draft"].forEach((n) => { $("p-" + n).hidden = n !== name; });
+}
+document.querySelectorAll("#tabs button").forEach((b) => { b.onclick = () => showTab(b.dataset.tab); });
+const said = [];                                              // the person's own messages, kept in this page only and sent along for follow-up questions
+const bubble = (cls) => { const b = el("div", "msg " + cls); $("log").append(b); $("log").scrollTop = $("log").scrollHeight; return b; };
+function greet() {
+  const first = $("log").firstElementChild;
+  if (first && first.dataset.greeting) { first.textContent = T[lang].hello; return; }
+  if (!$("log").children.length) { const b = bubble("bot"); b.dataset.greeting = "1"; b.textContent = T[lang].hello; }
+}
+function paintQuick() {
+  const box = $("quick"); box.replaceChildren();
+  T[lang].quick.forEach((text) => { const b = el("button", "", text); b.type = "button"; b.onclick = () => send(text); box.append(b); });
+}
+function showAnswer(box, a) {
+  if (a.refused) box.append(el("p", "", a.refusal));
+  const list = a.sentences || [];
+  if (list.length) box.append(el("p", "", list.map((x) => x.text).join(" ")));
+  if (list.length) box.append(sourceBlock(list.map((x) => ({ quote: x.quote, publisher: x.source.publisher, title: x.source.title, url: x.source.url }))));
+}
+function stepBox(r, n) {
+  const t = T[lang];
+  const d = el("details", "stepbox"); d.append(el("summary", "", n + ". " + r.title));
+  d.append(el("p", "", r.how));
+  if (r.attach) d.append(el("div", "take", t.bring + ": " + r.attach));
+  if (r.wait_documented) d.append(el("div", "take", t.wait + ": " + r.wait));
+  d.append(sourceBlock(r.sources));
+  return d;
+}
+function chips(box, items) {
+  const row = el("div", "acts");
+  items.forEach((it) => { const b = el("button", "", it.label); b.type = "button"; b.onclick = () => { row.remove(); send(it.send || it.label, it.set); }; row.append(b); });
+  box.append(row);
+}
+async function send(text, patch) {
+  text = (text || "").trim(); if (!text) return;
+  if (patch) Object.assign(profile, patch);
+  $("q").value = ""; bubble("me").textContent = text;
+  const reply = bubble("bot"); reply.replaceChildren(el("span", "dots", "")); reply.firstChild.append(el("i"), el("i"), el("i")); reply.setAttribute("aria-label", "typing");
   try {
-    const r = await fetch("/raksha/ask", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text: q, lang }) });
+    const r = await fetch("/raksha/chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text, lang, age, history: said.slice(-2), profile }) });
     if (!r.ok) throw new Error(r.status);
-    const a = await r.json();
-    if (a.danger) { out.append(el("div", "alert", a.message)); return; }
-    if (a.refused) { out.append(el("p", "", a.refusal)); }
-    (a.sentences || []).forEach((s) => {
-      const card = el("div", "card"); card.append(el("p", "", s.text)); const quote = el("div", "quote", "\u201c" + s.quote + "\u201d");
-      const meta = el("div", "mute", s.source.publisher + ", " + s.source.title + ", " + T[lang].retrieved + " " + s.source.retrieved_on + " "); const u = safeUrl(s.source.url);
-      if (u) { const l = el("a", "", u); l.href = u; l.rel = "noreferrer noopener"; meta.append(l); }
-      quote.append(meta); card.append(quote); out.append(card);
-    });
-    if (a.note) out.append(el("p", "mute", a.note));
-  } catch (e) { out.append(el("p", "err", T[lang].busy)); }
-};
+    const a = await r.json(); reply.replaceChildren();
+    if (a.profile) { profile = a.profile; if (profile.age && profile.age !== age) { age = profile.age; paint(); loadLadder(); } }
+    if (a.type === "danger") { reply.classList.add("alert"); reply.textContent = a.message; }
+    else if (a.type === "support") { reply.append(el("p", "", a.message)); }
+    else if (a.type === "ask") { reply.append(el("p", "", a.message)); chips(reply, a.options.map((o) => ({ label: o.label, set: o.set }))); }
+    else if (a.type === "plan") {
+      reply.append(el("p", "", a.message));
+      const ul = el("ul", "aid"); a.aid.slice(0, 2).forEach((x) => ul.append(el("li", "", x))); reply.append(ul);
+      a.steps.forEach((x, i) => reply.append(stepBox(x, i + 1)));
+      chips(reply, T[lang].planActs.map((label, i) => ({ label, send: T[lang].planActsSend[i] })));
+    }
+    else if (a.type === "ladder") { reply.append(el("p", "", T[lang].ladderIntro)); a.rungs.forEach((x, i) => reply.append(stepBox(x, i + 1))); }
+    else if (a.type === "draft") { reply.append(el("p", "", T[lang].draftHint)); showTab("draft"); }
+    else showAnswer(reply, a);
+    said.push(text);
+  } catch (e) { reply.replaceChildren(el("p", "err", T[lang].busy)); }
+  $("log").scrollTop = $("log").scrollHeight;
+}
+$("chatform").onsubmit = (e) => { e.preventDefault(); send($("q").value); };
 
 $("draftgo").onclick = async () => {
   const fields = {}; document.querySelectorAll("#d-fields input").forEach((i) => { if (i.value.trim()) fields[i.dataset.k] = i.value; });
@@ -165,8 +300,14 @@ $("draftgo").onclick = async () => {
   } catch (e) { $("draftout").textContent = T[lang].busy; $("draftout").hidden = false; }
 };
 $("copy").onclick = async () => { try { await navigator.clipboard.writeText($("draftout").textContent); $("copy").textContent = T[lang].copied; } catch (e) { /* the text is selectable on the page */ } };
-// A page cannot open about:blank (browsers block it). Close the tab if the browser allows it, otherwise replace this page, so Back does not return to it, with an ordinary page.
-const leave = () => { document.body.replaceChildren(); window.close(); setTimeout(() => location.replace("https://www.google.com/"), 150); };
+// Clear the page, then go back to where the person came from. location.replace puts that page in this one's place, so Back does not return here. With no referrer, step back
+// in history; with nothing to go back to (a page opened on its own), close the tab.
+const leave = () => {
+  document.body.replaceChildren();
+  if (document.referrer) location.replace(document.referrer);
+  else if (history.length > 1) history.back();
+  else window.close();
+};
 $("exit").onclick = leave;
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") leave(); });
 (async () => {

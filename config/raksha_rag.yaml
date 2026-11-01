@@ -38,14 +38,65 @@ retrieval:
                  fifty: 50, sixty: 60, ninety: 90, hundred: 100, thousand: 1000}   # a figure written in words counts like its digits when a sentence is checked against its quote
   min_quote_chars: 25          # a quote shorter than this is too small to show that a sentence is in the passage
 stopwords: ["the", "and", "for", "are", "but", "not", "you", "your", "with", "that", "this", "from", "have", "has", "was", "were", "what", "when", "where", "which", "who", "whom", "how", "can", "could", "should", "would", "will", "shall", "may", "might", "does", "did", "any", "all", "into", "out", "about", "over", "under", "then", "than", "them", "they", "their", "there", "here", "its", "our", "his", "her", "she", "him", "cant", "dont", "is", "it", "in", "on", "of", "to", "a", "an", "be", "by", "as", "at", "or", "if", "do", "so", "no", "me", "my", "i", "we", "us", "up", "please", "tell", "help", "need", "want", "get", "got", "say", "said"]
+chat:
+  # Plain word lists decide what a chat message is for; a model never picks the route. Danger words are checked first.
+  ladder_terms: ["who do i", "who should i", "who to approach", "what next", "what now", "next step", "what should i do", "what do i do", "where do i report", "where to report", "how do i report", "no reply", "no response", "nobody is", "not responding", "escalate", "ladder", "किसके पास", "आगे क्या", "अब क्या", "क्या करूँ", "क्या करें", "कहाँ शिकायत"]
+  draft_terms: ["draft", "write a letter", "write a complaint", "letter", "application for", "मसौदा", "पत्र लिख", "शिकायत लिख"]
+  # A message about how the person feels gets a fixed, warm reply (no model): it never goes to the document search, where it would only be refused.
+  support_terms: ["feel bad", "feel sick", "feel shit", "shitty", "feel terrible", "terrible", "feel awful", "awful", "feel worthless", "worthless", "feel low", "feel scared", "i am scared", "i'm scared", "i am afraid", "i'm afraid", "ashamed", "so alone", "i am alone", "hopeless", "depressed", "anxious", "crying", "panic", "can't cope", "cant cope", "i hate myself", "डर लग", "शर्म", "अकेला", "अकेली", "घबरा", "रो रही", "रो रहा", "बहुत बुरा", "परेशान"]
+  support:
+    en: "I am really sorry you are going through this, and I am glad you said it out loud. None of this is your fault, and you do not have to carry it alone. Take your time. When you feel ready, tell me what is happening in your own words, or pick one of the options below and I will take it from there. And if it ever feels like too much, or you feel you might hurt yourself, please call 112 right now or go to someone you trust."
+    hi: "मुझे सच में दुख है कि आप इससे गुज़र रही/रहे हैं, और मुझे खुशी है कि आपने इसे कह दिया। इसमें आपकी कोई गलती नहीं है, और इसे अकेले उठाने की ज़रूरत नहीं है। आराम से बताइए। जब आप तैयार हों, अपने शब्दों में बताइए क्या हो रहा है, या नीचे से एक चुनिए, आगे मैं संभाल लूँगी। और अगर कभी बहुत भारी लगे, या खुद को नुकसान पहुँचाने का मन हो, तो अभी 112 पर कॉल करें या किसी भरोसेमंद व्यक्ति के पास जाएँ।"
+  # --- the situation conversation (src/satyasutra/raksha/chat.py). Plain words decide; a model only phrases the final reply from these facts.
+  incident_terms: ["nude", "naked", "leak", "blackmail", "sextortion", "morph", "deepfake", "fake photo", "fake video", "fake pic", "my photos", "my pics", "my pictures", "my video", "intimate", "private photo", "private pic", "viral", "revenge porn", "न्यूड", "ब्लैकमेल", "मॉर्फ", "लीक", "वायरल", "फोटो", "तस्वीर"]
+  age_terms:
+    minor: ["under 18", "below 18", "minor", "i am 14", "i am 15", "i am 16", "i am 17", "i'm 14", "i'm 15", "i'm 16", "i'm 17", "i was 14", "i was 15", "i was 16", "i was 17", "school", "18 से कम", "नाबालिग"]
+    adult: ["18 or older", "over 18", "above 18", "18 or above", "i am an adult", "18 या ज़्यादा", "बालिग"]
+  what_terms:
+    faked: ["fake", "morph", "edited", "deepfake", "ai generated", "ai-generated", "photoshop", "नकली", "मॉर्फ", "बदली"]
+    shared: ["leaked", "posted", "uploaded", "already shared", "already sent", "went viral", "is viral", "spread", "लीक कर दी", "फैला दी", "फैल चुकी", "वायरल हो"]
+    threatened: ["threat", "going to leak", "will leak", "leak my", "blackmail", "demand", "pay", "धमकी", "ब्लैकमेल"]
+  opener:
+    en: "I am so sorry you are dealing with this, and I am glad you told me. It is not your fault."
+    hi: "मुझे बहुत दुख है कि आप इससे गुज़र रही/रहे हैं, और मुझे खुशी है कि आपने मुझे बताया। इसमें आपकी कोई गलती नहीं है।"
+  ask_age:
+    say: {en: "I want to send you to exactly the right help, and that depends on one thing: were you 18 or older when the pictures were taken?", hi: "ताकि मैं सही मदद बता सकूँ: जब तस्वीरें ली गईं तब क्या आप 18 साल या उससे ज़्यादा के थे/थीं?"}
+    options:
+      - {label: {en: "Yes, 18 or older", hi: "हाँ, 18 या ज़्यादा"}, set: {age: adult}}
+      - {label: {en: "No, under 18", hi: "नहीं, 18 से कम"}, set: {age: minor}}
+      - {label: {en: "Not sure", hi: "पक्का नहीं पता"}, set: {age: unsure}}
+  ask_what:
+    say: {en: "Thank you for telling me. One last thing, so I get the order of steps right: have the pictures already been shared, or is it only a threat so far?", hi: "एक बात और: क्या तस्वीरें पहले ही फैल चुकी हैं, या अभी सिर्फ़ धमकी है?"}
+    options:
+      - {label: {en: "Only a threat so far", hi: "अभी सिर्फ़ धमकी है"}, set: {what: threatened}}
+      - {label: {en: "Already shared", hi: "पहले ही फैल चुकी हैं"}, set: {what: shared}}
+      - {label: {en: "They were faked or edited", hi: "बदली या नकली बनाई गईं"}, set: {what: faked}}
+  # Always-true safety lines (the same advice the guided flow gives). They are facts the reply may use, and the fixed reply shows them.
+  first_aid:
+    - {en: "Do not pay and do not send any more pictures: paying usually leads to more demands.", hi: "पैसे न दें और कोई और तस्वीर न भेजें: पैसे देने से अक्सर और माँगें आती हैं।"}
+    - {en: "Do not delete the chat. Take screenshots that show the name or number, the date and any link.", hi: "चैट न मिटाएँ। ऐसे स्क्रीनशॉट लें जिनमें नाम या नंबर, तारीख और लिंक दिखें।"}
+    - {en: "If you are in danger right now, call 112.", hi: "अगर आप अभी खतरे में हैं तो 112 पर कॉल करें।"}
+  # The first steps for each situation, from the ladder; "hash" becomes StopNCII for an adult and Take It Down otherwise.
+  plan:
+    threatened: [hash, report_portal]
+    shared: [hash, report_portal, platform_officer]
+    faked: [report_portal, platform_officer, hash]
+  plan_fallback:
+    en: "I am so sorry you are dealing with this. It is not your fault, and you do not have to face it alone. Here is exactly what I would do first, in this order, and I will stay with you through each step."
+    hi: "मुझे बहुत दुख है कि आप इससे गुज़र रही/रहे हैं। इसमें आपकी कोई गलती नहीं है, और आपको यह अकेले नहीं झेलना है। सबसे पहले मैं यही करूँगी, इसी क्रम में, और हर कदम पर आपके साथ रहूँगी।"
+  max_message_chars: 1100
+  reply_max_words: 5            # a message this short, while a question of ours is open, is read as the answer to it
+  forbidden_terms: ["section ", "ipc", "bns", "pocso", "it act", "act, 20", "court order", "fir "]    # law-like words are allowed only if the facts contain them
+  short_question_words: 3      # a question with fewer content words than this borrows the words of the person's previous question for the search only
+  history_turns: 2             # earlier messages the page sends along
 safety:
   # A message with one of these goes to the 112 and trusted-person text before anything is retrieved or sent to a model.
   danger_terms: [kill myself, end my life, suicide, want to die, harm myself, "i am in danger", "he is outside", "he will kill", "मर जाऊँ", "मर जाना चाहती", "मर जाना चाहता", "आत्महत्या", "जान से मार"]
   # A sentence that promises an outcome is dropped from every answer.
   promise_terms: ["will be removed", "will be deleted", "will act", "will arrest", "will be arrested", "will definitely", "guaranteed", "100%", "within 24 hours", "will take action"]
 refusal:
-  en: "I cannot find this in the official documents I hold, so I will not guess. Try the steps in the ladder, or ask a lawyer or a legal-aid service."
-  hi: "यह मेरे पास मौजूद सरकारी दस्तावेज़ों में नहीं मिला, इसलिए मैं अंदाज़ा नहीं लगाऊँगा। सीढ़ी के कदम आज़माइए, या किसी वकील या कानूनी सहायता सेवा से पूछिए।"
+  en: "That one is best answered by a lawyer or a legal-aid service. What I can do right now is show you who to approach next, or write the letter for you."
+  hi: "इसका सही जवाब कोई वकील या कानूनी सहायता सेवा देगी। अभी मैं यह कर सकती हूँ: बता दूँ कि अगला कदम किसके पास जाकर उठाना है, या आपके लिए पत्र लिख दूँ।"
 unreviewed:
   en: "Not legal advice. The Hindi wording and the legal text have not been reviewed by a native speaker or a lawyer."
   hi: "यह कानूनी सलाह नहीं है। हिंदी शब्दों और कानूनी पाठ की किसी हिंदी भाषी या वकील ने समीक्षा नहीं की है।"

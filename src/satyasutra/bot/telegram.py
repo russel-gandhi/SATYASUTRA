@@ -156,9 +156,9 @@ class TelegramBot:
                 v = self.local.get("/raksha/ladder", params={"age": rest or "unsure", "lang": "en"}).json()
                 lines = [self.s.messages["ladder_intro"]]
                 for i, r in enumerate(v["rungs"], start=1):
-                    lines.append(f"{i}. {r['title']}\n{r['how']}\n{r['wait']}")
+                    lines.append(f"{i}. {r['title']}\n{r['how']}" + (f"\n{r['wait']}" if r["wait_documented"] else ""))
                     lines += [f"   “{q['quote']}” ({q['url']})" + ("" if q["confirmed"] else " [source not confirmed]") for q in r["sources"] if q.get("url")]
-                return "\n\n".join([*lines, v["not_covered"]])
+                return "\n\n".join(lines)
             if cmd == "/ask":
                 if not rest:
                     return self.s.messages["ask_usage"]

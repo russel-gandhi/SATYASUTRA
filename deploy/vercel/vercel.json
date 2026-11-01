@@ -1,0 +1,152 @@
+{
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/"
+    },
+    {
+      "source": "/check/:kind",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/check/:kind"
+    },
+    {
+      "source": "/health",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/health"
+    },
+    {
+      "source": "/health/sources",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/health/sources"
+    },
+    {
+      "source": "/ledger/verify",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/ledger/verify"
+    },
+    {
+      "source": "/ledger/:seq",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/ledger/:seq"
+    },
+    {
+      "source": "/fastclock/:p*",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/fastclock/:p*"
+    },
+    {
+      "source": "/notice/check",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/notice/check"
+    },
+    {
+      "source": "/url/check",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/url/check"
+    },
+    {
+      "source": "/doc/check",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/doc/check"
+    },
+    {
+      "source": "/pulse",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/pulse"
+    },
+    {
+      "source": "/pulse/match",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/pulse/match"
+    },
+    {
+      "source": "/officials",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/officials"
+    },
+    {
+      "source": "/officials/data",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/officials/data"
+    },
+    {
+      "source": "/guard",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/guard"
+    },
+    {
+      "source": "/guard/:p*",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/guard/:p*"
+    },
+    {
+      "source": "/links/check",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/links/check"
+    },
+    {
+      "source": "/voice/transcribe",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/voice/transcribe"
+    },
+    {
+      "source": "/report/build",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/report/build"
+    },
+    {
+      "source": "/report/:rid",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/report/:rid"
+    },
+    {
+      "source": "/my-investigations",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/my-investigations"
+    },
+    {
+      "source": "/history",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/history"
+    },
+    {
+      "source": "/records/:rid",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/records/:rid"
+    },
+    {
+      "source": "/help",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/help"
+    },
+    {
+      "source": "/raksha/:p*",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/raksha/:p*"
+    },
+    {
+      "source": "/news/check",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/news/check"
+    },
+    {
+      "source": "/audio/check",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/audio/check"
+    },
+    {
+      "source": "/card/spec",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/card/spec"
+    },
+    {
+      "source": "/act/plan",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/act/plan"
+    },
+    {
+      "source": "/media/check",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/media/check"
+    },
+    {
+      "source": "/video/check",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/video/check"
+    },
+    {
+      "source": "/agent/stream",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/agent/stream"
+    },
+    {
+      "source": "/trace/stream",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/trace/stream"
+    },
+    {
+      "source": "/verify",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/verify"
+    },
+    {
+      "source": "/about",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/about"
+    },
+    {
+      "source": "/assets/:p*",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/assets/:p*"
+    },
+    {
+      "source": "/static/:p*",
+      "destination": "https://gangrene-matchbox-mutate.ngrok-free.dev/static/:p*"
+    }
+  ]
+}
