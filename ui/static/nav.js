@@ -15,4 +15,6 @@
   const sp = document.createElement("span"); sp.className = "sp"; nav.append(sp);
   const tag = document.createElement("span"); tag.className = "tagm"; tag.textContent = "Investigator"; nav.append(tag, ...INVESTIGATOR.map((x) => link(...x)));
   document.body.prepend(nav);
+  // The public address does not serve the investigator pages: drop a link that would only lead to a 404.
+  nav.querySelectorAll("a[href='/command']").forEach((a) => fetch(a.href, { method: "HEAD" }).then((r) => { if (r.status === 404) a.remove(); }).catch(() => {}));
 })();
