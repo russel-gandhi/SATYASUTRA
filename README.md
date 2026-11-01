@@ -16,7 +16,7 @@ Hackathon Theme 1, Civic Pulse (problem statement 4) &nbsp;|&nbsp; this reposito
 
 ### [Live demo](https://vercel-bice-six-85.vercel.app/) &nbsp;·&nbsp; [Demo video](https://www.youtube.com/watch?v=Ui2GTXgsvSg) &nbsp;·&nbsp; [Slide deck](https://app.slidespeak.co/presentation/cmvxxi6w2012n08lia09hzp1s/share) &nbsp;·&nbsp; [Telegram bot](https://t.me/my_case_solve_pro_bot)
 
-[The problem](#the-problem) &nbsp;·&nbsp; [What it does](#what-it-does) &nbsp;·&nbsp; [Status](#status-at-a-glance) &nbsp;·&nbsp; [How it decides](#how-a-claim-is-decided) &nbsp;·&nbsp; [Accuracy](#how-well-does-it-work) &nbsp;·&nbsp; [Run it](#run-it) &nbsp;·&nbsp; [Limits](#known-limits)
+[The problem](#the-problem) &nbsp;·&nbsp; [What it does](#what-it-does) &nbsp;·&nbsp; [How it decides](#how-a-claim-is-decided) &nbsp;·&nbsp; [Accuracy](#how-well-does-it-work) &nbsp;·&nbsp; [Run it](#run-it) &nbsp;·&nbsp; [Limits](#known-limits)
 
 </div>
 
@@ -74,21 +74,20 @@ pictures are being shared or threatened.
 
 1. [The problem](#the-problem)
 2. [What it does](#what-it-does)
-3. [Status at a glance](#status-at-a-glance)
-4. [How a claim is decided](#how-a-claim-is-decided)
-5. [Architecture](#architecture)
-6. [Features in detail](#features-in-detail)
-7. [How well does it work?](#how-well-does-it-work)
-8. [Safety, privacy and ethics](#safety-privacy-and-ethics)
-9. [Run it](#run-it)
-10. [Deploying it](#deploying-it)
-11. [Using the website](#using-the-website)
-12. [Telegram bot](#telegram-bot)
-13. [API](#api)
-14. [Repository layout](#repository-layout)
-15. [Known limits](#known-limits)
-16. [Roadmap](#roadmap)
-17. [Credits and licences](#credits-and-licences)
+3. [How a claim is decided](#how-a-claim-is-decided)
+4. [Architecture](#architecture)
+5. [Features in detail](#features-in-detail)
+6. [How well does it work?](#how-well-does-it-work)
+7. [Safety, privacy and ethics](#safety-privacy-and-ethics)
+8. [Run it](#run-it)
+9. [Deploying it](#deploying-it)
+10. [Using the website](#using-the-website)
+11. [Telegram bot](#telegram-bot)
+12. [API](#api)
+13. [Repository layout](#repository-layout)
+14. [Known limits](#known-limits)
+15. [Future developments](#future-developments)
+16. [Credits and licences](#credits-and-licences)
 
 ---
 
@@ -118,26 +117,6 @@ SATYASUTRA is our attempt at that. The design rules are in `docs/plan/`; the wor
 | A suspicious phone call | **Call guard**: amber or red on your screen as the call goes on, with advice for that scam type |
 | Private pictures leaked or threatened | **Raksha** (`/help`): a chat that asks two questions (your age, what happened), then gives a short, kind plan with the steps in order, sourced from official documents, plus a ladder of who to approach and a letter drafter; nothing stored, no pictures ever requested |
 | Any check | A shareable **Trust Report**, a correction card (English or Hindi), and a "what to do next" plan |
-
-## Status at a glance
-
-An honest split between what runs today, what runs with stated weaknesses, and what is not built. **Built** means it runs end to end; it does not mean it is accurate on every input.
-
-| Capability | Status | Note |
-|---|---|---|
-| Claim agent (extract, registry, web, judge, rules, ledger) | Built, measured | Held-out numbers below; coverage is low by design |
-| Hindi and Kannada claims | Built, lightly tested | Hindi wording of our own text is unreviewed |
-| Image forensics (edits, AI-generated, debunked-image index) | Built, calibrated on small sets | False-alarm rate on real social-media images unknown |
-| Video | Built, weak | Compression hides splices; face swaps and AI video not detected |
-| Voice note transcript and synthetic-voice check | Built, weak test data | No cloned real voices in the test |
-| Notice, link and PDF checks | Built | Real photographed notices not tested |
-| Call guard | Built | Tested on scripts we wrote, not real calls |
-| Raksha grounded guide, ladder, letters | Built | Statute and IT Rules text not in its sources; Hindi and legal wording unreviewed |
-| Telegram bot | Built | Needs the API running; a fresh token is in use |
-| Trust Report, history, command centre | Built | No sign-in, so the command centre is local only |
-| What is spreading (India pulse) | Built | Media and search attention, not WhatsApp |
-| Public deployment | Prototype | A Vercel front door proxying to the machine that runs the app; see [Deploying it](#deploying-it) |
-| WhatsApp and X ingestion, reverse image search, official PIB/MoHFW feeds, counselling and takedown handling | Not built | See [Roadmap](#roadmap) |
 
 ## How a claim is decided
 
@@ -434,14 +413,17 @@ tools/        forge.py: the phase and ticket board
 - **Gemini free tier.** About 15 calls a minute per model plus a daily limit; at roughly 3 claim checks a minute, a live demo should have no more than about 3 people checking at once.
 - **Media.** A clean TruFor or Smaug result is weak evidence; false-alarm rates on real social-media images are unknown; face swaps and AI-generated video are not detected; the synthetic-voice test has no cloned real voices.
 - **Hindi and Hinglish wording is ours and not reviewed by a native speaker** (Call guard, Raksha, correction cards, Trust Report).
-- **Raksha's sources.** The statute and IT Rules text is not in its corpus (those hosts refuse our client; the PDFs must be added by hand), so it cannot quote the law, and the section on voice and social-media impersonation is not built. Coverage is Delhi first. Hindi and legal wording is unreviewed.
+- **Raksha's sources.** The statute and IT Rules text is not in its corpus (those hosts refuse our client; the PDFs must be added by hand), so it cannot quote the law. Coverage is Delhi first. Hindi and legal wording is unreviewed.
 - **Call guard and Raksha** were tested on text we wrote, not on real calls or real messages. The next-step routes (1930, cybercrime.gov.in, Chakshu) come from secondary sources and are marked unconfirmed, because the official sites refuse our client.
 - **Networks.** The optional live stream is Bluesky only; nothing here sees WhatsApp.
 - **Not read or not tested:** the terms of use of the news outlets and Google News, real photographed notices (skew, glare), JavaScript-built pages, real-speaker Kannada.
 
-## Roadmap
+## Future developments
 
-Not built, or only sketched: a "where reported" timeline for each claim; names and places in the contrast check; more language rows and a native-speaker review; WhatsApp and X ingestion (needs official access); reverse image search (paid APIs); adding the statutes and IT Rules to Raksha's corpus, other states' ladders, and a lawyer review of its wording; counselling, takedown handling and legal advice for the private-image flow; official PIB, MoHFW and PMIndia sources (needs an official access route); sign-in and per-user records for the command centre; a paid model tier for real load.
+- **Raksha:** an evidence pack that walks the person through each step; the statutes and IT Rules in its sources; ladders for every state; a lawyer's and a native speaker's review of the wording; counselling and takedown support.
+- **Reach:** Call guard as an Android app; forwarded videos in the Telegram bot; WhatsApp and X (through official access); Tamil, Bengali, Marathi and Hinglish.
+- **Evidence:** a "where reported" timeline for each claim; names and places in the contrast check; reverse image search; official PIB, MoHFW and PMIndia sources through an official route.
+- **Scale and trust:** sign-in and per-user records for the command centre; a paid model tier for real load; a larger public test set with an accuracy dashboard; work with cyber cells, 1930 and helplines.
 
 ## Credits and licences
 
