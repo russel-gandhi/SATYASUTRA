@@ -420,6 +420,7 @@ class ForensicsSettings(_Strict):
     threshold: str                           # name of the calibrated cut in thresholds.yaml for the manipulation score
     ai_threshold: str                        # name of the calibrated cut for the AI-generated probability from the same service
     video_frames: int = Field(gt=0)          # frames sampled evenly across a video
+    video_mostly_share: float = Field(gt=0, lt=1)   # headline wording only: 'mostly' means more than this share of frames
     video_ai_min_frames: int = Field(gt=0)   # this many sampled frames over the AI-generated cut make the video SYNTHETIC_SUSPECTED (a policy choice: one frame is within the per-image false-flag rate)
     max_video_bytes: int = Field(gt=0)
     max_video_s: float = Field(gt=0)         # longer videos are refused: every sampled frame costs a model run

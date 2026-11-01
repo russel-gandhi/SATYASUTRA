@@ -20,12 +20,12 @@ def detector(monkeypatch, scores, seconds=10):
 def test_a_median_window_at_or_above_the_cut_is_suspected_synthetic(monkeypatch):
     cut = load_config().thresholds.thresholds["audio_synthetic_probability"].value
     r = detector(monkeypatch, [0.99, 0.97, 0.2]).check(b"x")
-    assert r.label == "SYNTHETIC_SUSPECTED" and r.cut == cut and r.flagged_windows == 2 and "may be synthetic" in r.reasons[0]
+    assert r.label == "SYNTHETIC_SUSPECTED" and r.cut == cut and r.flagged_windows == 2 and r.headline == "Likely an AI or cloned voice" and "2 of 3 stretches" in r.reasons[0]
 
 
 def test_below_the_cut_is_inconclusive_and_never_says_the_voice_is_real(monkeypatch):
     r = detector(monkeypatch, [0.99, 0.1, 0.05]).check(b"x")
-    assert r.label == "INCONCLUSIVE" and "does not prove the voice is real" in r.reasons[0] and r.flagged_windows == 1
+    assert r.label == "INCONCLUSIVE" and r.headline == "No sign of a machine-made voice" and "real" not in r.headline and r.flagged_windows == 1
 
 
 def test_one_loud_window_does_not_decide_the_clip(monkeypatch):

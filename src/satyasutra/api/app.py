@@ -595,7 +595,7 @@ def create_app(
             r = await run_in_threadpool((audio_check_fn or spoof().check), data)
         except VoiceError as exc:
             raise HTTPException(status_code=422, detail=str(exc))
-        out = {"label": r.label, "reasons": r.reasons, "scores": r.scores, "cut": None if r.cut != r.cut else r.cut, "seconds": r.seconds,
+        out = {"label": r.label, "headline": r.headline, "reasons": r.reasons, "scores": r.scores, "cut": None if r.cut != r.cut else r.cut, "seconds": r.seconds,
                "lowest": r.lowest, "flagged_windows": r.flagged_windows, "note": r.note}
         return {**out, "record_id": keep("audio", out)}
 
@@ -675,7 +675,7 @@ def create_app(
             raise HTTPException(status_code=422, detail=f"not an image: {exc}")
         heatmap = result.forensics.pop("heatmap_png_b64", None)
         metadata = image_metadata(data, cfg)
-        out = {"width": result.width, "height": result.height, "label": result.label, "reasons": result.reasons,
+        out = {"width": result.width, "height": result.height, "label": result.label, "headline": result.headline, "reasons": result.reasons,
                "matches": result.matches, "forensics": result.forensics, "explanation": result.explanation, "metadata": metadata}
         record = keep("media", {"name": request.headers.get("x-filename", "")[:120], "result": out, "thumb": image_thumb(data, cfg.runtime.report.thumb_px), "metadata": metadata})
         return {**out, "heatmap_png_b64": heatmap, "record_id": record}
@@ -693,12 +693,12 @@ def create_app(
             raise HTTPException(status_code=422, detail=str(exc))
         except RuntimeError as exc:
             raise HTTPException(status_code=503, detail=str(exc))
-        summary = {"duration_s": result.duration_s, "label": result.label, "reasons": result.reasons, "forensics_available": result.forensics_available,
+        summary = {"duration_s": result.duration_s, "label": result.label, "headline": result.headline, "reasons": result.reasons, "forensics_available": result.forensics_available,
                    "frames": [{"index": f.index, "at_s": f.at_s, "score": f.score, "flagged": f.flagged, "ai_score": f.ai_score, "ai_flagged": f.ai_flagged, "matches": f.matches} for f in result.frames]}
         video_record = keep("video", {"name": request.headers.get("x-filename", "")[:120], "result": summary})
         return {
             "record_id": video_record,
-            "duration_s": result.duration_s, "label": result.label, "reasons": result.reasons, "forensics_available": result.forensics_available,
+            "duration_s": result.duration_s, "label": result.label, "headline": result.headline, "reasons": result.reasons, "forensics_available": result.forensics_available,
             "frames": [{"index": f.index, "at_s": f.at_s, "score": f.score, "flagged": f.flagged, "ai_score": f.ai_score, "ai_flagged": f.ai_flagged, "thumb_jpeg_b64": f.thumb_jpeg_b64,
                         "matches": f.matches, "heatmap_png_b64": f.heatmap_png_b64, "note": f.note} for f in result.frames],
         }

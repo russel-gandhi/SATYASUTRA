@@ -10,10 +10,15 @@
   --jaali: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='12' viewBox='0 0 24 12'%3E%3Cpath d='M12 0 18 6 12 12 6 6Z' fill='%23f5b50f'/%3E%3Cpath d='M0 0 6 6 0 12ZM24 0 18 6 24 12Z' fill='%23bf2a1c'/%3E%3Ccircle cx='12' cy='6' r='1.6' fill='%23151a4f'/%3E%3C/svg%3E");
 }
 :root[data-theme="dark"] {
-  --bg: #0a0f1f; --panel: #121a31; --line: #25304e; --text: #e8ecf8; --mute: #93a0bf; --accent: #8fa2ff; --accent-ink: #0a0f1f; --accent-soft: #1b2748;
-  --ok: #3ecf8e; --ok-soft: #12362a; --bad: #ff6b74; --bad-soft: #3b1a1f; --warn: #f5b84b; --warn-soft: #3a2c10; --idle: #8d98b5; --idle-soft: #1c2540;
+  --bg: #0c1033; --panel: #141a4c; --line: #2c3475; --text: #f2f0ff; --mute: #a8add8; --accent: #f5b50f; --accent-ink: #151a4f; --accent-soft: #252d78;
+  --ok: #35d0a0; --ok-soft: #0f3a4a; --bad: #ff7a6b; --bad-soft: #4a1f3a; --warn: #ffa94d; --warn-soft: #4a3320; --idle: #9aa0cf; --idle-soft: #1d2466;
   --shadow: none;
 }
+:root[data-theme="dark"] .jnav b { color: var(--marigold); }
+:root[data-theme="dark"] .jnav a { color: #b9bfe8; }
+:root[data-theme="dark"] .jnav a:hover, :root[data-theme="dark"] .jnav a.on { color: #fff; }
+:root[data-theme="dark"] .jnav .tagm { background: rgba(245, 181, 15, .18); color: var(--marigold); }
+:root[data-theme="dark"] .btn { box-shadow: none; }
 * { box-sizing: border-box; }
 html { color-scheme: light; } html[data-theme="dark"] { color-scheme: dark; }
 body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.6 "Segoe UI", system-ui, -apple-system, "Noto Sans Devanagari", "Noto Sans Kannada", "Noto Sans Telugu", sans-serif; }

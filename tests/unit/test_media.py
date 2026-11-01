@@ -54,9 +54,9 @@ def test_a_score_at_or_above_the_cut_is_edited_and_below_is_inconclusive_never_a
     data = png()
     high = check_media(cfg(), data, index(tmp_path), scores(0.9))
     low = check_media(cfg(), data, index(tmp_path), scores(0.1))
-    assert high.label == "EDITED" and "heatmap" in " ".join(high.reasons)
-    assert low.label == "INCONCLUSIVE" and "does not prove the image is genuine" in " ".join(low.reasons)
-    assert "AI-generated" in " ".join(low.reasons)                                  # the scope limit is always stated
+    assert high.label == "EDITED" and high.headline == "Likely edited" and "red glow" in " ".join(high.reasons)
+    assert low.label == "INCONCLUSIVE" and low.headline == "No sign of editing or AI"
+    assert "authentic" not in (low.headline + " ".join(low.reasons)).lower()          # a clean result never says authentic
 
 
 def test_without_a_calibrated_cut_the_score_is_shown_but_no_label_is_given(tmp_path):
@@ -75,9 +75,9 @@ def test_a_debunked_image_match_is_a_lead_not_a_verdict(tmp_path):
     data = png()
     out = check_media(cfg(), data, index(tmp_path, data), scores(0.1))
     text = " ".join(out.reasons)
-    assert out.matches and "not a verdict on any claim" in text and out.label == "INCONCLUSIVE"
+    assert out.matches and "already appeared in a fact-check" in text and out.label == "INCONCLUSIVE"
     none = check_media(cfg(), png(seed=2), index(tmp_path, data), scores(0.1))
-    assert none.matches == [] and "says nothing about whether it is authentic" in " ".join(none.reasons)
+    assert none.matches == [] and "fact-check" not in " ".join(none.reasons)
 
 
 def test_not_an_image_is_refused(tmp_path):
@@ -122,14 +122,14 @@ def test_ai_score_at_or_above_its_cut_is_synthetic_and_below_is_inconclusive_wit
     cut = c.thresholds.thresholds[c.runtime.forensics.ai_threshold].value
     high = check_media(c, png(), index(tmp_path), scores_ai(min(cut + 0.4, 1.0)))
     low = check_media(c, png(), index(tmp_path), scores_ai(max(cut - 0.4, 0.0)))
-    assert high.label == "SYNTHETIC_SUSPECTED" and "a suspicion, not a finding" in " ".join(high.reasons)
-    assert low.label == "INCONCLUSIVE" and "does not prove it is a real photo" in " ".join(low.reasons) and "evasive generators" in " ".join(low.reasons)
+    assert high.label == "SYNTHETIC_SUSPECTED" and high.headline == "Likely AI-made" and "made by AI tools" in " ".join(high.reasons)
+    assert low.label == "INCONCLUSIVE" and low.headline == "No sign of editing or AI"
 
 
 def test_edited_and_synthetic_are_both_reported_and_a_missing_detector_is_named(tmp_path):
     both = check_media(cfg(), png(), index(tmp_path), scores_ai(0.99, edit=0.9))
     text = " ".join(both.reasons)
-    assert both.label == "SYNTHETIC_SUSPECTED" and "manipulation score" in text and "AI-generated score" in text
+    assert both.label == "SYNTHETIC_SUSPECTED" and both.headline == "Likely edited and AI-made" and "changed after it was taken" in text and "made by AI tools" in text
     gone = lambda c, d: {"available": True, "score": 0.1, "ai_score": None, "ai_error": "Smaug weights are not installed", "heatmap_png_b64": "AAAA"}
     out = check_media(cfg(), png(), index(tmp_path), gone)
-    assert out.label == "INCONCLUSIVE" and "AI-image detector unavailable: Smaug weights are not installed" in " ".join(out.reasons)
+    assert out.label == "INCONCLUSIVE" and "The AI check is unavailable: Smaug weights are not installed" in " ".join(out.reasons)

@@ -98,6 +98,7 @@ forensics:
   ai_threshold: smaug_ai_generated_score
   video_frames: 8
   video_ai_min_frames: 3
+  video_mostly_share: 0.5       # 'mostly' in a video headline means more than this share of the sampled frames (a plain-words choice, not calibrated)
   max_video_bytes: 60000000
   max_video_s: 120
   ffmpeg_timeout_s: 30

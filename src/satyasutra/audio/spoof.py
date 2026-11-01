@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 import httpx
 import numpy as np
 
+from .. import plain
 from ..config import Config
 from ..voice.transcribe import SAMPLE_RATE, VoiceError, decode
 
@@ -34,6 +35,7 @@ class SpoofResult:
     label: str = "INCONCLUSIVE"
     reasons: list[str] = field(default_factory=list)
     note: str = NOTE
+    headline: str = ""
 
 
 class SpoofDetector:
@@ -67,9 +69,8 @@ class SpoofDetector:
             result.reasons.append("no calibrated cut: the scores are shown but no label is given")
             return result
         result.flagged_windows = sum(v >= entry.value for v in scores)
-        if middle >= entry.value:
+        synthetic = middle >= entry.value
+        if synthetic:
             result.label = "SYNTHETIC_SUSPECTED"
-            result.reasons.append(f"the median of {len(scores)} windows scored {middle:.2f} for synthetic speech, at or above the cut {entry.value}: the voice may be synthetic or cloned")
-        else:
-            result.reasons.append(f"the median of {len(scores)} windows scored {middle:.2f}, below the cut {entry.value}: no sign of synthetic speech found, which does not prove the voice is real")
+        result.headline, result.reasons = plain.voice(synthetic, result.flagged_windows, len(scores))
         return result

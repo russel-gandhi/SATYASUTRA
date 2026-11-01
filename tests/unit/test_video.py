@@ -43,16 +43,15 @@ def test_frames_are_sampled_evenly_and_one_flagged_frame_makes_the_video_edited(
     assert [f.at_s for f in out.frames] == [0.5, 1.5, 2.5, 3.5] and [f.flagged for f in out.frames] == [False, False, True, False]
     assert out.label == "EDITED" and out.duration_s == pytest.approx(4, abs=0.2) and out.forensics_available
     text = " ".join(out.reasons)
-    assert "1 of 4 sampled frames" in text and "2.5 s" in text
+    assert "1 of 4 frames look changed" in text and "2.5 s" in text and out.headline == "Some frames look edited"
     assert all(f.thumb_jpeg_b64 for f in out.frames)
 
 
 def test_no_flagged_frame_is_inconclusive_and_the_limits_are_always_stated(tmp_path):
     out = check_video(cfg(video_frames=3), clip(tmp_path), ImageIndex(tmp_path / "i.sqlite3"), scorer([0.1, 0.2, 0.3]))
     text = " ".join(out.reasons)
-    assert out.label == "INCONCLUSIVE" and "does not prove the video is genuine" in text
-    assert "face swaps" in text and "AI-generated" in text and "says nothing about whether the video is authentic" in text
-    assert "compression hides editing traces" in text
+    assert out.label == "INCONCLUSIVE" and out.headline == "No sign of editing or AI"
+    assert "authentic" not in (out.headline + text).lower() and "deepfake" not in (out.headline + text).lower()   # we do not detect face swaps, so we never use the word
 
 
 def test_an_unreachable_forensics_service_is_reported_not_guessed(tmp_path):
@@ -88,6 +87,6 @@ def test_several_frames_over_the_ai_cut_make_the_video_synthetic_suspected_but_o
         it = iter(ai_scores)
         return lambda c, d: {"available": True, "score": 0.1, "ai_score": next(it), "heatmap_png_b64": "AAAA"}
     many = check_video(cfg(video_frames=4), clip(tmp_path), ImageIndex(tmp_path / "i.sqlite3"), ai_scorer([ai_cut + 0.1, ai_cut + 0.2, ai_cut + 0.3, 0.0]))
-    assert many.label == "SYNTHETIC_SUSPECTED" and "3 of 4 sampled frames look AI-generated" in " ".join(many.reasons)
+    assert many.label == "SYNTHETIC_SUSPECTED" and "3 of 4 frames look AI-made" in " ".join(many.reasons) and many.headline == "Mostly AI-made"
     one = check_video(cfg(video_frames=4), clip(tmp_path), ImageIndex(tmp_path / "j.sqlite3"), ai_scorer([ai_cut + 0.1, 0.0, 0.0, 0.0]))
-    assert one.label == "INCONCLUSIVE" and "it takes 3 to raise a suspicion" in " ".join(one.reasons) and one.frames[0].ai_flagged
+    assert one.label == "INCONCLUSIVE" and one.headline == "No sign of editing or AI" and one.frames[0].ai_flagged
