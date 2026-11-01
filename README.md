@@ -14,7 +14,7 @@
 
 Hackathon Theme 1, Civic Pulse (problem statement 4) &nbsp;|&nbsp; this repository, FORGE, is where it was built
 
-### [Live demo](https://vercel-bice-six-85.vercel.app/) &nbsp;·&nbsp; [Demo video](https://www.youtube.com/watch?v=Ui2GTXgsvSg) &nbsp;·&nbsp; [Slide deck](https://app.slidespeak.co/presentation/cmvxxi6w2012n08lia09hzp1s/share) &nbsp;·&nbsp; [Telegram bot](#telegram-bot)
+### [Live demo](https://vercel-bice-six-85.vercel.app/) &nbsp;·&nbsp; [Demo video](https://www.youtube.com/watch?v=Ui2GTXgsvSg) &nbsp;·&nbsp; [Slide deck](https://app.slidespeak.co/presentation/cmvxxi6w2012n08lia09hzp1s/share) &nbsp;·&nbsp; [Telegram bot](https://t.me/my_case_solve_pro_bot)
 
 [The problem](#the-problem) &nbsp;·&nbsp; [What it does](#what-it-does) &nbsp;·&nbsp; [Status](#status-at-a-glance) &nbsp;·&nbsp; [How it decides](#how-a-claim-is-decided) &nbsp;·&nbsp; [Accuracy](#how-well-does-it-work) &nbsp;·&nbsp; [Run it](#run-it) &nbsp;·&nbsp; [Limits](#known-limits)
 
@@ -51,7 +51,7 @@ pictures are being shared or threatened.
 | Live deployment | https://vercel-bice-six-85.vercel.app/ (up only while the host machine, the API and the tunnel are running; see [Deploying it](#deploying-it)) |
 | Demo video | https://www.youtube.com/watch?v=Ui2GTXgsvSg |
 | Slide deck | https://app.slidespeak.co/presentation/cmvxxi6w2012n08lia09hzp1s/share |
-| Telegram bot | see [Telegram bot](#telegram-bot) for how to reach it and run your own |
+| Telegram bot | https://t.me/my_case_solve_pro_bot (@my_case_solve_pro_bot; commands and setup in [Telegram bot](#telegram-bot)) |
 
 ### At a glance
 
@@ -350,7 +350,7 @@ formats the answer. It never replies with a verdict it did not get from the API.
 
 ### Using it
 
-Open the bot in Telegram (search for its username, or ask the team for the link) and press **Start**. Then:
+Open **[t.me/my_case_solve_pro_bot](https://t.me/my_case_solve_pro_bot)** (or search for `@my_case_solve_pro_bot` in Telegram) and press **Start**. Then:
 
 | Send | You get |
 |---|---|
