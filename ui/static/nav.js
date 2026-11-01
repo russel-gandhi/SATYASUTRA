@@ -1,7 +1,7 @@
 // One navigation bar for every page: citizen pages on the left, investigator pages on the right.
 // Loaded with <script src="/static/nav.js">; it also pulls in the shared stylesheet so a page only needs this one line.
 (function () {
-  const CITIZEN = [["/", "Check"], ["/guard", "Call guard"], ["/help", "Private help"], ["/my-investigations", "My investigations"], ["/about", "How it works"]];
+  const CITIZEN = [["/", "Check"], ["/guard", "Call guard"], ["/help", "Private help"], ["/my-investigations", "My investigations"]];
   const INVESTIGATOR = [["/command", "Command centre"], ["/officials", "What is spreading"]];
   if (!document.querySelector('link[href="/static/jv.css"]')) {
     const l = document.createElement("link"); l.rel = "stylesheet"; l.href = "/static/jv.css"; document.head.prepend(l);

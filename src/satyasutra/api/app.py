@@ -567,10 +567,6 @@ def create_app(
         """Quiet page for someone whose private pictures are being shared: steps only, no history, no upload, one-tap exit."""
         return FileResponse(ROOT / "ui" / "help.html", media_type="text/html", headers={"Cache-Control": "no-store"})
 
-    @app.get("/about", include_in_schema=False)
-    def about_page() -> FileResponse:
-        return FileResponse(ROOT / "ui" / "about.html", media_type="text/html")
-
     @app.get("/news/check")
     async def news_check(text: str = Query(min_length=1, max_length=cfg.runtime.verify.max_text_chars)) -> dict:
         """Do major outlets' recent headlines mention this claim? Context only: it never changes a verdict and is not Tier 1 or 2 evidence."""
