@@ -152,11 +152,6 @@
   <div class="ledgerbar"><button class="ghost" id="chain">Check ledger integrity</button><span>Every verdict is written to a tamper-evident ledger.</span></div>
 </div>
 
-<footer>
-  Verdicts come from live sources only: Gemini reads the claim, the Google Fact Check API and a live news search supply evidence, and rules written in code decide.
-  Only evidence from fact-checkers, reputable outlets or official sources can decide a claim; everything else is shown as context.
-</footer>
-
 <script>
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
